@@ -24,5 +24,10 @@ export const rotateImage = async (imageId: string, angle: number) => {
   return response.data;
 };
 
+export const deleteBanner = async () => {
+  const response = await api.delete('/business/banner');
+  return response.data;
+};
+
 
 export default api;
