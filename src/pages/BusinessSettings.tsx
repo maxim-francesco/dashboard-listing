@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Image as ImageIcon } from "lucide-react";
+import { Loader2, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "react-hot-toast";
 
@@ -57,7 +58,7 @@ const BusinessSettings = () => {
     toast.promise(promise, {
       loading: 'Se încarcă șablonul...',
       success: (response) => {
-        setBusiness(response.data.business);
+        setBusiness(response.data);
         setSelectedFile(null);
         setIsUploading(false);
         return 'Șablonul a fost actualizat cu succes!';
@@ -111,6 +112,14 @@ const BusinessSettings = () => {
                 </div>
               )}
             </div>
+            {business?.bannerUrl && (
+              <div className="flex justify-end mt-4">
+                <Button variant="destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Șterge Șablonul
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
