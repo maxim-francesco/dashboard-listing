@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
 import { toast } from "react-hot-toast";
-import api from "@/services/api";
+import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
@@ -229,21 +229,34 @@ const AddEditListing = () => {
     }));
   };
   
-  const handleRotateExistingImage = (imageIndex: number, direction: 'left' | 'right') => {
+  const handleRotateExistingImage = async (imageIndex: number, direction: 'left' | 'right') => {
+    let imageId: string | undefined;
+    let newAngle: number | undefined;
+
     setExistingImages(currentImages => {
       const newImages = [...currentImages];
       const imageToUpdate = { ...newImages[imageIndex] };
       const rotationAmount = direction === 'left' ? -90 : 90;
-      let newAngle = (imageToUpdate.rotation || 0) + rotationAmount;
+      const angle = (imageToUpdate.rotation || 0) + rotationAmount;
 
-      if (newAngle < 0) newAngle = 270;
-      if (newAngle >= 360) newAngle = 0;
+      if (angle < 0) newAngle = 270;
+      if (angle >= 360) newAngle = 0;
+      else newAngle = angle;
       
       imageToUpdate.rotation = newAngle;
       newImages[imageIndex] = imageToUpdate;
+      imageId = imageToUpdate.id;
       
       return newImages;
     });
+
+    if (imageId !== undefined && newAngle !== undefined) {
+      try {
+        await rotateImage(imageId, newAngle);
+      } catch (err) {
+        // console.error("Failed to persist image rotation:", err);
+      }
+    }
   };
 
   const handleDeleteExistingImage = async (imageId: string) => {
@@ -541,6 +554,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
-    
