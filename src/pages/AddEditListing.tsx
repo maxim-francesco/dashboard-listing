@@ -148,6 +148,20 @@ const AddEditListing = () => {
     e.preventDefault();
 
     try {
+      // --- Step 0: Process Pending Rotations ---
+      const rotationIds = Object.keys(pendingRotations);
+      if (rotationIds.length > 0) {
+        const rotationPromises = rotationIds.map(id =>
+          rotateImage(id, pendingRotations[id])
+        );
+        const results = await Promise.allSettled(rotationPromises);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Failed to rotate image ${rotationIds[index]}:`, result.reason);
+          }
+        });
+      }
+
       // --- Step 1: Save Text Data ---
       const attributesPayload = Object.keys(attributeValues).map(key => ({ attributeId: key, value: attributeValues[key] }));
       const listingPayload = { title: formData.title, description: formData.description, categoryId: formData.categoryId, attributes: attributesPayload };
@@ -184,13 +198,14 @@ const AddEditListing = () => {
         
       }
       
+      setPendingRotations({}); // Reset pending rotations on success
       toast.success('Anunțul a fost salvat cu succes!');
       navigate('/listings');
 
     } catch (error) {
       toast.error('A apărut o eroare la salvarea anunțului.');
     }
-  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate]);
+  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations]);
 
   const handleAttributeChange = (attributeId: string, value: any) => {
     setAttributeValues(prev => ({
@@ -240,10 +255,7 @@ const AddEditListing = () => {
       
       const rotationAmount = direction === 'left' ? -90 : 90;
       const currentRotation = imageToUpdate.rotation || 0;
-      let finalAngle = currentRotation + rotationAmount;
-  
-      if (finalAngle < 0) finalAngle = 270;
-      if (finalAngle >= 360) finalAngle = 0;
+      let finalAngle = (currentRotation + rotationAmount + 360) % 360;
       
       imageToUpdate.rotation = finalAngle;
       newImages[imageIndex] = imageToUpdate;
