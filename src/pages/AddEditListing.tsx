@@ -252,9 +252,16 @@ const AddEditListing = () => {
 
     if (imageId !== undefined && newAngle !== undefined) {
       try {
-        await rotateImage(imageId, newAngle);
+        const response = await rotateImage(imageId, newAngle);
+        setExistingImages(currentImages => currentImages.map(img => {
+            if (img.id === imageId) {
+                return { ...img, url: response.url, rotation: 0 }; // Reset rotation as the URL is new
+            }
+            return img;
+        }));
+        toast.success("Imaginea a fost rotită cu succes.");
       } catch (err) {
-        // console.error("Failed to persist image rotation:", err);
+        toast.error("Eroare la rotirea imaginii pe server.");
       }
     }
   };
@@ -554,3 +561,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
