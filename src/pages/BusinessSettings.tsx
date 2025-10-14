@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
-import api from "@/services/api";
+import api, { deleteBanner } from "@/services/api";
 import { toast } from "react-hot-toast";
 
 interface Business {
@@ -70,6 +70,25 @@ const BusinessSettings = () => {
     });
   };
 
+  const handleDeleteBanner = async () => {
+    if (!window.confirm("Ești sigur că vrei să ștergi șablonul? Această acțiune este ireversibilă.")) {
+      return;
+    }
+
+    const promise = deleteBanner();
+
+    toast.promise(promise, {
+      loading: 'Se șterge șablonul...',
+      success: () => {
+        setBusiness(prev => prev ? { ...prev, bannerUrl: null } : null);
+        return 'Șablonul a fost șters cu succes!';
+      },
+      error: () => {
+        return 'A apărut o eroare la ștergerea șablonului.';
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -114,7 +133,7 @@ const BusinessSettings = () => {
             </div>
             {business?.bannerUrl && (
               <div className="flex justify-end mt-4">
-                <Button variant="destructive">
+                <Button variant="destructive" onClick={handleDeleteBanner}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Șterge Șablonul
                 </Button>
