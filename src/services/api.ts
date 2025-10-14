@@ -19,4 +19,10 @@ api.interceptors.request.use(
   }
 );
 
+export const rotateImage = async (imageId: string, angle: number) => {
+  const response = await api.put(`/images/${imageId}/rotate`, { angle });
+  return response.data;
+};
+
+
 export default api;
