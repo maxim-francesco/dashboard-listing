@@ -69,6 +69,7 @@ const AddEditListing = () => {
   
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
+  const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -231,40 +232,52 @@ const AddEditListing = () => {
   
   const handleRotateExistingImage = async (imageIndex: number, direction: 'left' | 'right') => {
     let imageId: string | undefined;
-    let newAngle: number | undefined;
+    let newAngle: number = 0;
 
     setExistingImages(currentImages => {
-      const newImages = [...currentImages];
-      const imageToUpdate = { ...newImages[imageIndex] };
-      const rotationAmount = direction === 'left' ? -90 : 90;
-      const angle = (imageToUpdate.rotation || 0) + rotationAmount;
+        const newImages = [...currentImages];
+        const imageToUpdate = { ...newImages[imageIndex] };
+        
+        const rotationAmount = direction === 'left' ? -90 : 90;
+        const currentRotation = imageToUpdate.rotation || 0;
+        let finalAngle = currentRotation + rotationAmount;
 
-      if (angle < 0) newAngle = 270;
-      if (angle >= 360) newAngle = 0;
-      else newAngle = angle;
-      
-      imageToUpdate.rotation = newAngle;
-      newImages[imageIndex] = imageToUpdate;
-      imageId = imageToUpdate.id;
-      
-      return newImages;
+        if (finalAngle < 0) finalAngle = 270;
+        if (finalAngle >= 360) finalAngle = 0;
+        
+        imageToUpdate.rotation = finalAngle;
+        newImages[imageIndex] = imageToUpdate;
+        
+        imageId = imageToUpdate.id;
+        newAngle = finalAngle;
+        
+        return newImages;
     });
 
-    if (imageId !== undefined && newAngle !== undefined) {
-      try {
-        const response = await rotateImage(imageId, newAngle);
-        setExistingImages(currentImages => currentImages.map(img => {
-            if (img.id === imageId) {
-                return { ...img, url: response.url, rotation: 0 }; // Reset rotation as the URL is new
-            }
-            return img;
-        }));
-        toast.success("Imaginea a fost rotită cu succes.");
-      } catch (err) {
-        toast.error("Eroare la rotirea imaginii pe server.");
-      }
+    if (imageId) {
+        try {
+            const response = await rotateImage(imageId, newAngle);
+            setExistingImages(currentImages => currentImages.map(img => {
+                if (img.id === imageId) {
+                    // Replace the URL with the new one from the server and reset local rotation
+                    return { ...img, url: response.url, rotation: 0 };
+                }
+                return img;
+            }));
+            toast.success("Imaginea a fost rotită permanent pe server.");
+        } catch (err) {
+            toast.error("Eroare la rotirea imaginii pe server. Modificarea este doar locală.");
+            // Optionally revert the local rotation if the API call fails
+            setExistingImages(currentImages => currentImages.map(img => {
+                if (img.id === imageId) {
+                    const originalRotation = (newAngle - (direction === 'left' ? -90 : 90) + 360) % 360;
+                    return { ...img, rotation: originalRotation };
+                }
+                return img;
+            }));
+        }
     }
-  };
+};
 
   const handleDeleteExistingImage = async (imageId: string) => {
       if (!listingId) return;
