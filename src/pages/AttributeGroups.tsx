@@ -19,11 +19,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Loader2, ListTree, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, ListTree, ArrowLeft, Settings2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import AttributeFormModal from "@/components/modals/AttributeFormModal";
+import AssignAttributesModal from "@/components/modals/AssignAttributesModal";
 
 interface AttributeGroup {
   id: string;
@@ -43,6 +44,10 @@ const AttributeGroups = () => {
 
   const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+
+  // New state for the assign attributes modal
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [groupToAssign, setGroupToAssign] = useState<AttributeGroup | null>(null);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -85,6 +90,12 @@ const AttributeGroups = () => {
   const openDeleteConfirmation = (group: AttributeGroup) => {
     setGroupToDelete(group);
     setIsConfirmModalOpen(true);
+  };
+
+  // New handler to open the assign attributes modal
+  const openAssignModal = (group: AttributeGroup) => {
+    setGroupToAssign(group);
+    setIsAssignModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -218,6 +229,16 @@ const AttributeGroups = () => {
         />
       )}
 
+      <AssignAttributesModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        onSave={() => {
+            setIsAssignModalOpen(false);
+            fetchGroups(); // Refresh data in case assignments changed
+        }}
+        group={groupToAssign}
+      />
+
       <Card className="border-card-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Grupuri Configurate</CardTitle>
@@ -250,7 +271,16 @@ const AttributeGroups = () => {
                         {group.name}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
+                        <div className="flex justify-end items-center flex-wrap gap-2">
+                           <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-secondary"
+                            onClick={() => openAssignModal(group)}
+                          >
+                            <Settings2 className="w-4 h-4 mr-1" />
+                            Alocă Atribute
+                          </Button>
                            <Button
                             variant="ghost"
                             size="sm"
