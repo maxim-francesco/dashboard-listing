@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,38 +32,63 @@ interface AttributeGroup {
     name: string;
 }
 
+interface Category {
+    id: string;
+    name: string;
+}
+
 interface AttributeFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: () => void;
-    categoryId: string;
+    categoryId?: string; // Optional for create mode from groups page
     initialData?: Partial<Attribute> | null;
     defaultGroupId?: string | null;
 }
 
 const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, defaultGroupId }: AttributeFormModalProps) => {
     const isEditing = !!initialData?.id;
+
+    // We need a separate state for the category ID when creating.
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(categoryId);
+
     const [formData, setFormData] = useState({
         name: "",
         type: "STRING" as Attribute['type'],
         attributeGroupId: null as string | null,
     });
     const [attributeGroups, setAttributeGroups] = useState<AttributeGroup[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+
 
     useEffect(() => {
-        const fetchAttributeGroups = async () => {
+        const fetchRequiredData = async () => {
             try {
-                const response = await api.get("/attribute-groups");
-                setAttributeGroups(response.data);
+                // Fetch groups
+                const groupsResponse = await api.get("/attribute-groups");
+                setAttributeGroups(groupsResponse.data);
+
+                // Fetch categories only if we don't have a categoryId (i.e., we are in create mode from groups page)
+                if (!categoryId && !isEditing) {
+                    const categoriesResponse = await api.get("/categories");
+                    setCategories(categoriesResponse.data);
+                }
             } catch (error) {
-                toast.error("Nu s-au putut încărca grupurile de atribute.");
+                toast.error("Nu s-au putut încărca datele necesare (grupuri sau categorii).");
             }
         };
-        fetchAttributeGroups();
-    }, []);
+
+        if (isOpen) {
+            fetchRequiredData();
+        }
+    }, [isOpen, categoryId, isEditing]);
+
 
     useEffect(() => {
         if (isOpen) {
+            // Set initial category ID
+            setSelectedCategoryId(categoryId || initialData?.categoryId);
+
             if (initialData) {
                 setFormData({
                     name: initialData.name || "",
@@ -77,9 +103,16 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                 });
             }
         }
-    }, [isOpen, initialData, defaultGroupId]);
+    }, [isOpen, initialData, defaultGroupId, categoryId]);
 
     const handleSave = async () => {
+        const finalCategoryId = isEditing ? initialData?.categoryId : selectedCategoryId;
+
+        if (!finalCategoryId) {
+            toast.error("Te rugăm să selectezi o categorie.");
+            return;
+        }
+
         if (!formData.name.trim()) {
             toast.error("Numele atributului este obligatoriu.");
             return;
@@ -95,9 +128,9 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
         
         let promise;
         if (isEditing) {
-            promise = api.put(`/categories/${categoryId}/attributes/${initialData?.id}`, payload);
+            promise = api.put(`/categories/${finalCategoryId}/attributes/${initialData?.id}`, payload);
         } else {
-            promise = api.post(`/categories/${categoryId}/attributes`, payload);
+            promise = api.post(`/categories/${finalCategoryId}/attributes`, payload);
         }
         
         toast.promise(promise, {
@@ -106,8 +139,9 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                 onSave();
                 return `Atributul "${formData.name}" a fost salvat cu succes.`;
             },
-            error: () => {
-                return "A apărut o eroare la salvarea atributului.";
+            error: (err) => {
+                const message = err.response?.data?.message || "A apărut o eroare la salvarea atributului.";
+                return message;
             }
         });
     };
@@ -125,6 +159,30 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                    {/* Category Selector for CREATE mode */}
+                    {!isEditing && (
+                        <div className="space-y-2">
+                            <Label htmlFor="category" className="text-foreground">
+                                Categorie *
+                            </Label>
+                            <Select
+                                value={selectedCategoryId}
+                                onValueChange={setSelectedCategoryId}
+                                disabled={!!categoryId} // Disable if categoryId is passed as prop
+                                required
+                            >
+                                <SelectTrigger className="bg-background border-border focus:border-primary">
+                                <SelectValue placeholder="Selectează o categorie" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border-border">
+                                {categories.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+                    
                     <div className="space-y-2">
                     <Label htmlFor="attributeName" className="text-foreground">
                         Numele Atributului

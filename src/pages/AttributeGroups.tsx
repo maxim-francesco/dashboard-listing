@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { Plus, Edit, Trash2, Loader2, ListTree, ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import AttributeFormModal from "@/components/modals/AttributeFormModal";
 
 interface AttributeGroup {
   id: string;
@@ -38,6 +40,9 @@ const AttributeGroups = () => {
   });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<AttributeGroup | null>(null);
+
+  const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -70,6 +75,11 @@ const AttributeGroups = () => {
     setCurrentGroup(group);
     setIsEditing(true);
     setIsModalOpen(true);
+  };
+
+  const openAddAttributeModal = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setIsAttributeModalOpen(true);
   };
 
   const openDeleteConfirmation = (group: AttributeGroup) => {
@@ -194,6 +204,19 @@ const AttributeGroups = () => {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {isAttributeModalOpen && (
+        <AttributeFormModal
+            isOpen={isAttributeModalOpen}
+            onClose={() => setIsAttributeModalOpen(false)}
+            onSave={() => {
+                setIsAttributeModalOpen(false);
+                // Optionally, we can provide feedback, but no data reload is needed here.
+                toast.success("Atributul a fost adăugat cu succes!");
+            }}
+            defaultGroupId={selectedGroupId}
+        />
+      )}
 
       <Card className="border-card-border bg-card">
         <CardHeader>
@@ -228,6 +251,15 @@ const AttributeGroups = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
+                           <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-secondary"
+                            onClick={() => openAddAttributeModal(group.id)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Adaugă Atribut
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
