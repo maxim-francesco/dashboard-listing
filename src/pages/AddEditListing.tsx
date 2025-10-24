@@ -14,7 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
@@ -448,25 +453,28 @@ const AddEditListing = () => {
               <CardTitle className="text-foreground">Detalii Specifice</CardTitle>
               <CardDescription>Completați detaliile specifice categoriei selectate.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {Object.entries(attributes).map(([groupName, groupAttributes], index) => (
-                <fieldset key={groupName} className="space-y-4">
-                  <legend className="text-lg font-semibold text-foreground w-full">
-                     {groupName}
-                  </legend>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                    {groupAttributes.map((attribute) => (
-                        <div key={attribute.id} className="space-y-2">
-                        <Label htmlFor={attribute.id} className="text-foreground font-medium">
-                            {attribute.name}
-                        </Label>
-                        {renderAttributeField(attribute)}
-                        </div>
-                    ))}
-                  </div>
-                  {index < Object.keys(attributes).length - 1 && <Separator className="mt-6" />}
-                </fieldset>
-              ))}
+            <CardContent>
+              <Accordion type="multiple" className="w-full space-y-4">
+                {Object.entries(attributes).map(([groupName, groupAttributes]) => (
+                  <AccordionItem value={groupName} key={groupName} className="border border-border rounded-lg bg-background/50 px-4">
+                    <AccordionTrigger className="text-lg font-semibold text-foreground hover:no-underline">
+                      {groupName}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                        {groupAttributes.map((attribute) => (
+                          <div key={attribute.id} className="space-y-2">
+                            <Label htmlFor={attribute.id} className="text-foreground font-medium">
+                              {attribute.name}
+                            </Label>
+                            {renderAttributeField(attribute)}
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </CardContent>
           </Card>
         )}
@@ -594,3 +602,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
