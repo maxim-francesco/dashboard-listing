@@ -159,8 +159,8 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    {/* Category Selector for CREATE mode */}
-                    {!isEditing && (
+                    {/* Category Selector for CREATE mode from groups page */}
+                    {!isEditing && !categoryId && (
                         <div className="space-y-2">
                             <Label htmlFor="category" className="text-foreground">
                                 Categorie *
@@ -168,7 +168,6 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                             <Select
                                 value={selectedCategoryId}
                                 onValueChange={setSelectedCategoryId}
-                                disabled={!!categoryId} // Disable if categoryId is passed as prop
                                 required
                             >
                                 <SelectTrigger className="bg-background border-border focus:border-primary">
@@ -221,11 +220,11 @@ const AttributeFormModal = ({ isOpen, onClose, onSave, categoryId, initialData, 
                     </Label>
                     <Select
                         value={formData.attributeGroupId || "none"}
-                        onValueChange={(value) => handleValueChange('attributeGroupId', value)}
+                        onValueChange={(value) => handleValueChange('attributeGroupId', value === 'none' ? null : value)}
                         disabled={!!defaultGroupId}
                     >
-                        <SelectTrigger className="bg-background border-border focus:border-primary">
-                        <SelectValue placeholder="Selectează un grup" />
+                        <SelectTrigger className="bg-background border-border focus:border-primary" disabled={!!defaultGroupId}>
+                            <SelectValue placeholder="Selectează un grup" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border">
                             <SelectItem value="none">Fără Grup</SelectItem>
