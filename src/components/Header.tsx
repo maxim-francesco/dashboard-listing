@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, LogOut, User, Building2, Settings } from "lucide-react";
+import { Menu, LogOut, User, Building2, Settings, ListTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -95,7 +95,14 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 className="cursor-pointer"
             >
               <Settings className="mr-2 h-4 w-4" />
-              <span>Setări Afacere</span>
+              <span>Setări Șablon</span>
+            </DropdownMenuItem>
+             <DropdownMenuItem
+                onClick={() => navigate('/settings/attribute-groups')}
+                className="cursor-pointer"
+            >
+              <ListTree className="mr-2 h-4 w-4" />
+              <span>Grupuri Atribute</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
