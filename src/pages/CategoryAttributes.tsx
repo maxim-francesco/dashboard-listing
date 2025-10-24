@@ -30,6 +30,7 @@ import { ArrowLeft, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import { Separator } from "@/components/ui/separator";
 
 interface Attribute {
   id: string;
@@ -48,12 +49,16 @@ interface AttributeGroup {
     name: string;
 }
 
+interface GroupedAttributes {
+    [groupName: string]: Attribute[];
+}
+
 const CategoryAttributes = () => {
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [attributes, setAttributes] = useState<GroupedAttributes>({});
   const [attributeGroups, setAttributeGroups] = useState<AttributeGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -298,97 +303,94 @@ const CategoryAttributes = () => {
               <p className="ml-4 text-muted-foreground">Se încarcă atributele...</p>
             </div>
           ) : (
-            <>
-              {/* Desktop Table */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead className="text-foreground font-medium">Numele Atributului</TableHead>
-                      <TableHead className="text-foreground font-medium">Tip</TableHead>
-                      <TableHead className="text-foreground font-medium">Grup</TableHead>
-                      <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attributes.map((attribute) => (
-                      <TableRow key={attribute.id} className="border-border">
-                        <TableCell className="font-medium text-foreground">
-                          {attribute.name}
-                        </TableCell>
-                        <TableCell>
+            <div className="space-y-8">
+              {Object.keys(attributes).map((groupName) => (
+                <div key={groupName}>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">{groupName}</h3>
+                  {/* Desktop Table */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead className="text-foreground font-medium">Numele Atributului</TableHead>
+                          <TableHead className="text-foreground font-medium">Tip</TableHead>
+                          <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {attributes[groupName].map((attribute) => (
+                          <TableRow key={attribute.id} className="border-border">
+                            <TableCell className="font-medium text-foreground">{attribute.name}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
+                                {attribute.type}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-border hover:bg-secondary"
+                                  onClick={() => openEditModal(attribute)}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  Editează
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openDeleteConfirmation(attribute)}
+                                  className="border-destructive text-destructive hover:bg-destructive-light"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Șterge
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-4">
+                    {attributes[groupName].map((attribute) => (
+                      <div key={attribute.id} className="border border-border rounded-lg p-4 space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{attribute.name}</h3>
+                          </div>
                           <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
                             {attribute.type}
                           </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {attribute.group?.name || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-border hover:bg-secondary"
-                              onClick={() => openEditModal(attribute)}
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Editează
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteConfirmation(attribute)}
-                              className="border-destructive text-destructive hover:bg-destructive-light"
-                            >
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Șterge
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-               {/* Mobile Card View */}
-               <div className="md:hidden space-y-4">
-                {attributes.map((attribute) => (
-                  <div key={attribute.id} className="border border-border rounded-lg p-4 space-y-4">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h3 className="font-semibold text-foreground">{attribute.name}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">Grup: {attribute.group?.name || 'Nespecificat'}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
-                            {attribute.type}
-                        </span>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditModal(attribute)}
-                        className="border-border hover:bg-secondary w-full justify-start"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editează
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteConfirmation(attribute)}
-                        className="border-destructive text-destructive hover:bg-destructive-light w-full justify-start"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Șterge
-                      </Button>
-                    </div>
+                        <div className="flex flex-col space-y-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditModal(attribute)}
+                            className="border-border hover:bg-secondary w-full justify-start"
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Editează
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteConfirmation(attribute)}
+                            className="border-destructive text-destructive hover:bg-destructive-light w-full justify-start"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Șterge
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
