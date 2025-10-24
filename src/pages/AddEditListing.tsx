@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
@@ -30,6 +31,11 @@ interface Attribute {
   id: string;
   name: string;
   type: "STRING" | "NUMBER" | "BOOLEAN";
+  group?: { id: string; name: string } | null;
+}
+
+interface GroupedAttributes {
+    [groupName: string]: Attribute[];
 }
 
 interface AttributeValueFromServer {
@@ -42,6 +48,7 @@ interface AttributeValueFromServer {
 interface ExistingImage {
     id: string;
     url: string;
+    order: number;
     rotation: number;
 }
 
@@ -64,7 +71,7 @@ const AddEditListing = () => {
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [attributes, setAttributes] = useState<GroupedAttributes>({});
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
   
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
@@ -103,7 +110,8 @@ const AddEditListing = () => {
             setExistingImages(imagesWithRotation);
             
             const valuesObject = fetchedAttributeValues.reduce((acc: Record<string, any>, val: AttributeValueFromServer) => {
-                acc[val.attributeId] = val.stringValue ?? val.numberValue ?? val.booleanValue;
+                const rawValue = val.stringValue ?? val.numberValue ?? val.booleanValue;
+                acc[val.attributeId] = rawValue === null ? '' : rawValue;
                 return acc;
             }, {});
             setAttributeValues(valuesObject);
@@ -127,20 +135,39 @@ const AddEditListing = () => {
       if (formData.categoryId) {
         try {
           const response = await api.get(`/categories/${formData.categoryId}/attributes`);
-          setAttributes(response.data);
+          
+          // Group attributes by group name
+          const grouped: GroupedAttributes = response.data.reduce((acc: GroupedAttributes, attr: Attribute) => {
+            const groupName = attr.group?.name || 'Atribute Generale';
+            if (!acc[groupName]) {
+              acc[groupName] = [];
+            }
+            acc[groupName].push(attr);
+            return acc;
+          }, {});
+
+          setAttributes(grouped);
+
+          // If we are creating a new listing, reset values
           if (!isEditing || Object.keys(attributeValues).length === 0) {
-            setAttributeValues({});
+              const initialValues: Record<string, any> = {};
+              response.data.forEach((attr: Attribute) => {
+                  initialValues[attr.id] = attr.type === 'BOOLEAN' ? false : '';
+              });
+              setAttributeValues(initialValues);
           }
         } catch (error) {
           toast.error("Nu s-au putut încărca atributele pentru categoria selectată.");
-          setAttributes([]);
+          setAttributes({});
         }
       } else {
-        setAttributes([]);
+        setAttributes({});
       }
     };
 
     fetchAttributesForCategory();
+  // We remove attributeValues from dependency array to prevent re-initialization on value change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.categoryId, isEditing]);
 
 
@@ -163,7 +190,10 @@ const AddEditListing = () => {
       }
 
       // --- Step 1: Save Text Data ---
-      const attributesPayload = Object.keys(attributeValues).map(key => ({ attributeId: key, value: attributeValues[key] }));
+      const attributesPayload = Object.entries(attributeValues)
+        .map(([key, value]) => ({ attributeId: key, value }))
+        .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
+
       const listingPayload = { title: formData.title, description: formData.description, categoryId: formData.categoryId, attributes: attributesPayload };
       
       let savedListingId;
@@ -189,13 +219,9 @@ const AddEditListing = () => {
       // --- Step 3: Save the New Order of Existing Images ---
       if (existingImages && existingImages.length > 0) {
         const imageIdsInOrder = existingImages.map(img => img.id);
-        
         const reorderUrl = `/listings/${savedListingId}/reorder-images`;
         const payload = { imageIds: imageIdsInOrder };
-
-
         await api.post(reorderUrl, payload);
-        
       }
       
       setPendingRotations({}); // Reset pending rotations on success
@@ -250,20 +276,20 @@ const AddEditListing = () => {
     let newAngle: number = 0;
   
     setExistingImages(currentImages => {
-      const newImages = [...currentImages];
-      const imageToUpdate = { ...newImages[imageIndex] };
-      
-      const rotationAmount = direction === 'left' ? -90 : 90;
-      const currentRotation = imageToUpdate.rotation || 0;
-      let finalAngle = (currentRotation + rotationAmount + 360) % 360;
-      
-      imageToUpdate.rotation = finalAngle;
-      newImages[imageIndex] = imageToUpdate;
-      
-      imageId = imageToUpdate.id;
-      newAngle = finalAngle;
-      
-      return newImages;
+        const newImages = [...currentImages];
+        const imageToUpdate = { ...newImages[imageIndex] };
+        
+        const rotationAmount = direction === 'left' ? -90 : 90;
+        const currentRotation = imageToUpdate.rotation || 0;
+        let finalAngle = (currentRotation + rotationAmount + 360) % 360;
+        
+        imageToUpdate.rotation = finalAngle;
+        newImages[imageIndex] = imageToUpdate;
+        
+        imageId = imageToUpdate.id;
+        newAngle = finalAngle;
+        
+        return newImages;
     });
 
     if (imageId) {
@@ -295,10 +321,7 @@ const AddEditListing = () => {
       setExistingImages((items) => {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        
-        
-        return newOrder;
+        return arrayMove(items, oldIndex, newIndex);
       });
     }
   }
@@ -310,15 +333,17 @@ const AddEditListing = () => {
       case "NUMBER":
         return (
           <Input
+            id={attribute.id}
             type="number"
             value={value}
-            onChange={(e) => handleAttributeChange(attribute.id, parseFloat(e.target.value) || '')}
+            onChange={(e) => handleAttributeChange(attribute.id, e.target.value === '' ? '' : parseFloat(e.target.value))}
             className="bg-background border-border focus:border-primary"
           />
         );
       case "STRING":
         return (
           <Input
+            id={attribute.id}
             type="text"
             value={value}
             onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
@@ -327,15 +352,12 @@ const AddEditListing = () => {
         );
       case "BOOLEAN":
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center h-10">
             <Checkbox
               id={attribute.id}
               checked={!!value}
               onCheckedChange={(checked) => handleAttributeChange(attribute.id, checked)}
             />
-            <Label htmlFor={attribute.id} className="text-sm text-muted-foreground">
-              {value ? "Da" : "Nu"}
-            </Label>
           </div>
         );
       default:
@@ -343,7 +365,7 @@ const AddEditListing = () => {
     }
   };
   
-    if (isLoading) {
+    if (isLoading && isEditing) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -379,17 +401,37 @@ const AddEditListing = () => {
             <CardTitle className="text-foreground">Informații de Bază</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground font-medium">
-                Titlul Anunțului
-              </Label>
-              <Input
-                id="title"
-                placeholder="Introdu titlul anunțului"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="bg-background border-border focus:border-primary"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                <Label htmlFor="title" className="text-foreground font-medium">
+                    Titlul Anunțului
+                </Label>
+                <Input
+                    id="title"
+                    placeholder="ex: Volkswagen Golf 7"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="bg-background border-border focus:border-primary"
+                    required
+                />
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="category" className="text-foreground font-medium">
+                    Categorie
+                </Label>
+                <Select value={formData.categoryId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))} required>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                    <SelectValue placeholder="Selectează categoria" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                    {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -398,46 +440,40 @@ const AddEditListing = () => {
               </Label>
               <Textarea
                 id="description"
-                placeholder="Introdu o descriere detaliată"
+                placeholder="Introdu o descriere detaliată a produsului"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 className="bg-background border-border focus:border-primary min-h-[120px]"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category" className="text-foreground font-medium">
-                Categorie
-              </Label>
-              <Select value={formData.categoryId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}>
-                <SelectTrigger className="bg-background border-border focus:border-primary">
-                  <SelectValue placeholder="Selectează categoria" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
-        {formData.categoryId && attributes.length > 0 && (
+        {formData.categoryId && Object.keys(attributes).length > 0 && (
           <Card className="border-card-border bg-card mb-6">
             <CardHeader>
-              <CardTitle className="text-foreground">Detalii Anunț</CardTitle>
+              <CardTitle className="text-foreground">Detalii Specifice</CardTitle>
+              <CardDescription>Completați detaliile specifice categoriei selectate.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {attributes.map((attribute) => (
-                <div key={attribute.id} className="space-y-2">
-                  <Label htmlFor={attribute.id} className="text-foreground font-medium">
-                    {attribute.name}
-                  </Label>
-                  {renderAttributeField(attribute)}
-                </div>
+            <CardContent className="space-y-6">
+              {Object.entries(attributes).map(([groupName, groupAttributes], index) => (
+                <fieldset key={groupName} className="space-y-4">
+                  <legend className="text-lg font-semibold text-foreground w-full">
+                     {groupName}
+                  </legend>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    {groupAttributes.map((attribute) => (
+                        <div key={attribute.id} className="space-y-2">
+                        <Label htmlFor={attribute.id} className="text-foreground font-medium">
+                            {attribute.name}
+                        </Label>
+                        {renderAttributeField(attribute)}
+                        </div>
+                    ))}
+                  </div>
+                  {index < Object.keys(attributes).length - 1 && <Separator className="mt-6" />}
+                </fieldset>
               ))}
             </CardContent>
           </Card>
@@ -476,7 +512,7 @@ const AddEditListing = () => {
               <div className="space-y-2">
                 <p className="text-foreground font-medium">Adaugă imagini noi</p>
                 <p className="text-sm text-muted-foreground">
-                  Trage fișierele aici sau apasă pentru a naviga. Max 5MB per imagine.
+                  Trage fișierele aici sau apasă pentru a naviga.
                 </p>
               </div>
               <Input
@@ -485,7 +521,7 @@ const AddEditListing = () => {
                 multiple
                 onChange={handleImageChange}
                 className="hidden"
-                accept="image/png, image/jpeg, image/gif"
+                accept="image/png, image/jpeg, image/gif, image/webp"
               />
             </div>
 
