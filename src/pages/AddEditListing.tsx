@@ -136,22 +136,14 @@ const AddEditListing = () => {
         try {
           const response = await api.get(`/categories/${formData.categoryId}/attributes`);
           
-          // Group attributes by group name
-          const grouped: GroupedAttributes = response.data.reduce((acc: GroupedAttributes, attr: Attribute) => {
-            const groupName = attr.group?.name || 'Atribute Generale';
-            if (!acc[groupName]) {
-              acc[groupName] = [];
-            }
-            acc[groupName].push(attr);
-            return acc;
-          }, {});
-
-          setAttributes(grouped);
+          // The API now returns grouped attributes, so we can set it directly.
+          setAttributes(response.data);
 
           // If we are creating a new listing, reset values
           if (!isEditing || Object.keys(attributeValues).length === 0) {
               const initialValues: Record<string, any> = {};
-              response.data.forEach((attr: Attribute) => {
+              // Flatten the attributes from all groups to initialize them
+              Object.values(response.data).flat().forEach((attr: Attribute) => {
                   initialValues[attr.id] = attr.type === 'BOOLEAN' ? false : '';
               });
               setAttributeValues(initialValues);
