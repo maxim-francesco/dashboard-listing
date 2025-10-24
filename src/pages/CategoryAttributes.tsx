@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ import { ArrowLeft, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { Separator } from "@/components/ui/separator";
 
 interface Attribute {
   id: string;
@@ -54,7 +52,7 @@ interface GroupedAttributes {
 }
 
 const CategoryAttributes = () => {
-  const { categoryId } = useParams();
+  const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -98,6 +96,7 @@ const CategoryAttributes = () => {
   useEffect(() => {
     fetchAttributes();
     fetchAttributeGroups();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
 
   const openCreateModal = () => {
@@ -203,7 +202,7 @@ const CategoryAttributes = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Link to="/settings/attribute-groups" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+            <Link to={`/settings/attribute-groups?fromCategory=${categoryId}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
                 Gestionează Grupuri
                 <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">Nou</span>
             </Link>

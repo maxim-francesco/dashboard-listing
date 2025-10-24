@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Loader2, ListTree } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, ListTree, ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
@@ -37,6 +38,11 @@ const AttributeGroups = () => {
   });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<AttributeGroup | null>(null);
+
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const fromCategoryId = searchParams.get("fromCategory");
+
 
   const fetchGroups = async () => {
     setIsLoading(true);
@@ -121,11 +127,23 @@ const AttributeGroups = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Grupuri de Atribute</h1>
-          <p className="text-muted-foreground mt-2">
-            Organizează atributele în grupuri pentru o mai bună structurare în pagina publică.
-          </p>
+        <div className="flex items-center gap-4">
+            {fromCategoryId && (
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => navigate(`/categories/${fromCategoryId}/attributes`)}
+                    className="border-border hover:bg-secondary flex-shrink-0"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Grupuri de Atribute</h1>
+              <p className="text-muted-foreground mt-2">
+                Organizează atributele în grupuri pentru o mai bună structurare în pagina publică.
+              </p>
+            </div>
         </div>
         
         <Button
