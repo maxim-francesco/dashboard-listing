@@ -139,10 +139,12 @@ const CategoryAttributes = () => {
   };
 
   const handleSave = async () => {
+    const finalGroupId = currentAttribute.attributeGroupId === 'none' ? null : currentAttribute.attributeGroupId;
+
     const payload = {
       name: currentAttribute.name,
       type: currentAttribute.type,
-      attributeGroupId: currentAttribute.attributeGroupId || null,
+      attributeGroupId: finalGroupId,
     };
     
     let promise;
@@ -256,16 +258,16 @@ const CategoryAttributes = () => {
                 Grup (Opțional)
               </Label>
               <Select
-                value={currentAttribute.attributeGroupId || ""}
+                value={currentAttribute.attributeGroupId || "none"}
                 onValueChange={(value) =>
-                  setCurrentAttribute({ ...currentAttribute, attributeGroupId: value || null })
+                  setCurrentAttribute({ ...currentAttribute, attributeGroupId: value })
                 }
               >
                 <SelectTrigger className="bg-background border-border focus:border-primary">
                   <SelectValue placeholder="Selectează un grup" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                    <SelectItem value="">Fără Grup</SelectItem>
+                    <SelectItem value="none">Fără Grup</SelectItem>
                     {attributeGroups.map(group => (
                         <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                     ))}
