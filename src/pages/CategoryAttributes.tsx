@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -202,13 +202,19 @@ const CategoryAttributes = () => {
             </div>
         </div>
         
-        <Button
-          onClick={openCreateModal}
-          className="bg-primary hover:bg-primary-hover text-primary-foreground w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Adaugă Atribut
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Link to="/settings/attribute-groups" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                Gestionează Grupuri
+                <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">Nou</span>
+            </Link>
+            <Button
+                onClick={openCreateModal}
+                className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            >
+                <Plus className="w-4 h-4 mr-2" />
+                Adaugă Atribut
+            </Button>
+        </div>
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
