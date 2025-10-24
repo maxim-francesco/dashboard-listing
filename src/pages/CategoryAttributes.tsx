@@ -36,6 +36,16 @@ interface Attribute {
   name: string;
   type: "STRING" | "NUMBER" | "BOOLEAN";
   categoryId: string;
+  attributeGroupId?: string | null;
+  group?: {
+      id: string;
+      name: string;
+  } | null;
+}
+
+interface AttributeGroup {
+    id: string;
+    name: string;
 }
 
 const CategoryAttributes = () => {
@@ -44,12 +54,14 @@ const CategoryAttributes = () => {
   const location = useLocation();
 
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [attributeGroups, setAttributeGroups] = useState<AttributeGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentAttribute, setCurrentAttribute] = useState<Partial<Attribute>>({
     name: "",
     type: "STRING",
+    attributeGroupId: null,
   });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(null);
@@ -69,12 +81,22 @@ const CategoryAttributes = () => {
     }
   };
 
+  const fetchAttributeGroups = async () => {
+    try {
+        const response = await api.get("/attribute-groups");
+        setAttributeGroups(response.data);
+    } catch (error) {
+        toast.error("Nu s-au putut încărca grupurile de atribute.");
+    }
+  };
+
   useEffect(() => {
     fetchAttributes();
+    fetchAttributeGroups();
   }, [categoryId]);
 
   const openCreateModal = () => {
-    setCurrentAttribute({ name: "", type: "STRING" });
+    setCurrentAttribute({ name: "", type: "STRING", attributeGroupId: null });
     setIsEditing(false);
     setIsModalOpen(true);
   };
@@ -112,17 +134,17 @@ const CategoryAttributes = () => {
   };
 
   const handleSave = async () => {
+    const payload = {
+      name: currentAttribute.name,
+      type: currentAttribute.type,
+      attributeGroupId: currentAttribute.attributeGroupId || null,
+    };
+    
     let promise;
     if (isEditing) {
-      promise = api.put(`/categories/${categoryId}/attributes/${currentAttribute.id}`, {
-        name: currentAttribute.name,
-        type: currentAttribute.type,
-      });
+      promise = api.put(`/categories/${categoryId}/attributes/${currentAttribute.id}`, payload);
     } else {
-      promise = api.post(`/categories/${categoryId}/attributes`, {
-        name: currentAttribute.name,
-        type: currentAttribute.type,
-      });
+      promise = api.post(`/categories/${categoryId}/attributes`, payload);
     }
     
     toast.promise(promise, {
@@ -223,6 +245,28 @@ const CategoryAttributes = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="attributeGroup" className="text-foreground">
+                Grup (Opțional)
+              </Label>
+              <Select
+                value={currentAttribute.attributeGroupId || ""}
+                onValueChange={(value) =>
+                  setCurrentAttribute({ ...currentAttribute, attributeGroupId: value || null })
+                }
+              >
+                <SelectTrigger className="bg-background border-border focus:border-primary">
+                  <SelectValue placeholder="Selectează un grup" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                    <SelectItem value="">Fără Grup</SelectItem>
+                    {attributeGroups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             <div className="flex justify-end space-x-2">
               <Button
@@ -261,7 +305,8 @@ const CategoryAttributes = () => {
                   <TableHeader>
                     <TableRow className="border-border">
                       <TableHead className="text-foreground font-medium">Numele Atributului</TableHead>
-                      <TableHead className="text-foreground font-medium">Tipul Atributului</TableHead>
+                      <TableHead className="text-foreground font-medium">Tip</TableHead>
+                      <TableHead className="text-foreground font-medium">Grup</TableHead>
                       <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -275,6 +320,9 @@ const CategoryAttributes = () => {
                           <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
                             {attribute.type}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {attribute.group?.name || "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
@@ -309,10 +357,13 @@ const CategoryAttributes = () => {
                 {attributes.map((attribute) => (
                   <div key={attribute.id} className="border border-border rounded-lg p-4 space-y-4">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-foreground">{attribute.name}</h3>
-                      <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
-                        {attribute.type}
-                      </span>
+                        <div>
+                            <h3 className="font-semibold text-foreground">{attribute.name}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">Grup: {attribute.group?.name || 'Nespecificat'}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(attribute.type)}`}>
+                            {attribute.type}
+                        </span>
                     </div>
                     <div className="flex flex-col space-y-2">
                       <Button
