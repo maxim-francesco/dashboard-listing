@@ -1,21 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,6 +14,7 @@ import { ArrowLeft, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import AttributeFormModal from "@/components/modals/AttributeFormModal";
 
 interface Attribute {
   id: string;
@@ -42,37 +28,31 @@ interface Attribute {
   } | null;
 }
 
-interface AttributeGroup {
-    id: string;
-    name: string;
-}
-
 interface GroupedAttributes {
     [groupName: string]: Attribute[];
 }
 
 const CategoryAttributes = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  if (!categoryId) {
+      // Or render an error state
+      return <div>Category ID is missing.</div>;
+  }
   const navigate = useNavigate();
   const location = useLocation();
 
   const [attributes, setAttributes] = useState<GroupedAttributes>({});
-  const [attributeGroups, setAttributeGroups] = useState<AttributeGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentAttribute, setCurrentAttribute] = useState<Partial<Attribute>>({
-    name: "",
-    type: "STRING",
-    attributeGroupId: null,
-  });
+  const [editingAttribute, setEditingAttribute] = useState<Attribute | null>(null);
+
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(null);
 
   const categoryName = location.state?.categoryName || "Categorie";
 
   const fetchAttributes = async () => {
-    if (!categoryId) return;
     setIsLoading(true);
     try {
       const response = await api.get(`/categories/${categoryId}/attributes`);
@@ -84,30 +64,18 @@ const CategoryAttributes = () => {
     }
   };
 
-  const fetchAttributeGroups = async () => {
-    try {
-        const response = await api.get("/attribute-groups");
-        setAttributeGroups(response.data);
-    } catch (error) {
-        toast.error("Nu s-au putut încărca grupurile de atribute.");
-    }
-  };
-
   useEffect(() => {
     fetchAttributes();
-    fetchAttributeGroups();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
 
   const openCreateModal = () => {
-    setCurrentAttribute({ name: "", type: "STRING", attributeGroupId: null });
-    setIsEditing(false);
+    setEditingAttribute(null);
     setIsModalOpen(true);
   };
 
   const openEditModal = (attribute: Attribute) => {
-    setCurrentAttribute(attribute);
-    setIsEditing(true);
+    setEditingAttribute(attribute);
     setIsModalOpen(true);
   };
 
@@ -134,35 +102,6 @@ const CategoryAttributes = () => {
           const errorMessage = err.response?.data?.message || 'Nu s-a putut șterge atributul.';
           return errorMessage;
       }
-    });
-  };
-
-  const handleSave = async () => {
-    const finalGroupId = currentAttribute.attributeGroupId === 'none' ? null : currentAttribute.attributeGroupId;
-
-    const payload = {
-      name: currentAttribute.name,
-      type: currentAttribute.type,
-      attributeGroupId: finalGroupId,
-    };
-    
-    let promise;
-    if (isEditing) {
-      promise = api.put(`/categories/${categoryId}/attributes/${currentAttribute.id}`, payload);
-    } else {
-      promise = api.post(`/categories/${categoryId}/attributes`, payload);
-    }
-    
-    toast.promise(promise, {
-        loading: 'Se salvează atributul...',
-        success: () => {
-            fetchAttributes();
-            setIsModalOpen(false);
-            return `Atributul "${currentAttribute.name}" a fost salvat cu succes.`;
-        },
-        error: (err) => {
-            return "A apărut o eroare la salvarea atributului.";
-        }
     });
   };
 
@@ -215,89 +154,20 @@ const CategoryAttributes = () => {
             </Button>
         </div>
       </div>
+      
+      {isModalOpen && (
+        <AttributeFormModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSave={() => {
+              setIsModalOpen(false);
+              fetchAttributes();
+            }}
+            categoryId={categoryId}
+            initialData={editingAttribute}
+        />
+      )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="bg-popover border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              {isEditing ? 'Editează Atributul' : 'Adaugă Atribut Nou'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="attributeName" className="text-foreground">
-                Numele Atributului
-              </Label>
-              <Input
-                id="attributeName"
-                placeholder="ex: Culoare, Kilometraj, Suprafață"
-                value={currentAttribute.name}
-                onChange={(e) => setCurrentAttribute({ ...currentAttribute, name: e.target.value })}
-                className="bg-background border-border focus:border-primary"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="attributeType" className="text-foreground">
-                Tipul Atributului
-              </Label>
-              <Select
-                value={currentAttribute.type}
-                onValueChange={(value) =>
-                  setCurrentAttribute({ ...currentAttribute, type: value as Attribute["type"] })
-                }
-              >
-                <SelectTrigger className="bg-background border-border focus:border-primary">
-                  <SelectValue placeholder="Selectează tipul atributului" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="STRING">STRING (Text)</SelectItem>
-                  <SelectItem value="NUMBER">NUMBER (ex: 123,45)</SelectItem>
-                  <SelectItem value="BOOLEAN">BOOLEAN (Da/Nu)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="attributeGroup" className="text-foreground">
-                Grup (Opțional)
-              </Label>
-              <Select
-                value={currentAttribute.attributeGroupId || "none"}
-                onValueChange={(value) =>
-                  setCurrentAttribute({ ...currentAttribute, attributeGroupId: value })
-                }
-              >
-                <SelectTrigger className="bg-background border-border focus:border-primary">
-                  <SelectValue placeholder="Selectează un grup" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                    <SelectItem value="none">Fără Grup</SelectItem>
-                    {attributeGroups.map(group => (
-                        <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                className="border-border hover:bg-secondary"
-              >
-                Anulează
-              </Button>
-              <Button
-                onClick={handleSave}
-                className="bg-primary hover:bg-primary-hover text-primary-foreground"
-              >
-                Salvează Atributul
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Card className="border-card-border bg-card">
         <CardHeader>
