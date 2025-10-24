@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, MessageSquare, Eye, TrendingUp, Loader2 } from "lucide-react";
+import { BarChart3, Users, MessageSquare, Eye, TrendingUp, Loader2, CalendarClock } from "lucide-react";
 import api from "@/services/api";
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
@@ -11,7 +11,8 @@ interface StatsData {
   totalListings: number;
   totalCategories: number;
   totalMessages: number;
-  listingViews: number;
+  totalViews: number;
+  viewsLast30Days: number;
 }
 
 const Dashboard = () => {
@@ -19,7 +20,8 @@ const Dashboard = () => {
     totalListings: 0,
     totalCategories: 0,
     totalMessages: 0,
-    listingViews: 8910,
+    totalViews: 0,
+    viewsLast30Days: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,18 +55,18 @@ const Dashboard = () => {
       bgColor: "bg-success-light",
     },
     {
-      title: "Mesaje Primite",
-      value: stats.totalMessages.toLocaleString(),
-      icon: MessageSquare,
-      color: "text-warning",
-      bgColor: "bg-warning-light",
+      title: "Total Vizualizări",
+      value: stats.totalViews.toLocaleString(),
+      icon: Eye,
+      color: "text-indigo-500",
+      bgColor: "bg-indigo-100 dark:bg-indigo-500/20",
     },
     {
-      title: "Vizualizări Profil",
-      value: stats.listingViews.toLocaleString(),
-      icon: Eye,
-      color: "text-destructive",
-      bgColor: "bg-destructive-light",
+      title: "Vizualizări (30 zile)",
+      value: stats.viewsLast30Days.toLocaleString(),
+      icon: CalendarClock,
+      color: "text-orange-500",
+      bgColor: "bg-orange-100 dark:bg-orange-500/20",
     },
   ];
 
