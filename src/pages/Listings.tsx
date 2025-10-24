@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from 'date-fns';
 import api from "@/services/api";
@@ -25,10 +25,11 @@ interface Listing {
     name: string;
   };
   createdAt: string;
-  // This is a placeholder as the backend doesn't seem to provide a status field yet.
-  // We'll give it a default value for now.
   status: 'Activ' | 'Inactiv';
   images?: { url: string }[];
+  _count?: {
+    views: number;
+  };
 }
 
 
@@ -42,7 +43,6 @@ const Listings = () => {
     setIsLoading(true);
     try {
       const response = await api.get('/listings');
-      // Adding a default 'Active' status to each listing for display purposes
       const listingsWithStatus = response.data.map((listing: any) => ({
         ...listing,
         status: 'Activ' as const,
@@ -141,6 +141,7 @@ const Listings = () => {
                     <TableHead className="text-foreground font-medium">Imagine</TableHead>
                     <TableHead className="text-foreground font-medium">Titlu</TableHead>
                     <TableHead className="text-foreground font-medium">Categorie</TableHead>
+                    <TableHead className="text-foreground font-medium">Vizualizări</TableHead>
                     <TableHead className="text-foreground font-medium">Dată Creare</TableHead>
                     <TableHead className="text-foreground font-medium">Status</TableHead>
                     <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
@@ -170,6 +171,13 @@ const Listings = () => {
                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
                             <span className="font-semibold text-foreground md:hidden">Categorie</span>
                             <span>{listing.category.name}</span>
+                        </TableCell>
+                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
+                            <span className="font-semibold text-foreground md:hidden">Vizualizări</span>
+                            <div className="flex items-center gap-2">
+                                <Eye className="w-4 h-4" />
+                                <span>{listing._count?.views ?? 0}</span>
+                            </div>
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
                             <span className="font-semibold text-foreground md:hidden">Dată Creare</span>
@@ -217,3 +225,5 @@ const Listings = () => {
 };
 
 export default Listings;
+
+    
