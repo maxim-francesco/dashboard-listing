@@ -38,6 +38,7 @@ interface AssignAttributesModalProps {
 
 const AssignAttributesModal = ({ isOpen, onClose, onSave, group }: AssignAttributesModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [attributes, setAttributes] = useState<UngroupedAttribute[]>([]);
   const [selectedAttributeIds, setSelectedAttributeIds] = useState<Set<string>>(new Set());
 
@@ -75,9 +76,30 @@ const AssignAttributesModal = ({ isOpen, onClose, onSave, group }: AssignAttribu
     });
   };
 
-  const handleSaveChanges = () => {
-    // This will be implemented in the next step
-    onSave();
+  const handleSaveChanges = async () => {
+    if (!group || selectedAttributeIds.size === 0) return;
+
+    setIsSaving(true);
+    const payload = {
+        groupId: group.id,
+        attributeIds: Array.from(selectedAttributeIds),
+    };
+    
+    const promise = api.patch('/attributes/batch-update', payload);
+
+    toast.promise(promise, {
+        loading: 'Se salvează alocările...',
+        success: () => {
+            setIsSaving(false);
+            onSave(); // This closes modal and refreshes parent
+            return 'Atributele au fost alocate cu succes!';
+        },
+        error: (err) => {
+            setIsSaving(false);
+            const message = err.response?.data?.message || "A apărut o eroare la salvare.";
+            return message;
+        }
+    });
   };
 
   if (!isOpen || !group) {
@@ -133,16 +155,17 @@ const AssignAttributesModal = ({ isOpen, onClose, onSave, group }: AssignAttribu
             variant="outline"
             onClick={onClose}
             className="border-border hover:bg-secondary"
+            disabled={isSaving}
           >
             Anulează
           </Button>
           <Button
             onClick={handleSaveChanges}
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            disabled={isLoading || selectedAttributeIds.size === 0}
+            disabled={isLoading || isSaving || selectedAttributeIds.size === 0}
           >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Salvează Modificările
+            {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isSaving ? 'Se salvează...' : 'Salvează Modificările'}
           </Button>
         </DialogFooter>
       </DialogContent>
