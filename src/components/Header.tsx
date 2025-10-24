@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, LogOut, User, Building2, Settings, ListTree } from "lucide-react";
+import { Menu, LogOut, User, Building2, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -71,6 +71,22 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 {item.name}
             </NavLink>
         ))}
+         <NavLink
+            to="/settings/attribute-groups"
+            className={({ isActive }) =>
+                cn(
+                    "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",
+                    isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )
+            }
+        >
+            Grupuri Atribute
+            <span className="bg-primary/20 text-primary font-bold text-xs px-2 py-0.5 rounded-full">
+                Nou
+            </span>
+        </NavLink>
       </nav>
 
       <div className="flex items-center gap-4">
@@ -96,13 +112,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             >
               <Settings className="mr-2 h-4 w-4" />
               <span>Setări Șablon</span>
-            </DropdownMenuItem>
-             <DropdownMenuItem
-                onClick={() => navigate('/settings/attribute-groups')}
-                className="cursor-pointer"
-            >
-              <ListTree className="mr-2 h-4 w-4" />
-              <span>Grupuri Atribute</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
