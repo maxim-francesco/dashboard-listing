@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Table,
@@ -16,7 +17,7 @@ import { Button } from "@/components/ui/button";
 
 interface Review {
   id: string;
-  clientName: string;
+  name: string;
   rating: number;
   text: string;
   isApproved: boolean;
@@ -142,7 +143,7 @@ const AdminReviewsPage = () => {
                   {reviews.map((review) => (
                     <TableRow key={review.id} className="border-border">
                       <TableCell className="font-medium text-foreground">
-                        {review.clientName}
+                        {review.name}
                       </TableCell>
                       <TableCell>{renderRating(review.rating)}</TableCell>
                       <TableCell className="text-muted-foreground max-w-sm break-words">
