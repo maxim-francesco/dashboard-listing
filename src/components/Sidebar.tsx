@@ -6,7 +6,8 @@ import {
   Car, 
   Building2,
   X,
-  Mail
+  Mail,
+  Star
 } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Categorii", href: "/categories", icon: List },
   { name: "Anunțuri", href: "/listings", icon: Car },
   { name: "Mesaje", href: "/messages", icon: Mail },
+  { name: "Recenzii", href: "/reviews", icon: Star },
 ];
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {

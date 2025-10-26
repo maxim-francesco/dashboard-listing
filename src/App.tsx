@@ -19,6 +19,7 @@ import AdminTerms from "./pages/AdminTerms";
 import CookieBanner from "./components/CookieBanner";
 import NotFound from "./pages/NotFound";
 import AttributeGroups from "./pages/AttributeGroups";
+import AdminReviewsPage from "./pages/AdminReviewsPage";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
               <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/reviews" element={<AdminReviewsPage />} />
               <Route path="/settings" element={<BusinessSettings />} />
               <Route path="/settings/attribute-groups" element={<AttributeGroups />} />
             </Route>
