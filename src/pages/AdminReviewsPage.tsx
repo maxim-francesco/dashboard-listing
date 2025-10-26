@@ -9,9 +9,10 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star } from "lucide-react";
+import { Loader2, Star, Check, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
+import { Button } from "@/components/ui/button";
 
 interface Review {
   id: string;
@@ -40,6 +41,41 @@ const AdminReviewsPage = () => {
 
     fetchReviews();
   }, []);
+
+  const handleApprove = async (reviewId: string) => {
+    const promise = api.put(`/reviews/${reviewId}/approve`);
+
+    toast.promise(promise, {
+      loading: "Se aprobă recenzia...",
+      success: () => {
+        setReviews((prevReviews) =>
+          prevReviews.map((r) =>
+            r.id === reviewId ? { ...r, isApproved: true } : r
+          )
+        );
+        return "Recenzia a fost aprobată.";
+      },
+      error: "Nu s-a putut aproba recenzia.",
+    });
+  };
+
+  const handleDelete = async (reviewId: string) => {
+    if (window.confirm("Ești sigur că vrei să ștergi această recenzie?")) {
+      const promise = api.delete(`/reviews/${reviewId}`);
+      
+      toast.promise(promise, {
+        loading: "Se șterge recenzia...",
+        success: () => {
+          setReviews((prevReviews) =>
+            prevReviews.filter((r) => r.id !== reviewId)
+          );
+          return "Recenzia a fost ștearsă.";
+        },
+        error: "Nu s-a putut șterge recenzia.",
+      });
+    }
+  };
+
 
   const getStatusBadge = (isApproved: boolean) => {
     if (isApproved) {
@@ -99,6 +135,7 @@ const AdminReviewsPage = () => {
                     <TableHead className="text-foreground font-medium">Rating</TableHead>
                     <TableHead className="text-foreground font-medium">Text Recenzie</TableHead>
                     <TableHead className="text-foreground font-medium">Status</TableHead>
+                    <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -112,6 +149,30 @@ const AdminReviewsPage = () => {
                         {review.text}
                       </TableCell>
                       <TableCell>{getStatusBadge(review.isApproved)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {!review.isApproved && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-success text-success hover:bg-success-light"
+                              onClick={() => handleApprove(review.id)}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Aprobă
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-destructive text-destructive hover:bg-destructive-light"
+                            onClick={() => handleDelete(review.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Șterge
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
