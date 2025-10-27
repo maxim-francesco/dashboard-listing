@@ -208,18 +208,18 @@ const AddEditListing = () => {
 
       // --- Step 2: Upload New Images (if any) ---
       if (imageFiles && imageFiles.length > 0) {
-        const uploadPromises = imageFiles.map(imageObject => {
+        for (const imageObject of imageFiles) {
           const formData = new FormData();
           formData.append('image', imageObject.file);
           formData.append('rotation', String(imageObject.rotation));
-          return api.post(`/listings/${savedListingId}/images`, formData);
-        });
-        await Promise.all(uploadPromises);
+          await api.post(`/listings/${savedListingId}/images`, formData);
+        }
       }
       
       // --- Step 3: Save the New Order of Existing Images ---
       if (existingImages && existingImages.length > 0) {
-        const sortedImageIds = [...existingImages]
+        const currentImages = existingImages;
+        const sortedImageIds = [...currentImages]
             .sort((a, b) => a.order - b.order)
             .map(image => image.id);
         const reorderUrl = `/listings/${savedListingId}/reorder-images`;
@@ -260,16 +260,19 @@ const AddEditListing = () => {
       }
 
       // If we are editing, upload images immediately
-      const uploadPromises = newFiles.map(imageObject => {
-        const formData = new FormData();
-        formData.append('image', imageObject.file);
-        formData.append('rotation', String(imageObject.rotation));
-        return api.post(`/listings/${listingId}/images`, formData);
-      });
+      const sequentialUpload = async () => {
+          const responses = [];
+          for (const imageObject of newFiles) {
+            const formData = new FormData();
+            formData.append('image', imageObject.file);
+            formData.append('rotation', String(imageObject.rotation));
+            const response = await api.post(`/listings/${listingId}/images`, formData);
+            responses.push(response);
+          }
+          return responses;
+      };
       
-      const promise = Promise.all(uploadPromises);
-
-      toast.promise(promise, {
+      toast.promise(sequentialUpload(), {
         loading: 'Se încarcă imaginile...',
         success: (responses) => {
           const newImages = responses.map(res => ({ ...res.data, rotation: 0 }));
@@ -639,6 +642,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
-    
