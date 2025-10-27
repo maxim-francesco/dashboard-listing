@@ -219,9 +219,11 @@ const AddEditListing = () => {
       
       // --- Step 3: Save the New Order of Existing Images ---
       if (existingImages && existingImages.length > 0) {
-        const imageIdsInOrder = existingImages.map(img => img.id);
+        const sortedImageIds = [...existingImages]
+            .sort((a, b) => a.order - b.order)
+            .map(image => image.id);
         const reorderUrl = `/listings/${savedListingId}/reorder-images`;
-        const payload = { imageIds: imageIdsInOrder };
+        const payload = { imageIds: sortedImageIds };
         await api.post(reorderUrl, payload);
       }
       
@@ -638,4 +640,5 @@ const AddEditListing = () => {
 
 export default AddEditListing;
 
+    
     
