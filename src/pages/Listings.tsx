@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,30 +36,20 @@ interface Listing {
 
 const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const fetchListings = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get('/listings');
-      const listingsWithStatus = response.data.map((listing: any) => ({
-        ...listing,
-        status: 'Activ' as const,
-      }));
-      setListings(listingsWithStatus);
-    } catch (error) {
-      toast.error("Nu s-au putut încărca anunțurile de pe server.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchListings();
-  }, []);
-
+  const { data: listings = [], isLoading, refetch } = useQuery<Listing[]>({
+    queryKey: ['listings'],
+    queryFn: async () => {
+        const response = await api.get('/listings');
+        const listingsWithStatus = response.data.map((listing: any) => ({
+            ...listing,
+            status: 'Activ' as const,
+        }));
+        return listingsWithStatus;
+    },
+    refetchOnWindowFocus: false,
+  });
 
   const handleDeleteListing = async (listingId: string, listingTitle: string) => {
     if (window.confirm(`Ești sigur că vrei să ștergi definitiv "${listingTitle}"?`)) {
@@ -67,7 +58,7 @@ const Listings = () => {
         toast.promise(promise, {
             loading: `Se șterge "${listingTitle}"...`,
             success: () => {
-                fetchListings();
+                refetch();
                 return `"${listingTitle}" a fost șters cu succes.`;
             },
             error: (err) => {
@@ -225,5 +216,3 @@ const Listings = () => {
 };
 
 export default Listings;
-
-    

@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,7 @@ interface ImageFileState {
 const AddEditListing = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
 
@@ -111,7 +113,9 @@ const AddEditListing = () => {
             const { title, description, categoryId, attributeValues: fetchedAttributeValues, images } = response.data;
             setFormData({ title, description, categoryId });
             
-            const imagesWithRotation = (images || []).map((img: any) => ({ ...img, rotation: 0 }));
+            const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
+            const imagesWithRotation = sortedImages.map((img: any) => ({ ...img, rotation: 0 }));
+
             setExistingImages(imagesWithRotation);
             
             const valuesObject = fetchedAttributeValues.reduce((acc: Record<string, any>, val: AttributeValueFromServer) => {
@@ -223,12 +227,15 @@ const AddEditListing = () => {
       
       setPendingRotations({}); // Reset pending rotations on success
       toast.success('Anunțul a fost salvat cu succes!');
+      
+      // Invalidate the cache and navigate
+      await queryClient.invalidateQueries({ queryKey: ['listings'] });
       navigate('/listings');
 
     } catch (error) {
       toast.error('A apărut o eroare la salvarea anunțului.');
     }
-  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations]);
+  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations, queryClient]);
 
   const handleAttributeChange = (attributeId: string, value: any) => {
     setAttributeValues(prev => ({
@@ -237,14 +244,40 @@ const AddEditListing = () => {
     }));
   };
   
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files).map(file => ({
         file,
         rotation: 0,
         previewUrl: URL.createObjectURL(file)
       }));
-      setImageFiles(prevFiles => [...prevFiles, ...newFiles]);
+
+      if (!listingId) {
+         setImageFiles(prevFiles => [...prevFiles, ...newFiles]);
+         return;
+      }
+
+      // If we are editing, upload images immediately
+      const uploadPromises = newFiles.map(imageObject => {
+        const formData = new FormData();
+        formData.append('image', imageObject.file);
+        formData.append('rotation', String(imageObject.rotation));
+        return api.post(`/listings/${listingId}/images`, formData);
+      });
+      
+      const promise = Promise.all(uploadPromises);
+
+      toast.promise(promise, {
+        loading: 'Se încarcă imaginile...',
+        success: (responses) => {
+          const newImages = responses.map(res => ({ ...res.data, rotation: 0 }));
+          setExistingImages(prevImages => 
+            [...prevImages, ...newImages].sort((a, b) => a.order - b.order)
+          );
+          return 'Imaginile au fost adăugate.';
+        },
+        error: 'Eroare la încărcarea imaginilor.'
+      });
     }
   };
 
@@ -604,6 +637,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
-    
