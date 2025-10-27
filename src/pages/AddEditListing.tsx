@@ -174,68 +174,71 @@ const AddEditListing = () => {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
-      // --- Step 0: Process Pending Rotations ---
-      const rotationIds = Object.keys(pendingRotations);
-      if (rotationIds.length > 0) {
-        const rotationPromises = rotationIds.map(id =>
-          rotateImage(id, pendingRotations[id])
-        );
-        const results = await Promise.allSettled(rotationPromises);
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`Failed to rotate image ${rotationIds[index]}:`, result.reason);
-          }
-        });
-      }
-
-      // --- Step 1: Save Text Data ---
-      const attributesPayload = Object.entries(attributeValues)
-        .map(([key, value]) => ({ attributeId: key, value }))
-        .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
-
-      const listingPayload = { title: formData.title, description: formData.description, categoryId: formData.categoryId, attributes: attributesPayload };
-      
-      let savedListingId;
-      if (listingId) {
-        await api.put(`/listings/${listingId}`, listingPayload);
-        savedListingId = listingId;
-      } else {
-        const response = await api.post('/listings', listingPayload);
-        savedListingId = response.data.id;
-      }
-
-      // --- Step 2: Upload New Images (if any) ---
-      if (imageFiles && imageFiles.length > 0) {
-        for (const imageObject of imageFiles) {
-          const formData = new FormData();
-          formData.append('image', imageObject.file);
-          formData.append('rotation', String(imageObject.rotation));
-          await api.post(`/listings/${savedListingId}/images`, formData);
+        // --- Step 0: Process Pending Rotations ---
+        const rotationIds = Object.keys(pendingRotations);
+        if (rotationIds.length > 0) {
+            const rotationPromises = rotationIds.map(id =>
+            rotateImage(id, pendingRotations[id])
+            );
+            const results = await Promise.allSettled(rotationPromises);
+            results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                console.error(`Failed to rotate image ${rotationIds[index]}:`, result.reason);
+            }
+            });
         }
-      }
-      
-      // --- Step 3: Save the New Order of Existing Images ---
-      if (existingImages && existingImages.length > 0) {
-        const currentImages = existingImages;
-        const sortedImageIds = [...currentImages]
-            .sort((a, b) => a.order - b.order)
-            .map(image => image.id);
-        const reorderUrl = `/listings/${savedListingId}/reorder-images`;
-        const payload = { imageIds: sortedImageIds };
-        await api.post(reorderUrl, payload);
-      }
-      
-      setPendingRotations({}); // Reset pending rotations on success
-      toast.success('Anunțul a fost salvat cu succes!');
-      
-      // Invalidate the cache and navigate
-      await queryClient.invalidateQueries({ queryKey: ['listings'] });
-      navigate('/listings');
+
+        // --- Step 1: Save Text Data ---
+        const attributesPayload = Object.entries(attributeValues)
+            .map(([key, value]) => ({ attributeId: key, value }))
+            .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
+
+        const listingPayload = { title: formData.title, description: formData.description, categoryId: formData.categoryId, attributes: attributesPayload };
+        
+        let savedListingId;
+        if (listingId) {
+            await api.put(`/listings/${listingId}`, listingPayload);
+            savedListingId = listingId;
+        } else {
+            const response = await api.post('/listings', listingPayload);
+            savedListingId = response.data.id;
+        }
+
+        // --- Step 2: Upload New Images (if any) ---
+        if (imageFiles && imageFiles.length > 0) {
+            for (const imageObject of imageFiles) {
+                const formData = new FormData();
+                formData.append('image', imageObject.file);
+                formData.append('rotation', String(imageObject.rotation));
+                await api.post(`/listings/${savedListingId}/images`, formData);
+            }
+        }
+        
+        // --- Step 3: Save the New Order of Existing Images ---
+        if (existingImages && existingImages.length > 0) {
+            const currentImages = existingImages;
+            const sortedImageIds = [...currentImages]
+                .sort((a, b) => a.order - b.order)
+                .map(image => image.id);
+            const reorderUrl = `/listings/${savedListingId}/reorder-images`;
+            const payload = { imageIds: sortedImageIds };
+            await api.post(reorderUrl, payload);
+        }
+        
+        setPendingRotations({}); // Reset pending rotations on success
+        toast.success('Anunțul a fost salvat cu succes!');
+        
+        // Invalidate the cache and navigate
+        await queryClient.invalidateQueries({ queryKey: ['listings'] });
+        navigate('/listings');
 
     } catch (error) {
-      toast.error('A apărut o eroare la salvarea anunțului.');
+        toast.error('A apărut o eroare la salvarea anunțului.');
+    } finally {
+        setIsLoading(false);
     }
   }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations, queryClient]);
 
