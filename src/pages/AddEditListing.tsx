@@ -318,7 +318,9 @@ const AddEditListing = () => {
       setExistingImages((items) => {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
+        const newArray = arrayMove(items, oldIndex, newIndex);
+        // Re-assign order based on new array index
+        return newArray.map((item, index) => ({...item, order: index}));
       });
     }
   }
@@ -603,4 +605,5 @@ const AddEditListing = () => {
 
 export default AddEditListing;
 
+    
     
