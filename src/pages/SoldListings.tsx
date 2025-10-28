@@ -90,7 +90,9 @@ const SoldListings = () => {
                         {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'EUR' }).format(listing.sellingPrice)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {format(new Date(listing.dateSold), "dd MMM yyyy")}
+                        {listing.dateSold
+                          ? format(new Date(listing.dateSold), "dd MMM yyyy")
+                          : 'Dată indisponibilă'}
                       </TableCell>
                     </TableRow>
                   ))}
