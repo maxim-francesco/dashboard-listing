@@ -60,7 +60,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <NavLink
                 key={item.name}
                 to={item.href}
-                end={item.href === "/"}
+                end={item.href === "/" || item.href === "/listings"}
                 className={({ isActive }) =>
                 cn(
                     "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",

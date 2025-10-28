@@ -66,7 +66,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
             <NavLink
               key={item.name}
               to={item.href}
-              end={item.href === "/"}
+              end={item.href === "/" || item.href === "/listings"}
               onClick={onToggle} // Close sidebar on link click
               className={({ isActive }) =>
                 cn(
