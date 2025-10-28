@@ -21,7 +21,7 @@ interface SoldListing {
     name: string;
   };
   sellingPrice: number;
-  dateSold: string;
+  soldAt: string | null;
   images?: { url: string }[];
 }
 
@@ -99,8 +99,8 @@ const SoldListings = () => {
                         {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'EUR' }).format(listing.sellingPrice)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {listing.dateSold
-                          ? format(new Date(listing.dateSold), "dd MMM yyyy")
+                        {listing.soldAt
+                          ? format(new Date(listing.soldAt), "dd MMM yyyy")
                           : 'Dată indisponibilă'}
                       </TableCell>
                     </TableRow>
