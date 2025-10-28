@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -30,6 +31,14 @@ const SoldListings = () => {
     queryFn: getSoldListings,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (listings) {
+      console.log("--- RAW DATA FROM BACKEND ---");
+      console.log(listings);
+    }
+  }, [listings]);
+
 
   return (
     <div className="space-y-6">
