@@ -31,7 +31,7 @@ import { toast } from "react-hot-toast";
 
 const formSchema = z.object({
   sellingPrice: z.coerce.number().positive({ message: "Prețul trebuie să fie un număr pozitiv." }),
-  dateSold: z.date({
+  soldAt: z.date({
     required_error: "Data vânzării este obligatorie.",
   }),
 });
@@ -50,7 +50,7 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
     resolver: zodResolver(formSchema),
     defaultValues: {
       sellingPrice: '',
-      dateSold: new Date(),
+      soldAt: new Date(),
     },
   });
 
@@ -103,7 +103,7 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
             />
             <FormField
               control={form.control}
-              name="dateSold"
+              name="soldAt"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Data Vânzării</FormLabel>
