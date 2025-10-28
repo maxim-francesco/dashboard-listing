@@ -49,9 +49,9 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dateSold: new Date(),
       sellingPrice: undefined,
-    }
+      dateSold: new Date(),
+    },
   });
 
   const { mutate, isPending } = useMutation({
@@ -164,5 +164,3 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
 };
 
 export default MarkAsSoldModal;
-
-    
