@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, LogOut, User, Building2, Settings, Star } from "lucide-react";
+import { Menu, LogOut, User, Building2, Settings, Star, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -19,6 +19,7 @@ const navigation = [
   { name: "Panou de Bord", href: "/" },
   { name: "Categorii", href: "/categories" },
   { name: "Anunțuri", href: "/listings" },
+  { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Mesaje", href: "/messages" },
   { name: "Recenzii", href: "/reviews" },
 ];
@@ -62,13 +63,14 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 end={item.href === "/"}
                 className={({ isActive }) =>
                 cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",
                     isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )
                 }
             >
+                {item.icon && <item.icon className="w-4 h-4" />}
                 {item.name}
             </NavLink>
         ))}

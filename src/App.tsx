@@ -20,6 +20,7 @@ import CookieBanner from "./components/CookieBanner";
 import NotFound from "./pages/NotFound";
 import AttributeGroups from "./pages/AttributeGroups";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
+import SoldListings from "./pages/SoldListings";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/categories" element={<Categories />} />
               <Route path="/categories/:categoryId/attributes" element={<CategoryAttributes />} />
               <Route path="/listings" element={<Listings />} />
+              <Route path="/listings/sold" element={<SoldListings />} />
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
               <Route path="/messages" element={<MessagesPage />} />

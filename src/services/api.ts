@@ -29,5 +29,15 @@ export const deleteBanner = async () => {
   return response.data;
 };
 
+export const getSoldListings = async () => {
+  const response = await api.get('/listings/status/sold');
+  return response.data;
+};
+
+export const markListingAsSold = async (listingId: string, saleData: { sellingPrice: number; dateSold: string }) => {
+  const response = await api.put(`/listings/${listingId}/sell`, saleData);
+  return response.data;
+};
+
 
 export default api;
