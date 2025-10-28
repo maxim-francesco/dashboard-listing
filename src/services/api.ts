@@ -37,10 +37,13 @@ export const getSoldListings = async () => {
 
 export const markListingAsSold = (
   listingId: string, 
-  saleData: { sellingPrice: number | string; soldAt: string }
+  saleData: { sellingPrice: number; soldAt: string }
 ) => {
   return api.put(`/listings/${listingId}/sell`, saleData);
 };
 
+export const reactivateListing = (listingId: string) => {
+  return api.put(`/listings/${listingId}/reactivate`);
+};
 
 export default api;

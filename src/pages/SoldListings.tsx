@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -10,9 +10,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ClipboardCheck, ImageIcon } from "lucide-react";
+import { Loader2, ClipboardCheck, ImageIcon, MoreHorizontal, Undo2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { getSoldListings } from "@/services/api";
+import api, { getSoldListings, reactivateListing } from "@/services/api";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "react-hot-toast";
 
 interface SoldListing {
   id: string;
@@ -26,11 +34,39 @@ interface SoldListing {
 }
 
 const SoldListings = () => {
-  const { data: listings = [], isLoading } = useQuery<SoldListing[]>({
+  const queryClient = useQueryClient();
+  const { data: listings = [], isLoading, refetch } = useQuery<SoldListing[]>({
     queryKey: ['soldListings'],
     queryFn: getSoldListings,
     refetchOnWindowFocus: false,
   });
+
+  const handleReactivate = (listing: SoldListing) => {
+    const promise = reactivateListing(listing.id);
+    toast.promise(promise, {
+      loading: "Se reactivează anunțul...",
+      success: () => {
+        queryClient.invalidateQueries({ queryKey: ['soldListings'] });
+        queryClient.invalidateQueries({ queryKey: ['listings'] });
+        return `Anunțul "${listing.title}" este din nou activ.`;
+      },
+      error: "Nu s-a putut reactiva anunțul.",
+    });
+  };
+
+  const handleDelete = (listing: SoldListing) => {
+    if (window.confirm(`Ești sigur că vrei să ștergi definitiv anunțul "${listing.title}"? Această acțiune nu poate fi anulată.`)) {
+      const promise = api.delete(`/listings/${listing.id}`);
+      toast.promise(promise, {
+        loading: "Se șterge anunțul...",
+        success: () => {
+          refetch();
+          return "Anunțul a fost șters definitiv.";
+        },
+        error: "Eroare la ștergerea anunțului.",
+      });
+    }
+  };
 
   useEffect(() => {
     if (listings) {
@@ -75,6 +111,7 @@ const SoldListings = () => {
                     <TableHead className="text-foreground font-medium">Categorie</TableHead>
                     <TableHead className="text-foreground font-medium">Preț Vânzare</TableHead>
                     <TableHead className="text-foreground font-medium">Dată Vânzare</TableHead>
+                    <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -102,6 +139,32 @@ const SoldListings = () => {
                         {listing.soldAt
                           ? format(new Date(listing.soldAt), "dd MMM yyyy")
                           : 'Dată indisponibilă'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Deschide meniu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover border-border">
+                            <DropdownMenuItem
+                              onClick={() => handleReactivate(listing)}
+                              className="cursor-pointer"
+                            >
+                              <Undo2 className="mr-2 h-4 w-4" />
+                              <span>Reactivează Anunț</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(listing)}
+                              className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Șterge Definitiv</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
