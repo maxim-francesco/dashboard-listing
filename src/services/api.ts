@@ -46,4 +46,9 @@ export const reactivateListing = (listingId: string) => {
   return api.put(`/listings/${listingId}/reactivate`);
 };
 
+export const deleteListing = (listingId: string) => {
+    return api.delete(`/listings/${listingId}`);
+};
+
+
 export default api;

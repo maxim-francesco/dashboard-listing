@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ClipboardCheck, ImageIcon, MoreHorizontal, Undo2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import api, { getSoldListings, reactivateListing } from "@/services/api";
+import api, { getSoldListings, reactivateListing, deleteListing } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ interface SoldListing {
 
 const SoldListings = () => {
   const queryClient = useQueryClient();
-  const { data: listings = [], isLoading, refetch } = useQuery<SoldListing[]>({
+  const { data: listings = [], isLoading } = useQuery<SoldListing[]>({
     queryKey: ['soldListings'],
     queryFn: getSoldListings,
     refetchOnWindowFocus: false,
@@ -44,7 +44,6 @@ const SoldListings = () => {
   const { mutate: reactivate } = useMutation({
     mutationFn: reactivateListing,
     onSuccess: (data, variables) => {
-      // Find the title of the listing that was reactivated
       const reactivatedListing = listings.find(l => l.id === variables);
       toast.success(`Anunțul "${reactivatedListing?.title}" a fost reactivat!`);
       queryClient.invalidateQueries({ queryKey: ['soldListings'] });
@@ -55,21 +54,24 @@ const SoldListings = () => {
     },
   });
 
+  const { mutate: deletePermanently } = useMutation({
+    mutationFn: deleteListing,
+    onSuccess: (data, variables) => {
+      toast.success("Înregistrarea a fost ștearsă definitiv.");
+      queryClient.invalidateQueries({ queryKey: ['soldListings'] });
+    },
+    onError: () => {
+      toast.error("Eroare la ștergerea anunțului.");
+    }
+  });
+
   const handleReactivate = (listing: SoldListing) => {
     reactivate(listing.id);
   };
 
   const handleDelete = (listing: SoldListing) => {
     if (window.confirm(`Ești sigur că vrei să ștergi definitiv anunțul "${listing.title}"? Această acțiune nu poate fi anulată.`)) {
-      const promise = api.delete(`/listings/${listing.id}`);
-      toast.promise(promise, {
-        loading: "Se șterge anunțul...",
-        success: () => {
-          refetch();
-          return "Anunțul a fost șters definitiv.";
-        },
-        error: "Eroare la ștergerea anunțului.",
-      });
+      deletePermanently(listing.id);
     }
   };
 
