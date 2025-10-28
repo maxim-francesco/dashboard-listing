@@ -55,7 +55,7 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (values: z.infer<typeof formSchema>) => markListingAsSold(listingId, values),
+    mutationFn: (values: { sellingPrice: number; soldAt: string }) => markListingAsSold(listingId, values),
     onSuccess: () => {
       toast.success(`Anunțul "${listingTitle}" a fost marcat ca vândut!`);
       queryClient.invalidateQueries({ queryKey: ['listings'] });
@@ -71,7 +71,7 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
   function onSubmit(values: z.infer<typeof formSchema>) {
     const payload = {
       sellingPrice: values.sellingPrice,
-      soldAt: values.soldAt,
+      soldAt: values.soldAt.toISOString(),
     };
     mutate(payload);
   }

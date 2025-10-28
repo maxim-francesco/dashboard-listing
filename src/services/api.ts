@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // Create a new axios instance
@@ -36,7 +37,7 @@ export const getSoldListings = async () => {
 
 export const markListingAsSold = (
   listingId: string, 
-  saleData: { sellingPrice: number | string; soldAt: Date }
+  saleData: { sellingPrice: number | string; soldAt: string }
 ) => {
   return api.put(`/listings/${listingId}/sell`, saleData);
 };
