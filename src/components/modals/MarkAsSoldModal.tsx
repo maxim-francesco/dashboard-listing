@@ -49,7 +49,7 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      sellingPrice: undefined,
+      sellingPrice: '',
       dateSold: new Date(),
     },
   });
