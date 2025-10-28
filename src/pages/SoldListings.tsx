@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -41,17 +41,22 @@ const SoldListings = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { mutate: reactivate } = useMutation({
+    mutationFn: reactivateListing,
+    onSuccess: (data, variables) => {
+      // Find the title of the listing that was reactivated
+      const reactivatedListing = listings.find(l => l.id === variables);
+      toast.success(`Anunțul "${reactivatedListing?.title}" a fost reactivat!`);
+      queryClient.invalidateQueries({ queryKey: ['soldListings'] });
+      queryClient.invalidateQueries({ queryKey: ['listings'] });
+    },
+    onError: () => {
+      toast.error("Nu s-a putut reactiva anunțul.");
+    },
+  });
+
   const handleReactivate = (listing: SoldListing) => {
-    const promise = reactivateListing(listing.id);
-    toast.promise(promise, {
-      loading: "Se reactivează anunțul...",
-      success: () => {
-        queryClient.invalidateQueries({ queryKey: ['soldListings'] });
-        queryClient.invalidateQueries({ queryKey: ['listings'] });
-        return `Anunțul "${listing.title}" este din nou activ.`;
-      },
-      error: "Nu s-a putut reactiva anunțul.",
-    });
+    reactivate(listing.id);
   };
 
   const handleDelete = (listing: SoldListing) => {
