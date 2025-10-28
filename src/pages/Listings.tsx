@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,17 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "react-hot-toast";
 import { format } from 'date-fns';
 import api from "@/services/api";
+import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 
 interface Listing {
   id: string;
@@ -36,6 +43,8 @@ interface Listing {
 
 const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const navigate = useNavigate();
 
   const { data: listings = [], isLoading, refetch } = useQuery<Listing[]>({
@@ -66,6 +75,11 @@ const Listings = () => {
             }
         });
     }
+  };
+
+  const handleOpenSoldModal = (listing: Listing) => {
+    setSelectedListing(listing);
+    setIsSoldModalOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -182,26 +196,37 @@ const Listings = () => {
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 md:text-right">
                              <span className="font-semibold text-foreground md:hidden">Acțiuni</span>
-                            <div className="flex justify-end space-x-2">
-                                <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/listings/${listing.id}/edit`)}
-                                className="border-border hover:bg-secondary"
-                                >
-                                <Edit className="w-4 h-4" />
-                                <span className="sr-only">Editează</span>
-                                </Button>
-                                <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteListing(listing.id, listing.title)}
-                                className="border-destructive text-destructive hover:bg-destructive-light"
-                                >
-                                <Trash2 className="w-4 h-4" />
-                                <span className="sr-only">Șterge</span>
-                                </Button>
-                            </div>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Deschide meniu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-popover border-border">
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenSoldModal(listing)}
+                                    className="cursor-pointer"
+                                  >
+                                    <ClipboardCheck className="mr-2 h-4 w-4" />
+                                    <span>Marchează ca Vândut</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => navigate(`/listings/${listing.id}/edit`)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Editează</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteListing(listing.id, listing.title)}
+                                    className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Șterge</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                         </TableCell>
                     </TableRow>
                     ))}
@@ -211,8 +236,22 @@ const Listings = () => {
           )}
         </CardContent>
       </Card>
+      
+      {selectedListing && (
+        <MarkAsSoldModal
+          isOpen={isSoldModalOpen}
+          onClose={() => {
+            setIsSoldModalOpen(false);
+            setSelectedListing(null);
+          }}
+          listingId={selectedListing.id}
+          listingTitle={selectedListing.title}
+        />
+      )}
     </div>
   );
 };
 
 export default Listings;
+
+    
