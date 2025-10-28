@@ -34,9 +34,11 @@ export const getSoldListings = async () => {
   return response.data;
 };
 
-export const markListingAsSold = async (listingId: string, saleData: { sellingPrice: number; soldAt: Date }) => {
-  const response = await api.put(`/listings/${listingId}/sell`, saleData);
-  return response.data;
+export const markListingAsSold = (
+  listingId: string, 
+  saleData: { sellingPrice: number | string; soldAt: Date }
+) => {
+  return api.put(`/listings/${listingId}/sell`, saleData);
 };
 
 
