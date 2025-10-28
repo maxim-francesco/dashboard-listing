@@ -69,7 +69,11 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    mutate(values);
+    const payload = {
+      sellingPrice: values.sellingPrice,
+      soldAt: values.soldAt,
+    };
+    mutate(payload);
   }
 
   return (
