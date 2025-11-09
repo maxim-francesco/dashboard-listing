@@ -725,7 +725,9 @@ const AddEditListing = () => {
           )}
         </div>
       </form>
-      <PrintableSpecSheet ref={printRef} listing={listingData} />
+      <div style={{ display: 'none' }}>
+        <PrintableSpecSheet ref={printRef} listing={listingData} />
+      </div>
       {isEditing && (
         <QrCodeModal 
             isOpen={isQrModalOpen}
@@ -738,3 +740,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
