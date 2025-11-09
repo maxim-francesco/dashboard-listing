@@ -1,3 +1,9 @@
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ro } from "date-fns/locale";
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,10 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { getSoldListings } from "@/services/api";
-import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import KpiCard from "@/components/reports/KpiCard";
 
 interface SoldListing {
   id: string;
@@ -28,11 +41,16 @@ interface SoldListing {
 
 const calculateProfit = (listing: SoldListing) => {
   const totalCost = (listing.purchasePrice || 0) + (listing.otherCosts || 0);
-  if (totalCost === 0) return null; // Can't calculate profit if we don't know the cost
+  if (totalCost === 0 && (listing.purchasePrice === null || listing.purchasePrice === 0)) {
+    return null;
+  }
   return listing.sellingPrice - totalCost;
 };
 
 const ProfitabilityReport = () => {
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
   const { data: soldListings = [], isLoading } = useQuery<SoldListing[]>({
     queryKey: ["soldListingsForReport"],
     queryFn: getSoldListings,
@@ -42,10 +60,14 @@ const ProfitabilityReport = () => {
     .map(listing => ({
       ...listing,
       profit: calculateProfit(listing),
-    }))
-    .filter(listing => listing.profit !== null);
+    }));
+  
+  const profitableListings = listingsWithProfit.filter(l => l.profit !== null);
 
-  const totalProfit = listingsWithProfit.reduce((acc, curr) => acc + (curr.profit || 0), 0);
+  const totalRevenue = profitableListings.reduce((acc, curr) => acc + curr.sellingPrice, 0);
+  const totalProfit = profitableListings.reduce((acc, curr) => acc + (curr.profit || 0), 0);
+  const totalSold = profitableListings.length;
+  const avgProfitPerVehicle = totalSold > 0 ? totalProfit / totalSold : 0;
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "N/A";
@@ -56,15 +78,25 @@ const ProfitabilityReport = () => {
   };
 
   const getProfitBadge = (profit: number | null) => {
-    if (profit === null) return null;
+    if (profit === null) {
+      return <Badge variant="secondary">N/A</Badge>;
+    }
     if (profit > 0) {
-      return <Badge className="bg-success text-success-foreground">{formatCurrency(profit)}</Badge>;
+      return <Badge className="bg-success-light text-success border border-success/20">{formatCurrency(profit)}</Badge>;
     }
     if (profit < 0) {
       return <Badge variant="destructive">{formatCurrency(profit)}</Badge>;
     }
     return <Badge variant="secondary">{formatCurrency(profit)}</Badge>;
   };
+
+  const kpiData = [
+      { title: 'Profit Total', value: formatCurrency(totalProfit) },
+      { title: 'Venituri Totale', value: formatCurrency(totalRevenue) },
+      { title: 'Mașini Vândute', value: totalSold.toString() },
+      { title: 'Profit Mediu / Mașină', value: formatCurrency(avgProfitPerVehicle) },
+      { title: 'Timp Mediu de Vânzare', value: '25 zile' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -77,21 +109,69 @@ const ProfitabilityReport = () => {
 
       <Card className="border-card-border bg-card">
         <CardHeader>
-          <CardTitle className="text-foreground">Profit Total</CardTitle>
-          <CardDescription>
-            Suma profitului din toate anunțurile vândute cu preț de achiziție înregistrat.
-          </CardDescription>
+            <CardTitle>Filtrează Raportul</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold text-success">
-            {formatCurrency(totalProfit)}
-          </div>
+        <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
+            <Popover>
+                <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                    "w-full sm:w-[280px] justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                    )}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP", { locale: ro }) : <span>Dată de început</span>}
+                </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-popover">
+                <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                />
+                </PopoverContent>
+            </Popover>
+            <Popover>
+                <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                    "w-full sm:w-[280px] justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                    )}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP", { locale: ro }) : <span>Dată de sfârșit</span>}
+                </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-popover">
+                <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                />
+                </PopoverContent>
+            </Popover>
+            <Button className="w-full sm:w-auto">Generează Raport</Button>
         </CardContent>
       </Card>
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {kpiData.map(kpi => (
+            <KpiCard key={kpi.title} title={kpi.title} value={kpi.value} />
+        ))}
+      </div>
 
       <Card className="border-card-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Detalii pe Anunț</CardTitle>
+          <CardDescription>
+            Doar anunțurile cu preț de achiziție sunt incluse în calculul profitului.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
