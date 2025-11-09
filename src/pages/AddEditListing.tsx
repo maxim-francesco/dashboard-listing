@@ -1,8 +1,9 @@
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useReactToPrint } from "react-to-print";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,15 +103,10 @@ const AddEditListing = () => {
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const printComponentRef = useRef<HTMLDivElement>(null);
-  
-  const handlePrint = useReactToPrint({
-    content: () => printComponentRef.current,
-    documentTitle: `Specificații - ${listingData?.title || 'Anunț'}`,
-  });
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -399,6 +395,52 @@ const AddEditListing = () => {
       });
     }
   }
+
+  const handleSavePdf = async () => {
+    const specSheetElement = document.getElementById('spec-sheet-to-print');
+  
+    if (!specSheetElement) {
+      console.error('Printable component not found!');
+      return;
+    }
+  
+    setIsGeneratingPdf(true);
+  
+    try {
+      const canvas = await html2canvas(specSheetElement, {
+        scale: 2, 
+        useCORS: true 
+      });
+  
+      const imgData = canvas.toDataURL('image/png');
+  
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+  
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+  
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+  
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 0;
+  
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`${listingData?.title || 'spec-sheet'}.pdf`);
+  
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('A apărut o eroare la generarea PDF-ului.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+  
 
   const renderAttributeField = (attribute: Attribute) => {
     const value = attributeValues[attribute.id] ?? '';
@@ -706,11 +748,16 @@ const AddEditListing = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={handlePrint}
+                onClick={handleSavePdf}
                 className="border-border hover:bg-secondary"
+                disabled={isGeneratingPdf}
               >
-                <Printer className="w-4 h-4 mr-2" />
-                Tipărire
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4 mr-2" />
+                )}
+                Generează PDF
               </Button>
               <Button
                 type="button"
@@ -726,7 +773,7 @@ const AddEditListing = () => {
         </div>
       </form>
       <div className="hidden">
-        {listingData && <PrintableSpecSheet ref={printComponentRef} listing={listingData} />}
+        {listingData && <div id="spec-sheet-to-print"><PrintableSpecSheet listing={listingData} /></div>}
       </div>
       {isEditing && (
         <QrCodeModal 
