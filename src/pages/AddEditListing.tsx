@@ -105,10 +105,10 @@ const AddEditListing = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
+  const printComponentRef = useRef<HTMLDivElement>(null);
   
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    content: () => printComponentRef.current,
     documentTitle: `Specificații - ${listingData?.title || 'Anunț'}`,
   });
 
@@ -726,7 +726,7 @@ const AddEditListing = () => {
         </div>
       </form>
       <div className="hidden">
-        {listingData && <PrintableSpecSheet ref={printRef} listing={listingData} />}
+        {listingData && <PrintableSpecSheet ref={printComponentRef} listing={listingData} />}
       </div>
       {isEditing && (
         <QrCodeModal 
