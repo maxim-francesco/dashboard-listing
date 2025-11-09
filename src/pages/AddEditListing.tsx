@@ -725,7 +725,7 @@ const AddEditListing = () => {
           )}
         </div>
       </form>
-      <div style={{ display: 'none' }}>
+      <div className="hidden">
         {listingData && <PrintableSpecSheet ref={printRef} listing={listingData} />}
       </div>
       {isEditing && (
