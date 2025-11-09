@@ -18,15 +18,28 @@ interface PrintableSpecSheetProps {
   listing: Listing | null;
 }
 
+// Helper function to remove diacritics and normalize string
+const normalizeString = (str: string): string => {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .normalize("NFD") // Decompose combined graphemes
+    .replace(/[\u0300-\u036f]/g, ""); // Remove diacritical marks
+};
+
 // Helper function to find a specific attribute value from the listing data.
 // It checks both string and number values and is case-insensitive.
 const findAttr = (listing: Listing, attrName: string): string => {
   if (!listing?.attributeValues) return 'N/A';
-  
+
+  // Normalize the name we are looking for
+  const normalizedAttrName = normalizeString(attrName);
+
   const attr = listing.attributeValues.find(
-    (av) => av.attribute && av.attribute.name.toLowerCase() === attrName.toLowerCase()
+    // Normalize the name from the database before comparing
+    (av) => av.attribute && normalizeString(av.attribute.name) === normalizedAttrName
   );
-  
+
   if (!attr) return 'N/A';
 
   const value = attr.stringValue ?? attr.numberValue;
