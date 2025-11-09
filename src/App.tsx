@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import AttributeGroups from "./pages/AttributeGroups";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
 import SoldListings from "./pages/SoldListings";
+import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/reviews" element={<AdminReviewsPage />} />
               <Route path="/settings" element={<BusinessSettings />} />
               <Route path="/settings/attribute-groups" element={<AttributeGroups />} />
+              <Route path="/reports" element={<ProfitabilityReport />} />
             </Route>
           </Route>
 

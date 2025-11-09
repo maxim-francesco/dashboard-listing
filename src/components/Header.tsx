@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, LogOut, User, Building2, Settings, Star, ClipboardCheck } from "lucide-react";
+import { Menu, LogOut, User, Building2, Settings, Star, ClipboardCheck, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -22,6 +22,7 @@ const navigation = [
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Mesaje", href: "/messages" },
   { name: "Recenzii", href: "/reviews" },
+  { name: "Rapoarte", href: "/reports", icon: BarChart3 },
 ];
 
 const Header = ({ onMenuClick }: HeaderProps) => {

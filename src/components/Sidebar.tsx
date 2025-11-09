@@ -8,7 +8,8 @@ import {
   X,
   Mail,
   Star,
-  ClipboardCheck
+  ClipboardCheck,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Mesaje", href: "/messages", icon: Mail },
   { name: "Recenzii", href: "/reviews", icon: Star },
+  { name: "Rapoarte", href: "/reports", icon: BarChart3 },
 ];
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
