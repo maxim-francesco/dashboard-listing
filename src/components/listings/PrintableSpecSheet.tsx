@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Define the expected structure for a listing to ensure type safety.
@@ -34,19 +33,15 @@ const findAttr = (listing: Listing, attrName: string): string => {
   return value ? String(value) : 'N/A';
 };
 
-// The PrintableSpecSheet component is wrapped in React.forwardRef
-// to allow the react-to-print library to attach a ref to the DOM element.
-export const PrintableSpecSheet = React.forwardRef<HTMLDivElement, PrintableSpecSheetProps>(({ listing }, ref) => {
+export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing }) => {
   // If no listing data is provided, the component renders nothing.
   if (!listing) return null;
 
   const price = findAttr(listing, 'Pret');
   const formattedPrice = price !== 'N/A' ? new Intl.NumberFormat('ro-RO').format(Number(price)) : 'N/A';
 
-  // The component is designed to be hidden from the screen by its parent
-  // and will only be visible when the print dialog is triggered.
   return (
-    <div ref={ref} className="p-8 text-black bg-white font-sans">
+    <div className="p-8 text-black bg-white font-sans">
         {/* Header Section */}
         <header className="mb-6 border-b-2 border-gray-200 pb-4">
             <h1 className="text-3xl font-bold text-gray-800">{listing.title}</h1>
@@ -108,4 +103,4 @@ export const PrintableSpecSheet = React.forwardRef<HTMLDivElement, PrintableSpec
         </main>
     </div>
   );
-});
+};
