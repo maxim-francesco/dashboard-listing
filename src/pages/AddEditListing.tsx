@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useReactToPrint } from "react-to-print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +22,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, Printer, QrCode } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
+import QrCodeModal from "@/components/modals/QrCodeModal";
+import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
+
 
 interface Category {
   id: string;
@@ -64,12 +68,24 @@ interface ImageFileState {
   previewUrl: string;
 }
 
+interface FullListingData {
+    id: string;
+    title: string;
+    description: string;
+    categoryId: string;
+    purchasePrice: number | null;
+    otherCosts: number | null;
+    images: ExistingImage[];
+    attributeValues: AttributeValueFromServer[];
+}
+
 const AddEditListing = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
+  const [listingData, setListingData] = useState<FullListingData | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -87,6 +103,14 @@ const AddEditListing = () => {
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+  
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Specificații - ${listingData?.title || 'Anunț'}`,
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -112,6 +136,7 @@ const AddEditListing = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/listings/${listingId}`);
+            setListingData(response.data);
             const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts } = response.data;
             setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
             
@@ -659,15 +684,7 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/listings")}
-            className="border-border hover:bg-secondary"
-          >
-            Anulează
-          </Button>
+        <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
           <Button
             type="submit"
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
@@ -676,8 +693,46 @@ const AddEditListing = () => {
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/listings")}
+            className="border-border hover:bg-secondary"
+          >
+            Anulează
+          </Button>
+           {isEditing && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrint}
+                className="border-border hover:bg-secondary"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Tipărire
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsQrModalOpen(true)}
+                className="border-border hover:bg-secondary"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Cod QR
+              </Button>
+            </>
+          )}
         </div>
       </form>
+      <PrintableSpecSheet ref={printRef} listing={listingData} />
+      {isEditing && (
+        <QrCodeModal 
+            isOpen={isQrModalOpen}
+            onClose={() => setIsQrModalOpen(false)}
+            listingId={listingId}
+        />
+      )}
     </div>
   );
 };
