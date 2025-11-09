@@ -95,7 +95,6 @@ const ProfitabilityReport = () => {
       { title: 'Venituri Totale', value: formatCurrency(totalRevenue) },
       { title: 'Mașini Vândute', value: totalSold.toString() },
       { title: 'Profit Mediu / Mașină', value: formatCurrency(avgProfitPerVehicle) },
-      { title: 'Timp Mediu de Vânzare', value: '25 zile' }
   ];
 
   return (
@@ -160,9 +159,9 @@ const ProfitabilityReport = () => {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {kpiData.map(kpi => (
-            <KpiCard key={kpi.title} title={kpi.title} value={kpi.value} />
+            <KpiCard key={kpi.title} title={kpi.title} value={isLoading ? '...' : kpi.value} />
         ))}
       </div>
 
