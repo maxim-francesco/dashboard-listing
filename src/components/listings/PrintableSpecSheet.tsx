@@ -25,7 +25,7 @@ const findAttr = (listing: Listing, attrName: string): string => {
   if (!listing?.attributeValues) return 'N/A';
   
   const attr = listing.attributeValues.find(
-    (av) => av.attribute.name.toLowerCase() === attrName.toLowerCase()
+    (av) => av.attribute && av.attribute.name.toLowerCase() === attrName.toLowerCase()
   );
   
   if (!attr) return 'N/A';
