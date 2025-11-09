@@ -757,7 +757,7 @@ const AddEditListing = () => {
                 ) : (
                   <Printer className="w-4 h-4 mr-2" />
                 )}
-                Generează PDF
+                {isGeneratingPdf ? 'Se generează...' : 'Generează PDF'}
               </Button>
               <Button
                 type="button"
@@ -772,8 +772,18 @@ const AddEditListing = () => {
           )}
         </div>
       </form>
-      <div className="hidden">
-        {listingData && <div id="spec-sheet-to-print"><PrintableSpecSheet listing={listingData} /></div>}
+      <div style={{
+        position: 'absolute',
+        left: '-9999px',
+        top: 0,
+        zIndex: -1,
+        width: '210mm'
+      }}>
+        {listingData && (
+            <div id="spec-sheet-to-print">
+                <PrintableSpecSheet listing={listingData} />
+            </div>
+        )}
       </div>
       {isEditing && (
         <QrCodeModal 
@@ -787,3 +797,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
