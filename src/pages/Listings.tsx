@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +74,22 @@ const Listings = () => {
                 return "Nu s-a putut șterge anunțul. Te rugăm să încerci din nou.";
             }
         });
+    }
+  };
+
+  const handleCloneListing = async (listingId: string) => {
+    if (window.confirm("Ești sigur că vrei să clonezi acest anunț? Acesta va crea o copie nouă fără imagini.")) {
+      const promise = api.post(`/listings/${listingId}/clone`);
+
+      toast.promise(promise, {
+        loading: 'Se clonează anunțul...',
+        success: (response) => {
+          const newListingId = response.data.id;
+          navigate(`/listings/${newListingId}/edit`);
+          return 'Anunțul a fost clonat cu succes! Ești redirecționat...';
+        },
+        error: "Eroare la clonarea anunțului.",
+      });
     }
   };
 
@@ -210,6 +226,13 @@ const Listings = () => {
                                   >
                                     <ClipboardCheck className="mr-2 h-4 w-4" />
                                     <span>Marchează ca Vândut</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleCloneListing(listing.id)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    <span>Clonează</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => navigate(`/listings/${listing.id}/edit`)}
