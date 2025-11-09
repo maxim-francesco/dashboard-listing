@@ -75,6 +75,8 @@ const AddEditListing = () => {
     title: "",
     description: "",
     categoryId: "",
+    purchasePrice: "" as number | "",
+    otherCosts: "" as number | "",
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -110,8 +112,8 @@ const AddEditListing = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/listings/${listingId}`);
-            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images } = response.data;
-            setFormData({ title, description, categoryId });
+            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts } = response.data;
+            setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
             
             const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
             const imagesWithRotation = sortedImages.map((img: any) => ({ ...img, rotation: 0 }));
@@ -196,7 +198,14 @@ const AddEditListing = () => {
             .map(([key, value]) => ({ attributeId: key, value }))
             .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
 
-        const listingPayload = { title: formData.title, description: formData.description, categoryId: formData.categoryId, attributes: attributesPayload };
+        const listingPayload = { 
+            title: formData.title, 
+            description: formData.description, 
+            categoryId: formData.categoryId, 
+            attributes: attributesPayload,
+            purchasePrice: formData.purchasePrice === '' ? null : Number(formData.purchasePrice),
+            otherCosts: formData.otherCosts === '' ? null : Number(formData.otherCosts),
+        };
         
         let savedListingId;
         if (listingId) {
@@ -471,6 +480,35 @@ const AddEditListing = () => {
                     ))}
                     </SelectContent>
                 </Select>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <Label htmlFor="purchasePrice" className="text-foreground font-medium">
+                        Preț Achiziție (€)
+                    </Label>
+                    <Input
+                        id="purchasePrice"
+                        type="number"
+                        placeholder="ex: 12000"
+                        value={formData.purchasePrice}
+                        onChange={(e) => setFormData(prev => ({ ...prev, purchasePrice: e.target.value === '' ? '' : Number(e.target.value) }))}
+                        className="bg-background border-border focus:border-primary"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="otherCosts" className="text-foreground font-medium">
+                        Alte Costuri (€)
+                    </Label>
+                    <Input
+                        id="otherCosts"
+                        type="number"
+                        placeholder="ex: 500"
+                        value={formData.otherCosts}
+                        onChange={(e) => setFormData(prev => ({ ...prev, otherCosts: e.target.value === '' ? '' : Number(e.target.value) }))}
+                        className="bg-background border-border focus:border-primary"
+                    />
                 </div>
             </div>
 
