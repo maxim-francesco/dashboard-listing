@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Users, MessageSquare, Eye, TrendingUp, Loader2, CalendarClock } from "lucide-react";
 import api from "@/services/api";
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import ListingAnalyticsWidget from "@/components/ListingAnalyticsWidget";
+import { Skeleton } from "@/components/ui/skeleton";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -15,6 +18,16 @@ interface StatsData {
   viewsLast30Days: number;
 }
 
+interface Listing {
+  id: string;
+  title: string;
+  images?: { url: string }[];
+  _count: {
+    views: number;
+  };
+}
+
+
 const Dashboard = () => {
   const [stats, setStats] = useState<StatsData>({
     totalListings: 0,
@@ -24,6 +37,20 @@ const Dashboard = () => {
     viewsLast30Days: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  const { data: listingsData, isLoading: isListingsLoading } = useQuery({
+    queryKey: ['listingsForDashboard'],
+    queryFn: async () => {
+        const response = await api.get('/listings');
+        return response.data as Listing[];
+    },
+     refetchOnWindowFocus: false,
+  });
+
+  const analyticsData = {
+    mostViewed: [...(listingsData || [])].sort((a, b) => (b._count?.views ?? 0) - (a._count?.views ?? 0)).slice(0, 5),
+    leastViewed: [...(listingsData || [])].sort((a, b) => (a._count?.views ?? 0) - (b._count?.views ?? 0)).slice(0, 5),
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -116,6 +143,25 @@ const Dashboard = () => {
     ],
   };
 
+  const AnalyticsSkeleton = () => (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-3/4" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="w-12 h-12 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6 box-border w-full">
       {/* Page Header */}
@@ -147,6 +193,26 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {isListingsLoading ? (
+          <>
+            <AnalyticsSkeleton />
+            <AnalyticsSkeleton />
+          </>
+        ) : (
+          <>
+            <ListingAnalyticsWidget
+              title="Top 5 Cele Mai Vizualizate"
+              listings={analyticsData.mostViewed}
+            />
+            <ListingAnalyticsWidget
+              title="Top 5 Cele Mai Puțin Vizualizate"
+              listings={analyticsData.leastViewed}
+            />
+          </>
+        )}
       </div>
 
       {/* Chart Section */}
