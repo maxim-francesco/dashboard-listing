@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import QRCode from "react-qr-code";
+import html2canvas from 'html2canvas';
+import { Download } from "lucide-react";
 
 interface QrCodeModalProps {
   isOpen: boolean;
@@ -30,6 +32,24 @@ const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProp
     </p>
   ) : null;
 
+  const downloadQrCode = async () => {
+    const qrCodeElement = document.getElementById('qr-code-container');
+    if (qrCodeElement) {
+      try {
+        const canvas = await html2canvas(qrCodeElement, { scale: 3 });
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `qr-code-${listingId}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error("Failed to download QR code", error);
+      }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-popover border-border sm:max-w-md">
@@ -39,7 +59,10 @@ const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProp
             Scanează acest cod pentru a deschide pagina publică a anunțului pe un telefon mobil.
           </DialogDescription>
         </DialogHeader>
-        <div className="p-4 bg-white rounded-lg flex items-center justify-center">
+        <div 
+          id="qr-code-container" 
+          className="bg-white rounded-lg flex flex-col items-center justify-center p-6"
+        >
             <QRCode
                 size={256}
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
@@ -51,8 +74,16 @@ const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProp
             URL: {publicUrl}
             {fallbackMessage}
         </div>
-        <DialogFooter className="mt-4">
-          <Button onClick={onClose} variant="outline" className="w-full">
+        <DialogFooter className="mt-4 sm:justify-between gap-2">
+          <Button
+            onClick={downloadQrCode}
+            disabled={!urlPattern}
+            className="w-full sm:w-auto"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Descarcă PNG
+          </Button>
+          <Button onClick={onClose} variant="outline" className="w-full sm:w-auto">
             Închide
           </Button>
         </DialogFooter>
