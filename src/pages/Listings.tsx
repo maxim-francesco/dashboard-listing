@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -220,6 +220,20 @@ const Listings = () => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-popover border-border">
+                                  <DropdownMenuItem
+                                    onClick={() => console.log('PDF clicked')}
+                                    className="cursor-pointer"
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    <span>Generează PDF</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => console.log('QR clicked')}
+                                    className="cursor-pointer"
+                                  >
+                                    <QrCode className="mr-2 h-4 w-4" />
+                                    <span>Arată cod QR</span>
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleOpenSoldModal(listing)}
                                     className="cursor-pointer"
