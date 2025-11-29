@@ -75,12 +75,14 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
             </p>
           </div>
           <div className="w-1/3 flex justify-end">
-            <div className="bg-blue-600 text-white px-8 py-4 rounded-lg shadow-md flex items-center justify-center min-w-[140px]">
-                <span className="text-3xl font-bold text-center leading-none">
+            {/* Removed py-4, added fixed height (h-16) and flex centering */}
+            <div className="bg-blue-600 text-white px-6 rounded-lg shadow-md flex items-center justify-center min-w-[140px] h-16">
+              {/* Added pb-1 to manually lift the text slightly for the PDF render */}
+              <span className="text-3xl font-bold leading-none pb-1">
                 {formattedPrice} €
-                </span>
+              </span>
             </div>
-            </div>
+          </div>
         </header>
 
         <main>
