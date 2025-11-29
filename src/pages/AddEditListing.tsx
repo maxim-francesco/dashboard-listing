@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,15 +21,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, Printer, QrCode } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
-import QrCodeModal from "@/components/modals/QrCodeModal";
-import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
-
 
 interface Category {
   id: string;
@@ -86,8 +81,7 @@ const AddEditListing = () => {
   const queryClient = useQueryClient();
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
-  const [listingData, setListingData] = useState<FullListingData | null>(null);
-
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -104,9 +98,6 @@ const AddEditListing = () => {
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -132,7 +123,6 @@ const AddEditListing = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/listings/${listingId}`);
-            setListingData(response.data);
             const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts } = response.data;
             setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
             
@@ -168,13 +158,10 @@ const AddEditListing = () => {
         try {
           const response = await api.get(`/categories/${formData.categoryId}/attributes`);
           
-          // The API now returns grouped attributes, so we can set it directly.
           setAttributes(response.data);
 
-          // If we are creating a new listing, reset values
           if (!isEditing || Object.keys(attributeValues).length === 0) {
               const initialValues: Record<string, any> = {};
-              // Flatten the attributes from all groups to initialize them
               Object.values(response.data).flat().forEach((attr: Attribute) => {
                   initialValues[attr.id] = attr.type === 'BOOLEAN' ? false : '';
               });
@@ -190,7 +177,6 @@ const AddEditListing = () => {
     };
 
     fetchAttributesForCategory();
-  // We remove attributeValues from dependency array to prevent re-initialization on value change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.categoryId, isEditing]);
 
@@ -200,7 +186,6 @@ const AddEditListing = () => {
     setIsLoading(true);
 
     try {
-        // --- Step 0: Process Pending Rotations ---
         const rotationIds = Object.keys(pendingRotations);
         if (rotationIds.length > 0) {
             const rotationPromises = rotationIds.map(id =>
@@ -214,7 +199,6 @@ const AddEditListing = () => {
             });
         }
 
-        // --- Step 1: Save Text Data ---
         const attributesPayload = Object.entries(attributeValues)
             .map(([key, value]) => ({ attributeId: key, value }))
             .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
@@ -237,7 +221,6 @@ const AddEditListing = () => {
             savedListingId = response.data.id;
         }
 
-        // --- Step 2: Upload New Images (if any) ---
         if (imageFiles && imageFiles.length > 0) {
             for (const imageObject of imageFiles) {
                 const formData = new FormData();
@@ -247,7 +230,6 @@ const AddEditListing = () => {
             }
         }
         
-        // --- Step 3: Save the New Order of Existing Images ---
         if (existingImages && existingImages.length > 0) {
             const currentImages = existingImages;
             const sortedImageIds = [...currentImages]
@@ -258,10 +240,9 @@ const AddEditListing = () => {
             await api.post(reorderUrl, payload);
         }
         
-        setPendingRotations({}); // Reset pending rotations on success
+        setPendingRotations({});
         toast.success('Anunțul a fost salvat cu succes!');
         
-        // Invalidate the cache and navigate
         await queryClient.invalidateQueries({ queryKey: ['listings'] });
         navigate('/listings');
 
@@ -292,7 +273,6 @@ const AddEditListing = () => {
          return;
       }
 
-      // If we are editing, upload images immediately
       const sequentialUpload = async () => {
           const responses = [];
           for (const imageObject of newFiles) {
@@ -390,57 +370,10 @@ const AddEditListing = () => {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
         const newArray = arrayMove(items, oldIndex, newIndex);
-        // Re-assign order based on new array index
         return newArray.map((item, index) => ({...item, order: index}));
       });
     }
   }
-
-  const handleSavePdf = async () => {
-    const specSheetElement = document.getElementById('spec-sheet-to-print');
-  
-    if (!specSheetElement) {
-      console.error('Printable component not found!');
-      return;
-    }
-  
-    setIsGeneratingPdf(true);
-  
-    try {
-      const canvas = await html2canvas(specSheetElement, {
-        scale: 2, 
-        useCORS: true 
-      });
-  
-      const imgData = canvas.toDataURL('image/png');
-  
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-  
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-  
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-  
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-  
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      pdf.save(`${listingData?.title || 'spec-sheet'}.pdf`);
-  
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('A apărut o eroare la generarea PDF-ului.');
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-  
 
   const renderAttributeField = (attribute: Attribute) => {
     const value = attributeValues[attribute.id] ?? '';
@@ -743,59 +676,10 @@ const AddEditListing = () => {
           >
             Anulează
           </Button>
-           {isEditing && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSavePdf}
-                className="border-border hover:bg-secondary"
-                disabled={isGeneratingPdf}
-              >
-                {isGeneratingPdf ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Printer className="w-4 h-4 mr-2" />
-                )}
-                {isGeneratingPdf ? 'Se generează...' : 'Generează PDF'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsQrModalOpen(true)}
-                className="border-border hover:bg-secondary"
-              >
-                <QrCode className="w-4 h-4 mr-2" />
-                Cod QR
-              </Button>
-            </>
-          )}
         </div>
       </form>
-      <div style={{
-        position: 'absolute',
-        left: '-9999px',
-        top: 0,
-        zIndex: -1,
-        width: '210mm'
-      }}>
-        {listingData && (
-            <div id="spec-sheet-to-print">
-                <PrintableSpecSheet listing={listingData} />
-            </div>
-        )}
-      </div>
-      {isEditing && (
-        <QrCodeModal 
-            isOpen={isQrModalOpen}
-            onClose={() => setIsQrModalOpen(false)}
-            listingId={listingId}
-        />
-      )}
     </div>
   );
 };
 
 export default AddEditListing;
-
-    

@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // Define the expected structure for a listing to ensure type safety.
