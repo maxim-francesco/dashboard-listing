@@ -124,11 +124,11 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
       <footer className="absolute bottom-0 w-full bg-slate-900 text-white py-6 px-10">
         <div className="flex justify-between items-center opacity-80 text-sm">
           <div>
-            <p className="font-bold text-base mb-1">Ofertă generată automat</p>
-            <p>Pentru mai multe detalii, contactați dealerul.</p>
-          </div>
-          <div className="text-right">
-             <p className="font-mono text-xs text-slate-400">ID Anunț: {listing.title.substring(0, 15)}...</p>
+            <p className="font-bold text-base mb-1">
+              Pentru detalii complete și disponibilitate, vă rugăm să contactați
+              reprezentantul nostru de vânzări.
+            </p>
+            <p>Document informativ. Nu constituie o ofertă contractuală.</p>
           </div>
         </div>
       </footer>
