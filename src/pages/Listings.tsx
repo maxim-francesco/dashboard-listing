@@ -34,6 +34,7 @@ import QrCodeModal from "@/components/modals/QrCodeModal";
 interface Listing {
   id: string;
   title: string;
+  slug: string;
   description: string;
   category: {
     name: string;
@@ -61,7 +62,7 @@ const Listings = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [qrListingId, setQrListingId] = useState<string | null>(null);
+  const [qrListing, setQrListing] = useState<{id: string, slug: string} | null>(null);
   const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
   
   const navigate = useNavigate();
@@ -140,8 +141,8 @@ const Listings = () => {
     setPdfListing(listing);
   };
 
-  const handleShowQrCode = (listingId: string) => {
-    setQrListingId(listingId);
+  const handleShowQrCode = (listing: Listing) => {
+    setQrListing({ id: listing.id, slug: listing.slug });
     setQrModalOpen(true);
   };
 
@@ -318,7 +319,7 @@ const Listings = () => {
                                     <span>{isGeneratingPdf && pdfListing?.id === listing.id ? 'Se generează...' : 'Generează PDF'}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => handleShowQrCode(listing.id)}
+                                    onClick={() => handleShowQrCode(listing)}
                                     className="cursor-pointer"
                                   >
                                     <QrCode className="mr-2 h-4 w-4" />
@@ -379,7 +380,8 @@ const Listings = () => {
       <QrCodeModal 
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        listingId={qrListingId}
+        listingId={qrListing?.id || null}
+        listingSlug={qrListing?.slug || null}
         urlPattern={businessSettings?.listingUrlPattern || null}
       />
 

@@ -224,7 +224,7 @@ const BusinessSettings = () => {
                         className="pl-10"
                     />
                 </div>
-                <p className="text-xs text-muted-foreground">Folosește <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono">{'{id}'}</code> ca substituent pentru ID-ul anunțului.</p>
+                <p className="text-xs text-muted-foreground">Folosește <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono">{'{id}'}</code> pentru ID sau <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono">{'{slug}'}</code> pentru titlul mașinii.</p>
              </div>
              <div className="flex justify-end">
                 <Button onClick={handleSaveSettings} disabled={isSavingSettings}>

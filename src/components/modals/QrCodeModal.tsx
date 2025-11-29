@@ -16,15 +16,21 @@ interface QrCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   listingId: string | null;
+  listingSlug: string | null;
   urlPattern: string | null;
 }
 
-const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProps) => {
+const QrCodeModal = ({ isOpen, onClose, listingId, listingSlug, urlPattern }: QrCodeModalProps) => {
   if (!listingId) return null;
   
-  const publicUrl = urlPattern 
-    ? urlPattern.replace('{id}', listingId)
-    : `https://example.com/anunt/${listingId}`; // Fallback
+  let publicUrl = urlPattern || `https://example.com/anunt/{id}`; 
+
+  if (publicUrl.includes('{slug}')) {
+    publicUrl = publicUrl.replace('{slug}', listingSlug || listingId);
+  }
+  if (publicUrl.includes('{id}')) {
+    publicUrl = publicUrl.replace('{id}', listingId);
+  }
 
   const fallbackMessage = !urlPattern ? (
     <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
@@ -40,7 +46,7 @@ const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProp
         const dataUrl = canvas.toDataURL("image/png");
         const link = document.createElement('a');
         link.href = dataUrl;
-        link.download = `qr-code-${listingId}.png`;
+        link.download = `qr-code-${listingSlug || listingId}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
