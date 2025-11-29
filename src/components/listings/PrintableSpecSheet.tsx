@@ -74,11 +74,13 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
               {marca !== 'N/A' ? marca : ''} {model !== 'N/A' ? model : ''}
             </p>
           </div>
-          <div className="w-1/3 text-right">
-            <div className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md">
-              <span className="text-3xl font-bold whitespace-nowrap">{formattedPrice} €</span>
+          <div className="w-1/3 flex justify-end">
+            <div className="bg-blue-600 text-white px-8 py-4 rounded-lg shadow-md flex items-center justify-center min-w-[140px]">
+                <span className="text-3xl font-bold text-center leading-none">
+                {formattedPrice} €
+                </span>
             </div>
-          </div>
+            </div>
         </header>
 
         <main>
@@ -124,15 +126,15 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
       {/* Footer */}
       <footer className="absolute bottom-0 w-full bg-slate-900 text-white py-6 px-10">
         <div className="flex justify-between items-center opacity-80 text-sm">
-          <div>
+            <div>
             <p className="font-bold text-base mb-1">
-              Pentru detalii complete și disponibilitate, vă rugăm să contactați
-              reprezentantul nostru de vânzări.
+                Pentru detalii complete și disponibilitate, vă rugăm să contactați
+                reprezentantul nostru de vânzări.
             </p>
             <p>Document informativ. Nu constituie o ofertă contractuală.</p>
-          </div>
+            </div>
         </div>
-      </footer>
+        </footer>
     </div>
   );
 };
