@@ -38,10 +38,10 @@ const findAttr = (listing: Listing, attrName: string): string => {
 export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing }) => {
   if (!listing) return null;
 
-  const price = findAttr(listing, 'Pret'); // Sau 'Price'
+  const price = findAttr(listing, 'Pret'); 
   const formattedPrice = price !== 'N/A' ? new Intl.NumberFormat('ro-RO').format(Number(price)) : 'N/A';
   
-  // Pre-calculate attributes
+  // Attributes
   const marca = findAttr(listing, 'Marcă');
   const model = findAttr(listing, 'Model');
   const anFabricatie = findAttr(listing, 'An fabricație');
@@ -50,57 +50,106 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
   const transmisie = findAttr(listing, 'Cutie de viteze');
 
   return (
-    <div className="p-8 text-black bg-white font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
-      <header className="mb-6 border-b-2 border-gray-200 pb-4">
-        <h1 className="text-3xl font-bold text-gray-800">{listing.title}</h1>
-      </header>
+    <div 
+      className="bg-white font-sans relative" 
+      style={{ 
+        width: '210mm', 
+        minHeight: '297mm',
+        margin: '0 auto',
+        padding: '0' 
+      }}
+    >
+      {/* Decorative Top Bar */}
+      <div className="h-4 bg-slate-800 w-full"></div>
 
-      <main>
-        <div className="mb-8">
-          {listing.images && listing.images.length > 0 && (
-            <img
-              src={listing.images[0].url}
-              alt={listing.title}
-              className="w-full h-64 object-cover rounded-md mb-6"
-              crossOrigin="anonymous" // Important for html2canvas
-            />
-          )}
-          <p className="text-4xl font-bold text-blue-600 text-right">
-            {formattedPrice} €
-          </p>
-        </div>
-        
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Specificații Cheie</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-base">
-            {marca !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Marcă:</span><span>{marca}</span></div>
-            )}
-            {model !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Model:</span><span>{model}</span></div>
-            )}
-            {anFabricatie !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">An Fabricație:</span><span>{anFabricatie}</span></div>
-            )}
-            {kilometraj !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Kilometraj:</span><span>{kilometraj} km</span></div>
-            )}
-            {combustibil !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Combustibil:</span><span>{combustibil}</span></div>
-            )}
-            {transmisie !== 'N/A' && (
-              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Transmisie:</span><span>{transmisie}</span></div>
+      <div className="p-10">
+        {/* Header Section */}
+        <header className="flex justify-between items-start mb-8 border-b border-gray-200 pb-6">
+          <div className="w-2/3 pr-4">
+            <h1 className="text-4xl font-extrabold text-slate-900 leading-tight mb-2">
+              {listing.title}
+            </h1>
+            <p className="text-slate-500 text-lg uppercase tracking-wide font-semibold">
+              {marca !== 'N/A' ? marca : ''} {model !== 'N/A' ? model : ''}
+            </p>
+          </div>
+          <div className="w-1/3 text-right">
+            <div className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md">
+              <span className="text-3xl font-bold">{formattedPrice} €</span>
+            </div>
+          </div>
+        </header>
+
+        <main>
+          {/* Main Image Section */}
+          <div className="mb-10 relative">
+            {listing.images && listing.images.length > 0 ? (
+              <div className="rounded-xl overflow-hidden shadow-xl border border-gray-100 aspect-video relative">
+                 <img
+                  src={listing.images[0].url}
+                  alt={listing.title}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous" 
+                />
+              </div>
+            ) : (
+              <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                Fără imagine
+              </div>
             )}
           </div>
-        </section>
+          
+          {/* Specs Grid */}
+          <section className="mb-10">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
+              <span className="w-2 h-8 bg-blue-600 mr-3 rounded-sm"></span>
+              Detalii Tehnice & Specificații
+            </h2>
+            
+            <div className="grid grid-cols-3 gap-4">
+              {/* Card Helper Component for cleaner JSX */}
+              {marca !== 'N/A' && <SpecCard label="Marcă" value={marca} />}
+              {model !== 'N/A' && <SpecCard label="Model" value={model} />}
+              {anFabricatie !== 'N/A' && <SpecCard label="An Fabricație" value={anFabricatie} />}
+              {kilometraj !== 'N/A' && <SpecCard label="Kilometraj" value={`${kilometraj} km`} />}
+              {combustibil !== 'N/A' && <SpecCard label="Combustibil" value={combustibil} />}
+              {transmisie !== 'N/A' && <SpecCard label="Transmisie" value={transmisie} />}
+            </div>
+          </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Descriere</h2>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {listing.description || 'Nicio descriere adăugată.'}
-          </p>
-        </section>
-      </main>
+          {/* Description Section */}
+          <section className="mb-12">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+              <span className="w-2 h-8 bg-slate-400 mr-3 rounded-sm"></span>
+              Descriere Vehicul
+            </h2>
+            <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap text-sm text-justify">
+              {listing.description || 'Nicio descriere adăugată pentru acest vehicul.'}
+            </div>
+          </section>
+        </main>
+      </div>
+
+      {/* Footer */}
+      <footer className="absolute bottom-0 w-full bg-slate-900 text-white py-6 px-10">
+        <div className="flex justify-between items-center opacity-80 text-sm">
+          <div>
+            <p className="font-bold text-base mb-1">Ofertă generată automat</p>
+            <p>Pentru mai multe detalii, contactați dealerul.</p>
+          </div>
+          <div className="text-right">
+             <p className="font-mono text-xs text-slate-400">ID Anunț: {listing.title.substring(0, 15)}...</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
+
+// Small helper component for the grid items
+const SpecCard = ({ label, value }: { label: string, value: string }) => (
+  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</span>
+    <span className="text-lg font-semibold text-slate-800 truncate" title={value}>{value}</span>
+  </div>
+);
