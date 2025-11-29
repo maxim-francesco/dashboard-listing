@@ -137,9 +137,13 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
 };
 
 // Small helper component for the grid items
-const SpecCard = ({ label, value }: { label: string, value: string }) => (
-  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</span>
-    <span className="text-lg font-semibold text-slate-800 truncate" title={value}>{value}</span>
+const SpecCard = ({ label, value }: { label: string; value: string }) => (
+  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
+    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+      {label}
+    </span>
+    <span className="text-lg font-semibold text-slate-800 break-words" title={value}>
+      {value}
+    </span>
   </div>
 );
