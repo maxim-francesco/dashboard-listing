@@ -1,7 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,16 +28,20 @@ import { toast } from "react-hot-toast";
 import { format } from 'date-fns';
 import api from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
+import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
+import QrCodeModal from "@/components/modals/QrCodeModal";
 
 interface Listing {
   id: string;
   title: string;
+  description: string;
   category: {
     name: string;
   };
   createdAt: string;
   status: 'Activ' | 'Inactiv';
   images?: { url: string }[];
+  attributeValues: any[];
   _count?: {
     views: number;
   };
@@ -45,6 +52,13 @@ const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+
+  const [pdfListing, setPdfListing] = useState<Listing | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrListingId, setQrListingId] = useState<string | null>(null);
+  
   const navigate = useNavigate();
 
   const { data: listings = [], isLoading, refetch } = useQuery<Listing[]>({
@@ -59,6 +73,61 @@ const Listings = () => {
     },
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (pdfListing) {
+      const generatePdf = async () => {
+        setIsGeneratingPdf(true);
+        
+        // Give React time to render the offscreen component
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const specSheetElement = document.getElementById('offscreen-spec-sheet');
+        if (!specSheetElement) {
+          toast.error("A apărut o eroare la generarea PDF-ului.");
+          setIsGeneratingPdf(false);
+          setPdfListing(null);
+          return;
+        }
+
+        try {
+          const canvas = await html2canvas(specSheetElement, { scale: 2, useCORS: true });
+          const imgData = canvas.toDataURL('image/png');
+          
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+          const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+          
+          const imgX = (pdfWidth - imgWidth * ratio) / 2;
+          const imgY = 0;
+
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          pdf.save(`${pdfListing.title || 'spec-sheet'}.pdf`);
+        } catch (error) {
+          console.error("Eroare la generarea PDF-ului:", error);
+          toast.error("A apărut o eroare la generarea PDF-ului.");
+        } finally {
+          setIsGeneratingPdf(false);
+          setPdfListing(null);
+        }
+      };
+
+      generatePdf();
+    }
+  }, [pdfListing]);
+
+  const handleGeneratePdf = (listing: Listing) => {
+    setPdfListing(listing);
+  };
+
+  const handleShowQrCode = (listingId: string) => {
+    setQrListingId(listingId);
+    setQrModalOpen(true);
+  };
 
   const handleDeleteListing = async (listingId: string, listingTitle: string) => {
     if (window.confirm(`Ești sigur că vrei să ștergi definitiv "${listingTitle}"?`)) {
@@ -221,14 +290,19 @@ const Listings = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-popover border-border">
                                   <DropdownMenuItem
-                                    onClick={() => console.log('PDF clicked')}
+                                    onClick={() => handleGeneratePdf(listing)}
+                                    disabled={isGeneratingPdf && pdfListing?.id === listing.id}
                                     className="cursor-pointer"
                                   >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    <span>Generează PDF</span>
+                                    {isGeneratingPdf && pdfListing?.id === listing.id ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <FileText className="mr-2 h-4 w-4" />
+                                    )}
+                                    <span>{isGeneratingPdf && pdfListing?.id === listing.id ? 'Se generează...' : 'Generează PDF'}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => console.log('QR clicked')}
+                                    onClick={() => handleShowQrCode(listing.id)}
                                     className="cursor-pointer"
                                   >
                                     <QrCode className="mr-2 h-4 w-4" />
@@ -285,10 +359,21 @@ const Listings = () => {
           listingTitle={selectedListing.title}
         />
       )}
+
+      <QrCodeModal 
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        listingId={qrListingId}
+      />
+
+      {/* Hidden container for PDF generation */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
+        <div id="offscreen-spec-sheet">
+          {pdfListing && <PrintableSpecSheet listing={pdfListing} />}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default Listings;
-
-    
