@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Loader2, Upload, Image as ImageIcon, Trash2, Save, Link as LinkIcon } from "lucide-react";
 import api, { deleteBanner } from "@/services/api";
 import { toast } from "react-hot-toast";
 
@@ -12,6 +12,7 @@ interface Business {
   id: string;
   name: string;
   bannerUrl: string | null;
+  listingUrlPattern: string | null;
 }
 
 const BusinessSettings = () => {
@@ -19,11 +20,16 @@ const BusinessSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  const [listingUrlPattern, setListingUrlPattern] = useState("");
+
 
   const fetchBusinessDetails = async () => {
     try {
       const response = await api.get("/business/me");
       setBusiness(response.data);
+      setListingUrlPattern(response.data.listingUrlPattern || "");
     } catch (error) {
       toast.error("Nu s-au putut încărca detaliile afacerii.");
     } finally {
@@ -59,6 +65,7 @@ const BusinessSettings = () => {
       loading: 'Se încarcă șablonul...',
       success: (response) => {
         setBusiness(response.data);
+        setListingUrlPattern(response.data.listingUrlPattern || "");
         setSelectedFile(null);
         setIsUploading(false);
         return 'Șablonul a fost actualizat cu succes!';
@@ -85,6 +92,25 @@ const BusinessSettings = () => {
       },
       error: () => {
         return 'A apărut o eroare la ștergerea șablonului.';
+      }
+    });
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    const promise = api.put('/business/settings', { listingUrlPattern });
+
+    toast.promise(promise, {
+      loading: 'Se salvează setările...',
+      success: (response) => {
+        setBusiness(response.data);
+        setListingUrlPattern(response.data.listingUrlPattern || "");
+        setIsSavingSettings(false);
+        return 'Setările au fost salvate cu succes!';
+      },
+      error: () => {
+        setIsSavingSettings(false);
+        return 'A apărut o eroare la salvarea setărilor.';
       }
     });
   };
@@ -177,6 +203,35 @@ const BusinessSettings = () => {
                 </p>
             )}
           </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Configurare Cod QR</CardTitle>
+            <CardDescription>Setează modelul URL-ului pentru paginile publice ale anunțurilor.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+             <div className="space-y-2">
+                <Label htmlFor="url-pattern" className="font-medium">Model URL Anunț</Label>
+                <div className="relative">
+                    <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        id="url-pattern"
+                        value={listingUrlPattern}
+                        onChange={(e) => setListingUrlPattern(e.target.value)}
+                        placeholder="https://siteul-tau.ro/anunturi/{id}"
+                        className="pl-10"
+                    />
+                </div>
+                <p className="text-xs text-muted-foreground">Folosește <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono">{'{id}'}</code> ca substituent pentru ID-ul anunțului.</p>
+             </div>
+             <div className="flex justify-end">
+                <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+                    {isSavingSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {isSavingSettings ? 'Se salvează...' : 'Salvează Setările'}
+                </Button>
+             </div>
         </CardContent>
       </Card>
     </div>

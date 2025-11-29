@@ -14,13 +14,21 @@ interface QrCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   listingId: string | null;
+  urlPattern: string | null;
 }
 
-const QrCodeModal = ({ isOpen, onClose, listingId }: QrCodeModalProps) => {
+const QrCodeModal = ({ isOpen, onClose, listingId, urlPattern }: QrCodeModalProps) => {
   if (!listingId) return null;
+  
+  const publicUrl = urlPattern 
+    ? urlPattern.replace('{id}', listingId)
+    : `https://example.com/anunt/${listingId}`; // Fallback
 
-  // IMPORTANT: Replace 'your-public-site.com' with your actual public-facing domain.
-  const publicUrl = `https://your-public-site.com/anunt/${listingId}`;
+  const fallbackMessage = !urlPattern ? (
+    <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+      Modelul URL nu este configurat. Setează-l în pagina de Setări Afacere.
+    </p>
+  ) : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -41,6 +49,7 @@ const QrCodeModal = ({ isOpen, onClose, listingId }: QrCodeModalProps) => {
         </div>
         <div className="text-center text-xs text-muted-foreground mt-2 break-words">
             URL: {publicUrl}
+            {fallbackMessage}
         </div>
         <DialogFooter className="mt-4">
           <Button onClick={onClose} variant="outline" className="w-full">

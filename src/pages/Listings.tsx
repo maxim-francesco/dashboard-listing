@@ -47,6 +47,10 @@ interface Listing {
   };
 }
 
+interface Business {
+  listingUrlPattern: string | null;
+}
+
 
 const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,6 +62,7 @@ const Listings = () => {
   
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrListingId, setQrListingId] = useState<string | null>(null);
+  const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
   
   const navigate = useNavigate();
 
@@ -75,11 +80,22 @@ const Listings = () => {
   });
 
   useEffect(() => {
+    const fetchBusinessSettings = async () => {
+      try {
+        const response = await api.get<Business>('/business/me');
+        setBusinessSettings(response.data);
+      } catch (error) {
+        console.error("Failed to fetch business settings for QR code.");
+      }
+    };
+    fetchBusinessSettings();
+  }, []);
+
+  useEffect(() => {
     if (pdfListing) {
       const generatePdf = async () => {
         setIsGeneratingPdf(true);
         
-        // Give React time to render the offscreen component
         await new Promise(resolve => setTimeout(resolve, 500));
         
         const specSheetElement = document.getElementById('offscreen-spec-sheet');
@@ -364,6 +380,7 @@ const Listings = () => {
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         listingId={qrListingId}
+        urlPattern={businessSettings?.listingUrlPattern || null}
       />
 
       {/* Hidden container for PDF generation */}
