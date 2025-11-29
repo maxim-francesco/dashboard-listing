@@ -117,16 +117,6 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
             </div>
           </section>
 
-          {/* Description Section */}
-          <section className="mb-12">
-            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-              <span className="w-2 h-8 bg-slate-400 mr-3 rounded-sm"></span>
-              Descriere Vehicul
-            </h2>
-            <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap text-sm text-justify">
-              {listing.description || 'Nicio descriere adăugată pentru acest vehicul.'}
-            </div>
-          </section>
         </main>
       </div>
 
