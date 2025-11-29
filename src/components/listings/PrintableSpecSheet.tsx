@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface Listing {
@@ -74,8 +75,8 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
             </p>
           </div>
           <div className="w-1/3 text-right">
-            <div className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md">
-              <span className="text-3xl font-bold">{formattedPrice} €</span>
+            <div className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md">
+              <span className="text-3xl font-bold whitespace-nowrap">{formattedPrice} €</span>
             </div>
           </div>
         </header>
