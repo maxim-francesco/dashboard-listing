@@ -27,6 +27,11 @@ interface Listing {
   };
 }
 
+interface ChartDataPoint {
+    date: string;
+    views: number;
+}
+
 
 const Dashboard = () => {
   const [stats, setStats] = useState<StatsData>({
@@ -37,6 +42,8 @@ const Dashboard = () => {
     viewsLast30Days: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+
 
   const { data: listingsData, isLoading: isListingsLoading } = useQuery({
     queryKey: ['listingsForDashboard'],
@@ -53,17 +60,23 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAllData = async () => {
+      setIsLoading(true);
       try {
-        const response = await api.get("/dashboard/stats");
-        setStats(response.data);
+        const [statsResponse, chartResponse] = await Promise.all([
+          api.get("/dashboard/stats"),
+          api.get("/dashboard/chart"),
+        ]);
+        setStats(statsResponse.data);
+        setChartData(chartResponse.data);
       } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStats();
+    fetchAllData();
   }, []);
 
   const statCards = [
@@ -103,6 +116,9 @@ const Dashboard = () => {
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+            color: 'hsl(var(--muted-foreground))'
+        }
       },
       title: {
         display: false,
@@ -112,10 +128,10 @@ const Dashboard = () => {
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(200, 200, 200, 0.2)'
+          color: 'hsl(var(--border))'
         },
         ticks: {
-          color: '#888'
+          color: 'hsl(var(--muted-foreground))'
         }
       },
       x: {
@@ -123,18 +139,24 @@ const Dashboard = () => {
           display: false,
         },
         ticks: {
-          color: '#888'
+          color: 'hsl(var(--muted-foreground))'
         }
       }
     }
   };
 
-  const chartData = {
-    labels: ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'],
+  const formatXAxis = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00'); // Ensure date is parsed as local
+    const dayName = date.toLocaleDateString('ro-RO', { weekday: 'long' });
+    return dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  };
+  
+  const finalChartData = {
+    labels: chartData.map(d => formatXAxis(d.date)),
     datasets: [
       {
         label: 'Vizualizări',
-        data: [120, 190, 150, 250, 220, 300, 280],
+        data: chartData.map(d => d.views),
         borderColor: 'hsl(var(--primary))',
         backgroundColor: 'hsla(var(--primary), 0.2)',
         tension: 0.3,
@@ -220,7 +242,7 @@ const Dashboard = () => {
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Vizualizări Anunțuri în Timp
+            Vizualizări Anunțuri în Ultimele 7 Zile
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -230,7 +252,7 @@ const Dashboard = () => {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
             ) : (
-                <Line options={chartOptions} data={chartData} />
+                <Line options={chartOptions} data={finalChartData} />
             )}
           </div>
         </CardContent>
