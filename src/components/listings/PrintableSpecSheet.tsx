@@ -1,7 +1,5 @@
-
 import React from 'react';
 
-// Define the expected structure for a listing to ensure type safety.
 interface Listing {
   title: string;
   description: string;
@@ -19,41 +17,31 @@ interface PrintableSpecSheetProps {
   listing: Listing | null;
 }
 
-// Helper function to remove diacritics and normalize string
+// Helper: Normalize string (remove diacritics, lowercase)
 const normalizeString = (str: string): string => {
   if (!str) return "";
-  return str
-    .toLowerCase()
-    .normalize("NFD") // Decompose combined graphemes
-    .replace(/[\u0300-\u036f]/g, ""); // Remove diacritical marks
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
-// Helper function to find a specific attribute value from the listing data.
-// It checks both string and number values and is case-insensitive.
+// Helper: Find attribute value insensitive to diacritics
 const findAttr = (listing: Listing, attrName: string): string => {
   if (!listing?.attributeValues) return 'N/A';
-
-  // Normalize the name we are looking for
   const normalizedAttrName = normalizeString(attrName);
-
   const attr = listing.attributeValues.find(
-    // Normalize the name from the database before comparing
     (av) => av.attribute && normalizeString(av.attribute.name) === normalizedAttrName
   );
-
   if (!attr) return 'N/A';
-
   const value = attr.stringValue ?? attr.numberValue;
   return value ? String(value) : 'N/A';
 };
 
 export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing }) => {
-  // If no listing data is provided, the component renders nothing.
   if (!listing) return null;
 
-  const price = findAttr(listing, 'Pret');
+  const price = findAttr(listing, 'Pret'); // Sau 'Price'
   const formattedPrice = price !== 'N/A' ? new Intl.NumberFormat('ro-RO').format(Number(price)) : 'N/A';
-
+  
+  // Pre-calculate attributes
   const marca = findAttr(listing, 'Marcă');
   const model = findAttr(listing, 'Model');
   const anFabricatie = findAttr(listing, 'An fabricație');
@@ -62,85 +50,57 @@ export const PrintableSpecSheet: React.FC<PrintableSpecSheetProps> = ({ listing 
   const transmisie = findAttr(listing, 'Cutie de viteze');
 
   return (
-    <div className="p-8 text-black bg-white font-sans">
-        {/* Header Section */}
-        <header className="mb-6 border-b-2 border-gray-200 pb-4">
-            <h1 className="text-3xl font-bold text-gray-800">{listing.title}</h1>
-        </header>
+    <div className="p-8 text-black bg-white font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
+      <header className="mb-6 border-b-2 border-gray-200 pb-4">
+        <h1 className="text-3xl font-bold text-gray-800">{listing.title}</h1>
+      </header>
 
-        <main>
-            {/* Main Image and Price Section */}
-            <div className="mb-8">
-                {listing.images && listing.images.length > 0 && (
-                    <img
-                    src={listing.images[0].url}
-                    alt={listing.title}
-                    className="w-full h-auto object-cover rounded-md mb-6"
-                    />
-                )}
-                 <p className="text-4xl font-bold text-blue-600 text-right">
-                    {formattedPrice} €
-                </p>
-            </div>
-            
-            {/* Key Specifications Section */}
-            <section className="mb-8">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Specificații Cheie</h2>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-base">
-                    
-                    {marca !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">Marcă:</span>
-                            <span className="text-gray-800">{marca}</span>
-                        </div>
-                    )}
+      <main>
+        <div className="mb-8">
+          {listing.images && listing.images.length > 0 && (
+            <img
+              src={listing.images[0].url}
+              alt={listing.title}
+              className="w-full h-64 object-cover rounded-md mb-6"
+              crossOrigin="anonymous" // Important for html2canvas
+            />
+          )}
+          <p className="text-4xl font-bold text-blue-600 text-right">
+            {formattedPrice} €
+          </p>
+        </div>
+        
+        <section className="mb-8">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Specificații Cheie</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-base">
+            {marca !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Marcă:</span><span>{marca}</span></div>
+            )}
+            {model !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Model:</span><span>{model}</span></div>
+            )}
+            {anFabricatie !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">An Fabricație:</span><span>{anFabricatie}</span></div>
+            )}
+            {kilometraj !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Kilometraj:</span><span>{kilometraj} km</span></div>
+            )}
+            {combustibil !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Combustibil:</span><span>{combustibil}</span></div>
+            )}
+            {transmisie !== 'N/A' && (
+              <div className="flex justify-between border-b pb-2"><span className="font-semibold text-gray-600">Transmisie:</span><span>{transmisie}</span></div>
+            )}
+          </div>
+        </section>
 
-                    {model !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">Model:</span>
-                            <span className="text-gray-800">{model}</span>
-                        </div>
-                    )}
-
-                    {anFabricatie !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">An Fabricație:</span>
-                            <span className="text-gray-800">{anFabricatie}</span>
-                        </div>
-                    )}
-
-                    {kilometraj !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">Kilometraj:</span>
-                            <span className="text-gray-800">{kilometraj} km</span>
-                        </div>
-                    )}
-
-                    {combustibil !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">Combustibil:</span>
-                            <span className="text-gray-800">{combustibil}</span>
-                        </div>
-                    )}
-
-                    {transmisie !== 'N/A' && (
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="font-semibold text-gray-600">Transmisie:</span>
-                            <span className="text-gray-800">{transmisie}</span>
-                        </div>
-                    )}
-
-                </div>
-            </section>
-
-            {/* Description Section */}
-            <section>
-                <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Descriere</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {listing.description || 'Nicio descriere adăugată.'}
-                </p>
-            </section>
-        </main>
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Descriere</h2>
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {listing.description || 'Nicio descriere adăugată.'}
+          </p>
+        </section>
+      </main>
     </div>
   );
 };
