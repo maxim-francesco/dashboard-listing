@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Upload, Image as ImageIcon, Trash2, Save, Link as LinkIcon } from "lucide-react";
 import api, { deleteBanner } from "@/services/api";
 import { toast } from "react-hot-toast";
+import YouTubeConnect from "@/components/youtube/YouTubeConnect";
 
 interface Business {
   id: string;
@@ -234,6 +235,8 @@ const BusinessSettings = () => {
              </div>
         </CardContent>
       </Card>
+
+      <YouTubeConnect />
     </div>
   );
 };
