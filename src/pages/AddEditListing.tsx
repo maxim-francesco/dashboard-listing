@@ -23,13 +23,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, Video } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, Video, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage, getYouTubeUploadUrl } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 import { Progress } from "@/components/ui/progress";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface Category {
   id: string;
@@ -749,11 +750,23 @@ const AddEditListing = () => {
                 )}
 
                 {!isUploadingVideo && formData.youtubeVideoId && (
-                    <div className="flex items-center justify-between p-3 bg-success-light border border-success/20 rounded-lg">
-                        <p className="text-sm font-medium text-success">Video conectat: {formData.youtubeVideoId}</p>
-                        <Button variant="ghost" size="icon" className="text-success hover:bg-success/20 h-8 w-8" onClick={handleRemoveVideo}>
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-success-light border border-success/20 rounded-lg">
+                            <p className="text-sm font-medium text-success">Video conectat: {formData.youtubeVideoId}</p>
+                            <Button variant="ghost" size="icon" className="text-success hover:bg-success/20 h-8 w-8" onClick={handleRemoveVideo}>
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden border">
+                            <iframe
+                                src={`https://www.youtube.com/embed/${formData.youtubeVideoId}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                className="w-full h-full"
+                            ></iframe>
+                        </AspectRatio>
                     </div>
                 )}
                 
