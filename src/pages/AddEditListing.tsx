@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +23,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, Video } from "lucide-react";
 import { toast } from "react-hot-toast";
-import api, { rotateImage } from "@/services/api";
+import api, { rotateImage, getYouTubeUploadUrl } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
+import { Progress } from "@/components/ui/progress";
 
 interface Category {
   id: string;
@@ -71,6 +74,7 @@ interface FullListingData {
     categoryId: string;
     purchasePrice: number | null;
     otherCosts: number | null;
+    youtubeVideoId: string | null;
     images: ExistingImage[];
     attributeValues: AttributeValueFromServer[];
 }
@@ -88,6 +92,7 @@ const AddEditListing = () => {
     categoryId: "",
     purchasePrice: "" as number | "",
     otherCosts: "" as number | "",
+    youtubeVideoId: "",
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -98,6 +103,11 @@ const AddEditListing = () => {
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [videoFileName, setVideoFileName] = useState<string | null>(null);
+  const videoInputRef = React.useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -123,8 +133,8 @@ const AddEditListing = () => {
         setIsLoading(true);
         try {
             const response = await api.get(`/listings/${listingId}`);
-            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts } = response.data;
-            setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
+            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts, youtubeVideoId } = response.data;
+            setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "", youtubeVideoId: youtubeVideoId ?? "" });
             
             const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
             const imagesWithRotation = sortedImages.map((img: any) => ({ ...img, rotation: 0 }));
@@ -210,6 +220,7 @@ const AddEditListing = () => {
             attributes: attributesPayload,
             purchasePrice: formData.purchasePrice === '' ? null : Number(formData.purchasePrice),
             otherCosts: formData.otherCosts === '' ? null : Number(formData.otherCosts),
+            youtubeVideoId: formData.youtubeVideoId,
         };
         
         let savedListingId;
@@ -362,6 +373,71 @@ const AddEditListing = () => {
           }
       });
   };
+
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+        toast.error('Te rugăm să selectezi un fișier video.');
+        return;
+    }
+
+    if (!formData.title) {
+        toast.error('Te rugăm să introduci mai întâi un titlu pentru anunț.');
+        if (videoInputRef.current) videoInputRef.current.value = "";
+        return;
+    }
+    
+    setVideoFileName(file.name);
+    setIsUploadingVideo(true);
+    setUploadProgress(0);
+    const uploadToastId = toast.loading('Se pregătește încărcarea...');
+
+    try {
+        const { uploadUrl, youtubeVideoId } = await getYouTubeUploadUrl(formData.title, file.type);
+        
+        if (!uploadUrl || !youtubeVideoId) {
+            throw new Error("Datele pentru încărcare sunt invalide.");
+        }
+
+        toast.loading('Se încarcă video-ul...', { id: uploadToastId });
+
+        const response = await axios.put(uploadUrl, file, {
+            headers: { 'Content-Type': file.type },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
+                }
+            },
+        });
+
+        // The YouTube Resumable Upload API returns a 200 or 201 on success
+        // with the video details in the response body.
+        if (response.status === 200 || response.status === 201) {
+             setFormData(prev => ({ ...prev, youtubeVideoId }));
+             toast.success('Video încărcat cu succes!', { id: uploadToastId });
+        } else {
+            throw new Error(`Eroare la încărcare: Status ${response.status}`);
+        }
+
+    } catch (err) {
+        toast.error('A apărut o eroare la încărcarea video-ului.', { id: uploadToastId });
+        setUploadProgress(null);
+        setVideoFileName(null);
+    } finally {
+        setIsUploadingVideo(false);
+        if (videoInputRef.current) videoInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    setFormData(prev => ({...prev, youtubeVideoId: ''}));
+    setVideoFileName(null);
+    setUploadProgress(null);
+    toast.success("Video-ul a fost deconectat. Salvează anunțul pentru a confirma.");
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -659,11 +735,58 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
+        <Card className="border-card-border bg-card mb-6">
+            <CardHeader>
+                <CardTitle className="text-foreground">Video de Prezentare (YouTube)</CardTitle>
+                <CardDescription>Încarcă un video care va fi publicat pe canalul tău de YouTube.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {isUploadingVideo && (
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Se încarcă: <span className="font-bold text-foreground">{videoFileName}</span></p>
+                        <Progress value={uploadProgress} className="w-full" />
+                    </div>
+                )}
+
+                {!isUploadingVideo && formData.youtubeVideoId && (
+                    <div className="flex items-center justify-between p-3 bg-success-light border border-success/20 rounded-lg">
+                        <p className="text-sm font-medium text-success">Video conectat: {formData.youtubeVideoId}</p>
+                        <Button variant="ghost" size="icon" className="text-success hover:bg-success/20 h-8 w-8" onClick={handleRemoveVideo}>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )}
+                
+                {!isUploadingVideo && !formData.youtubeVideoId && (
+                     <div 
+                        className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => videoInputRef.current?.click()}
+                        >
+                        <Video className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <div className="space-y-2">
+                            <p className="text-foreground font-medium">Adaugă Video</p>
+                            <p className="text-sm text-muted-foreground">
+                                Apasă aici pentru a selecta un fișier video.
+                            </p>
+                        </div>
+                        <Input
+                            ref={videoInputRef}
+                            type="file"
+                            onChange={handleVideoUpload}
+                            className="hidden"
+                            accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
+                            disabled={isUploadingVideo}
+                        />
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+
         <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
           <Button
             type="submit"
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            disabled={isLoading}
+            disabled={isLoading || isUploadingVideo}
           >
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
@@ -673,6 +796,7 @@ const AddEditListing = () => {
             variant="outline"
             onClick={() => navigate("/listings")}
             className="border-border hover:bg-secondary"
+            disabled={isUploadingVideo}
           >
             Anulează
           </Button>
