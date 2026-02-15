@@ -16,9 +16,11 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 // Icons
-import { ShieldCheck, Loader2, Sparkles, Wand2, LogOut, Building2, Eye, BarChartHorizontal } from "lucide-react";
+import { ShieldCheck, Loader2, Sparkles, Wand2, LogOut, Building2, Eye, BarChartHorizontal, RefreshCw } from "lucide-react";
 
 // API
 import { onboardNewClient, getPlatformStats, getAllBusinesses } from "@/services/api";
@@ -125,13 +127,36 @@ const SuperAdmin = () => {
       navigate('/login');
   };
 
+  const handleRefresh = () => {
+    toast.success("Se reîmprospătează datele platformei...");
+    queryClient.invalidateQueries({ queryKey: ['platformStats'] });
+    queryClient.invalidateQueries({ queryKey: ['allBusinesses'] });
+  };
+
+  const handleImpersonate = (business: Business) => {
+    console.log(`Attempting to impersonate business: ${business.id} (${business.name})`);
+    // Future logic to get a temporary token and redirect will go here.
+    toast.info(`Funcționalitate în dezvoltare: Personificare ${business.name}`);
+  };
+
+  const TableSkeleton = () => (
+    [...Array(3)].map((_, i) => (
+        <TableRow key={i}>
+            <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-56" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
+        </TableRow>
+    ))
+  );
+
   return (
     <div className="min-h-screen bg-admin-bg p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <header className="flex justify-between items-center mb-6">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                     <ShieldCheck className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div>
@@ -139,10 +164,16 @@ const SuperAdmin = () => {
                     <p className="text-muted-foreground">Managementul platformei și al clienților.</p>
                 </div>
             </div>
-            <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4"/>
-                Logout
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={handleRefresh} className="w-full sm:w-auto">
+                  <RefreshCw className="mr-2 h-4 w-4"/>
+                  Reîmprospătează
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="w-full sm:w-auto">
+                  <LogOut className="mr-2 h-4 w-4"/>
+                  Logout
+              </Button>
+            </div>
         </header>
 
         {/* Stats Cards */}
@@ -273,35 +304,43 @@ const SuperAdmin = () => {
                         <CardDescription>Vizualizează și gestionează toți clienții de pe platformă.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {isLoadingBusinesses ? (
-                             <div className="flex justify-center items-center py-10">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Nume Afacere</TableHead>
-                                    <TableHead>Email Admin</TableHead>
-                                    <TableHead>Dată Creare</TableHead>
-                                    <TableHead className="text-right">Acțiuni</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {businesses?.map((business) => (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead>Nume Afacere</TableHead>
+                                <TableHead>Email Admin</TableHead>
+                                <TableHead>Dată Creare</TableHead>
+                                <TableHead className="text-right">Acțiuni</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoadingBusinesses ? (
+                                    <TableSkeleton />
+                                ) : (
+                                    businesses?.map((business) => (
                                     <TableRow key={business.id}>
                                         <TableCell className="font-medium">{business.name}</TableCell>
                                         <TableCell>{business.users[0]?.email || 'N/A'}</TableCell>
                                         <TableCell>{format(new Date(business.createdAt), "dd MMM yyyy")}</TableCell>
                                         <TableCell className="text-right">
-                                            {/* Action buttons can be added here */}
-                                            <Button variant="ghost" size="sm">Detalii</Button>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleImpersonate(business)}>
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Personificare client</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                     </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        )}
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             </TabsContent>
