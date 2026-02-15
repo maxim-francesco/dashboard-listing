@@ -214,5 +214,18 @@ export const deleteListing = (listingId: string) => {
     return api.delete(`/listings/${listingId}`);
 };
 
+// --- NEW SUPER ADMIN FUNCTIONS ---
+
+// NOTE: These endpoints are assumed to exist and be protected by a SUPER_ADMIN role middleware on the backend.
+export const getPlatformStats = async () => {
+  const response = await api.get('/super-admin/stats');
+  return response.data;
+}
+
+export const getAllBusinesses = async () => {
+  const response = await api.get('/super-admin/businesses');
+  return response.data;
+}
+
 
 export default api;
