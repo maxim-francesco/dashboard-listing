@@ -22,6 +22,7 @@ import AttributeGroups from "./pages/AttributeGroups";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
 import SoldListings from "./pages/SoldListings";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
+import SuperAdmin from "./pages/SuperAdmin";
 
 const queryClient = new QueryClient();
 
@@ -37,9 +38,14 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/politica-de-confidentialitate-admin" element={<AdminPrivacyPolicy />} />
           <Route path="/termeni-admin" element={<AdminTerms />} />
+          
+          {/* --- GROUP 2: Super Admin Route (Standalone) --- */}
+          <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+            <Route path="/super-admin" element={<SuperAdmin />} />
+          </Route>
 
-          {/* --- GROUP 2: Protected Pages (Inside the Main Layout) --- */}
-          <Route element={<ProtectedRoute />}>
+          {/* --- GROUP 3: Protected Pages (Inside the Main Layout) --- */}
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/categories" element={<Categories />} />
@@ -56,7 +62,7 @@ const App = () => (
             </Route>
           </Route>
 
-          {/* --- GROUP 3: Catch-all for any other route --- */}
+          {/* --- GROUP 4: Catch-all for any other route --- */}
           <Route path="*" element={<NotFound />} />
         </Routes>
         <CookieBanner />
