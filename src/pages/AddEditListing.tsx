@@ -414,8 +414,6 @@ const AddEditListing = () => {
             },
         });
 
-        // The YouTube Resumable Upload API returns a 200 or 201 on success
-        // with the video details in the response body.
         if (response.status === 200 || response.status === 201) {
              setFormData(prev => ({ ...prev, youtubeVideoId }));
              toast.success('Video încărcat cu succes!', { id: uploadToastId });
