@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,7 +68,7 @@ const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; valu
 const SuperAdmin = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isOnboarding, setIsOnboarding] = useState(false);
+  const [isLoadingOnboarding, setIsLoadingOnboarding] = useState(false);
   const [progressMessage, setProgressMessage] = useState("");
 
   const { data: stats, isLoading: isLoadingStats } = useQuery<PlatformStats>({
@@ -100,7 +101,7 @@ const SuperAdmin = () => {
   };
 
   const onOnboardingSubmit = async (values: OnboardingFormValues) => {
-    setIsOnboarding(true);
+    setIsLoadingOnboarding(true);
     setProgressMessage("Se inițializează procesul...");
 
     try {
@@ -117,7 +118,7 @@ const SuperAdmin = () => {
     } catch (error: any) {
         toast.error(error.message || "A apărut o eroare neașteptată.");
     } finally {
-        setIsOnboarding(false);
+        setIsLoadingOnboarding(false);
         setProgressMessage("");
     }
   };
@@ -277,8 +278,8 @@ const SuperAdmin = () => {
                               </FormItem>
                             )}
                           />
-                          <Button type="submit" disabled={isOnboarding} className="w-full">
-                            {isOnboarding ? (
+                          <Button type="submit" disabled={isLoadingOnboarding} className="w-full">
+                            {isLoadingOnboarding ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 <span>{progressMessage || "Se procesează..."}</span>
@@ -320,7 +321,7 @@ const SuperAdmin = () => {
                                     businesses?.map((business) => (
                                     <TableRow key={business.id}>
                                         <TableCell className="font-medium">{business.name}</TableCell>
-                                        <TableCell>{business.users[0]?.email || 'N/A'}</TableCell>
+                                        <TableCell>{business.users?.[0]?.email || 'N/A'}</TableCell>
                                         <TableCell>{business.createdAt ? format(new Date(business.createdAt), "dd MMM yyyy") : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <TooltipProvider>
@@ -351,3 +352,5 @@ const SuperAdmin = () => {
 };
 
 export default SuperAdmin;
+
+    
