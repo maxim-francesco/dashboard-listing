@@ -104,21 +104,21 @@ const SuperAdmin = () => {
     setProgressMessage("Se inițializează procesul...");
 
     try {
-      await onboardNewClient(values, setProgressMessage);
-      toast.success('Clientul a fost creat și configurat cu succes!');
-      onboardingForm.reset({
-        businessName: "",
-        email: "",
-        password: "",
-        seedData: true,
-      });
-      queryClient.invalidateQueries({ queryKey: ['platformStats'] });
-      queryClient.invalidateQueries({ queryKey: ['allBusinesses'] });
+        await onboardNewClient(values, setProgressMessage);
+        toast.success('Clientul a fost creat și configurat cu succes!');
+        onboardingForm.reset({
+            businessName: "",
+            email: "",
+            password: "",
+            seedData: true,
+        });
+        queryClient.invalidateQueries({ queryKey: ['platformStats'] });
+        queryClient.invalidateQueries({ queryKey: ['allBusinesses'] });
     } catch (error: any) {
-      toast.error(error.message || "A apărut o eroare neașteptată.");
+        toast.error(error.message || "A apărut o eroare neașteptată.");
     } finally {
-      setIsOnboarding(false);
-      setProgressMessage("");
+        setIsOnboarding(false);
+        setProgressMessage("");
     }
   };
   
@@ -180,19 +180,19 @@ const SuperAdmin = () => {
         <div className="grid gap-4 md:grid-cols-3 mb-6">
           <StatCard 
             title="Total Afaceri"
-            value={stats?.totalBusinesses.toLocaleString() ?? '0'}
+            value={(stats?.totalBusinesses ?? 0).toLocaleString()}
             icon={Building2}
             isLoading={isLoadingStats}
           />
           <StatCard 
             title="Anunțuri Active"
-            value={stats?.totalActiveListings.toLocaleString() ?? '0'}
+            value={(stats?.totalActiveListings ?? 0).toLocaleString()}
             icon={BarChartHorizontal}
             isLoading={isLoadingStats}
           />
           <StatCard 
             title="Vizualizări Totale"
-            value={stats?.totalViews.toLocaleString() ?? '0'}
+            value={(stats?.totalViews ?? 0).toLocaleString()}
             icon={Eye}
             isLoading={isLoadingStats}
           />
@@ -321,7 +321,7 @@ const SuperAdmin = () => {
                                     <TableRow key={business.id}>
                                         <TableCell className="font-medium">{business.name}</TableCell>
                                         <TableCell>{business.users[0]?.email || 'N/A'}</TableCell>
-                                        <TableCell>{format(new Date(business.createdAt), "dd MMM yyyy")}</TableCell>
+                                        <TableCell>{business.createdAt ? format(new Date(business.createdAt), "dd MMM yyyy") : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <TooltipProvider>
                                                 <Tooltip>
