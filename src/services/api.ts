@@ -50,7 +50,7 @@ export const deleteListing = (listingId: string) => {
     return api.delete(`/listings/${listingId}`);
 };
 
-export const getYouTubeUploadUrl = async (title: string, mimeType: string) => {
+export const getYouTubeUploadUrl = async (title: string, mimeType: string): Promise<{ uploadUrl: string }> => {
   const response = await api.post('/youtube/get-upload-url', { title, mimeType });
   return response.data;
 };

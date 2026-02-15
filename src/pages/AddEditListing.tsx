@@ -396,10 +396,10 @@ const AddEditListing = () => {
     const uploadToastId = toast.loading('Se pregătește încărcarea...');
 
     try {
-        const { uploadUrl, youtubeVideoId } = await getYouTubeUploadUrl(formData.title, file.type);
+        const { uploadUrl } = await getYouTubeUploadUrl(formData.title, file.type);
         
-        if (!uploadUrl || !youtubeVideoId) {
-            throw new Error("Datele pentru încărcare sunt invalide.");
+        if (!uploadUrl) {
+            throw new Error("Backend-ul nu a returnat un URL de încărcare.");
         }
 
         toast.loading('Se încarcă video-ul...', { id: uploadToastId });
@@ -415,14 +415,20 @@ const AddEditListing = () => {
         });
 
         if (response.status === 200 || response.status === 201) {
-             setFormData(prev => ({ ...prev, youtubeVideoId }));
+             const videoId = response.data?.id;
+             if (!videoId) {
+                 console.error("Upload response:", response);
+                 throw new Error("Răspuns invalid de la server după încărcare. ID-ul video-ului lipsește.");
+             }
+             setFormData(prev => ({ ...prev, youtubeVideoId: videoId }));
              toast.success('Video încărcat cu succes!', { id: uploadToastId });
         } else {
             throw new Error(`Eroare la încărcare: Status ${response.status}`);
         }
 
-    } catch (err) {
-        toast.error('A apărut o eroare la încărcarea video-ului.', { id: uploadToastId });
+    } catch (err: any) {
+        const errorMessage = err.response?.data?.message || err.message || 'A apărut o eroare la încărcarea video-ului.';
+        toast.error(errorMessage, { id: uploadToastId });
         setUploadProgress(null);
         setVideoFileName(null);
     } finally {
