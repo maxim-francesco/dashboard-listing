@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,6 +32,9 @@ interface Business {
   name: string;
   createdAt: string;
   users: { email: string }[];
+  _count?: {
+    listings: number;
+  };
 }
 
 interface PlatformStats {
@@ -80,6 +83,13 @@ const SuperAdmin = () => {
     queryKey: ['allBusinesses'],
     queryFn: getAllBusinesses,
   });
+  
+  useEffect(() => {
+    if (businesses) {
+      console.log('Businesses Data:', businesses);
+    }
+  }, [businesses]);
+
 
   const onboardingForm = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingFormSchema),
@@ -136,15 +146,15 @@ const SuperAdmin = () => {
 
   const handleImpersonate = (business: Business) => {
     console.log(`Attempting to impersonate business: ${business.id} (${business.name})`);
-    // Future logic to get a temporary token and redirect will go here.
     toast.info(`Funcționalitate în dezvoltare: Personificare ${business.name}`);
   };
 
   const TableSkeleton = () => (
     [...Array(3)].map((_, i) => (
         <TableRow key={i}>
+            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
             <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-56" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
             <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
         </TableRow>
@@ -310,6 +320,7 @@ const SuperAdmin = () => {
                                 <TableRow>
                                 <TableHead>Nume Afacere</TableHead>
                                 <TableHead>Email Admin</TableHead>
+                                <TableHead>Anunțuri</TableHead>
                                 <TableHead>Dată Creare</TableHead>
                                 <TableHead className="text-right">Acțiuni</TableHead>
                                 </TableRow>
@@ -320,9 +331,10 @@ const SuperAdmin = () => {
                                 ) : (
                                     businesses?.map((business) => (
                                     <TableRow key={business.id}>
-                                        <TableCell className="font-medium">{business.name}</TableCell>
-                                        <TableCell>{business.users?.[0]?.email || 'N/A'}</TableCell>
-                                        <TableCell>{business.createdAt ? format(new Date(business.createdAt), "dd MMM yyyy") : 'N/A'}</TableCell>
+                                        <TableCell className="font-medium">{business.name ?? 'N/A'}</TableCell>
+                                        <TableCell>{business.users?.[0]?.email ?? 'N/A'}</TableCell>
+                                        <TableCell>{business._count?.listings ?? 0}</TableCell>
+                                        <TableCell>{business.createdAt ? new Date(business.createdAt).toLocaleDateString('ro-RO') : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <TooltipProvider>
                                                 <Tooltip>
