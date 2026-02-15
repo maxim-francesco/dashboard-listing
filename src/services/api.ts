@@ -36,10 +36,8 @@ export const onboardNewClient = async (data: OnboardingData) => {
             password: data.password,
         });
     } catch(error: any) {
-        throw new Error(error.response?.data?.message || "Eroare la înregistrarea afacerii.");
+        throw new Error(error.response?.data?.message || "Eroare la înregistrarea afacerii (Pasul 1).");
     }
-
-    toast.loading('Pasul 2/4: Autentificare client nou...');
 
     // 2. Login as the new admin to get their token
     let newUserToken;
@@ -50,7 +48,7 @@ export const onboardNewClient = async (data: OnboardingData) => {
         });
         newUserToken = loginResponse.data.token;
     } catch (error: any) {
-        throw new Error("Nu s-a putut autentifica noul client pentru configurare.");
+        throw new Error("Nu s-a putut autentifica noul client pentru configurare (Pasul 2).");
     }
     
     // Create a temporary axios instance with the new user's token
@@ -59,15 +57,13 @@ export const onboardNewClient = async (data: OnboardingData) => {
         headers: { Authorization: `Bearer ${newUserToken}` }
     });
     
-    toast.loading('Pasul 3/4: Creare categorie și atribute...');
-
     // 3. Create default category
     let categoryId;
     try {
         const categoryResponse = await tempApi.post('/categories', { name: 'Vehicule' });
         categoryId = categoryResponse.data.id;
     } catch(error) {
-        throw new Error("Nu s-a putut crea categoria implicită.");
+        throw new Error("Nu s-a putut crea categoria implicită (Pasul 3).");
     }
 
     // 4. Seed attributes for the new category
@@ -83,12 +79,11 @@ export const onboardNewClient = async (data: OnboardingData) => {
         const attributeResults = await Promise.all(attributePromises);
         createdAttributes = attributeResults.map(res => res.data);
     } catch (error) {
-        throw new Error("Nu s-au putut crea atributele implicite.");
+        throw new Error("Nu s-au putut crea atributele implicite (Pasul 4).");
     }
 
     // 5. (Optional) Seed dummy listings
     if (data.seedData) {
-        toast.loading('Pasul 4/4: Adăugare date de test...');
         try {
             const findAttrId = (name: string) => createdAttributes.find((a: any) => a.name === name)?.id;
             const dummyListings = [
@@ -99,7 +94,7 @@ export const onboardNewClient = async (data: OnboardingData) => {
             const listingPromises = dummyListings.map(listing => tempApi.post('/listings', listing));
             await Promise.all(listingPromises);
         } catch (error) {
-            throw new Error("Nu s-au putut adăuga anunțurile de test.");
+            throw new Error("Nu s-au putut adăuga anunțurile de test (Pasul 5).");
         }
     }
     

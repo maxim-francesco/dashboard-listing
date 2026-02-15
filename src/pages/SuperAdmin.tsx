@@ -45,21 +45,22 @@ const SuperAdmin = () => {
 
   const onSubmit = async (values: OnboardingFormValues) => {
     setIsLoading(true);
-    
-    const promise = onboardNewClient(values);
+    const loadingToastId = toast.loading('Se procesează crearea clientului...');
 
-    toast.promise(promise, {
-      loading: 'Se creează clientul... Pasul 1/4: Înregistrare',
-      success: (result) => {
-        setIsLoading(false);
-        form.reset();
-        return 'Clientul a fost creat și configurat cu succes!';
-      },
-      error: (err) => {
-        setIsLoading(false);
-        return err.message || "A apărut o eroare la crearea clientului.";
-      }
-    });
+    try {
+      await onboardNewClient(values);
+      toast.success('Clientul a fost creat și configurat cu succes!', { id: loadingToastId });
+      form.reset({
+        businessName: "",
+        email: "",
+        password: "",
+        seedData: true,
+      });
+    } catch (error: any) {
+      toast.error(error.message || "A apărut o eroare neașteptată.", { id: loadingToastId });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
