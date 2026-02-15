@@ -23,6 +23,7 @@ type OnboardingFormValues = z.infer<typeof formSchema>;
 
 const SuperAdmin = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [progressMessage, setProgressMessage] = useState("");
 
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(formSchema),
@@ -45,11 +46,11 @@ const SuperAdmin = () => {
 
   const onSubmit = async (values: OnboardingFormValues) => {
     setIsLoading(true);
-    const loadingToastId = toast.loading('Se procesează crearea clientului...');
+    setProgressMessage("Se inițializează procesul...");
 
     try {
-      await onboardNewClient(values);
-      toast.success('Clientul a fost creat și configurat cu succes!', { id: loadingToastId });
+      await onboardNewClient(values, setProgressMessage);
+      toast.success('Clientul a fost creat și configurat cu succes!');
       form.reset({
         businessName: "",
         email: "",
@@ -57,9 +58,10 @@ const SuperAdmin = () => {
         seedData: true,
       });
     } catch (error: any) {
-      toast.error(error.message || "A apărut o eroare neașteptată.", { id: loadingToastId });
+      toast.error(error.message || "A apărut o eroare neașteptată.");
     } finally {
       setIsLoading(false);
+      setProgressMessage("");
     }
   };
 
@@ -143,8 +145,17 @@ const SuperAdmin = () => {
                 )}
               />
               <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                {isLoading ? 'Se procesează...' : 'Creează Client'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>{progressMessage || "Se procesează..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Creează Client
+                  </>
+                )}
               </Button>
             </form>
           </Form>
