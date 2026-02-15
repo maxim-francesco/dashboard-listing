@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 // Helper function to decode JWT in a safe way
 const parseJwt = (token: string) => {
@@ -23,30 +23,58 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+  const location = useLocation();
   const token = localStorage.getItem('authToken');
+
+  // For debugging purposes, let's log the initial state
+  console.log(`[ProtectedRoute] Checking route: ${location.pathname}`);
+  console.log(`[ProtectedRoute] Required roles:`, allowedRoles);
 
   // 1. Check if token exists
   if (!token) {
-    return <Navigate to="/login" replace />;
+    console.log('[ProtectedRoute] No token found, redirecting to /login');
+    // Allow access to login page from anywhere, but redirect if there's no token
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  
+
   // 2. Parse token to get user info
   const user = parseJwt(token);
+  console.log('[ProtectedRoute] Decoded user from token:', user);
+
 
   // 3. If token is invalid or parsing fails, clear it and redirect to login
-  if (!user) {
+  if (!user || !user.role) {
+    console.error('[ProtectedRoute] Invalid token or role missing, redirecting to /login');
     localStorage.removeItem('authToken');
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // 4. If allowedRoles are specified, check if the user's role is included
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If user role is not allowed, redirect to home/dashboard (or a specific 'unauthorized' page)
+  const isAuthorized = allowedRoles ? allowedRoles.includes(user.role) : true;
+
+  if (isAuthorized) {
+    console.log(`[ProtectedRoute] User role '${user.role}' is authorized. Access granted.`);
+    return <Outlet />;
+  }
+
+  // 5. If user is not authorized for the requested route, redirect them to their default page.
+  // This prevents redirect loops.
+  console.log(`[ProtectedRoute] User role '${user.role}' is NOT authorized for this route.`);
+  if (user.role === 'SUPER_ADMIN') {
+    console.log('[ProtectedRoute] Redirecting SUPER_ADMIN to /super-admin');
+    return <Navigate to="/super-admin" replace />;
+  }
+  
+  if (user.role === 'ADMIN') {
+    // An ADMIN trying to access a SUPER_ADMIN page
+    console.log('[ProtectedRoute] Redirecting ADMIN to /');
     return <Navigate to="/" replace />;
   }
 
-  // 5. If all checks pass, render the child routes
-  return <Outlet />;
+  // Fallback for any other unexpected roles, just in case
+  console.log('[ProtectedRoute] Unknown role, redirecting to /login');
+  localStorage.removeItem('authToken');
+  return <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;
