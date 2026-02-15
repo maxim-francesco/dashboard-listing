@@ -39,7 +39,7 @@ interface Business {
 
 interface PlatformStats {
   totalBusinesses: number;
-  totalActiveListings: number;
+  totalListings: number; // Changed from totalActiveListings
   totalViews: number;
 }
 
@@ -197,7 +197,7 @@ const SuperAdmin = () => {
           />
           <StatCard 
             title="Anunțuri Active"
-            value={(stats?.totalActiveListings ?? 0).toLocaleString()}
+            value={(stats?.totalListings ?? 0).toLocaleString()}
             icon={BarChartHorizontal}
             isLoading={isLoadingStats}
           />
@@ -332,7 +332,7 @@ const SuperAdmin = () => {
                                     businesses?.map((business) => (
                                     <TableRow key={business.id}>
                                         <TableCell className="font-medium">{business.name ?? 'N/A'}</TableCell>
-                                        <TableCell>{business.users?.[0]?.email ?? 'N/A'}</TableCell>
+                                        <TableCell>{business.users && business.users.length > 0 ? business.users[0].email : 'No Admin'}</TableCell>
                                         <TableCell>{business._count?.listings ?? 0}</TableCell>
                                         <TableCell>{business.createdAt ? new Date(business.createdAt).toLocaleDateString('ro-RO') : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
@@ -364,5 +364,3 @@ const SuperAdmin = () => {
 };
 
 export default SuperAdmin;
-
-    
