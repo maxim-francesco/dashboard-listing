@@ -224,6 +224,8 @@ const AddEditListing = () => {
             youtubeVideoId: formData.youtubeVideoId,
         };
         
+        console.log('3. Date trimise către backend:', listingPayload);
+        
         let savedListingId;
         if (listingId) {
             await api.put(`/listings/${listingId}`, listingPayload);
@@ -414,12 +416,15 @@ const AddEditListing = () => {
             },
         });
 
+        console.log('1. Răspuns brut YouTube:', response.data);
+
         if (response.status === 200 || response.status === 201) {
              const videoId = response.data?.id;
              if (!videoId) {
                  console.error("Upload response:", response);
                  throw new Error("Răspuns invalid de la server după încărcare. ID-ul video-ului lipsește.");
              }
+             console.log('2. ID setat în formular:', videoId);
              setFormData(prev => ({ ...prev, youtubeVideoId: videoId }));
              toast.success('Video încărcat cu succes!', { id: uploadToastId });
         } else {
