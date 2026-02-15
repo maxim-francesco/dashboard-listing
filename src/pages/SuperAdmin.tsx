@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,7 +5,6 @@ import * as z from "zod";
 import { toast } from "react-hot-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
 
 // Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Icons
 import { ShieldCheck, Loader2, Sparkles, Wand2, LogOut, Building2, Eye, BarChartHorizontal, RefreshCw } from "lucide-react";
@@ -39,7 +37,7 @@ interface Business {
 
 interface PlatformStats {
   totalBusinesses: number;
-  totalListings: number; // Changed from totalActiveListings
+  totalListings: number;
   totalViews: number;
 }
 
@@ -48,6 +46,7 @@ const onboardingFormSchema = z.object({
   email: z.string().email("Adresă de email invalidă."),
   password: z.string().min(8, "Parola trebuie să aibă cel puțin 8 caractere."),
   seedData: z.boolean().default(false),
+  vertical: z.enum(['auto', 'imobiliare'], { required_error: "Selectează un domeniu de activitate." }),
 });
 
 type OnboardingFormValues = z.infer<typeof onboardingFormSchema>;
@@ -98,6 +97,7 @@ const SuperAdmin = () => {
       email: "",
       password: "",
       seedData: true,
+      vertical: 'auto',
     },
   });
 
@@ -122,6 +122,7 @@ const SuperAdmin = () => {
             email: "",
             password: "",
             seedData: true,
+            vertical: 'auto',
         });
         queryClient.invalidateQueries({ queryKey: ['platformStats'] });
         queryClient.invalidateQueries({ queryKey: ['allBusinesses'] });
@@ -228,6 +229,36 @@ const SuperAdmin = () => {
                         <form onSubmit={onboardingForm.handleSubmit(onOnboardingSubmit)} className="space-y-6">
                           <FormField
                             control={onboardingForm.control}
+                            name="vertical"
+                            render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                <FormLabel>Domeniu de Activitate</FormLabel>
+                                <FormControl>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4"
+                                    >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="auto" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Auto</FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="imobiliare" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Imobiliare</FormLabel>
+                                    </FormItem>
+                                    </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                          <FormField
+                            control={onboardingForm.control}
                             name="businessName"
                             render={({ field }) => (
                               <FormItem>
@@ -332,7 +363,7 @@ const SuperAdmin = () => {
                                     businesses?.map((business) => (
                                     <TableRow key={business.id}>
                                         <TableCell className="font-medium">{business.name ?? 'N/A'}</TableCell>
-                                        <TableCell>{business.users && business.users.length > 0 ? business.users[0].email : 'No Admin'}</TableCell>
+                                        <TableCell>{business.users?.[0]?.email || 'N/A'}</TableCell>
                                         <TableCell>{business._count?.listings ?? 0}</TableCell>
                                         <TableCell>{business.createdAt ? new Date(business.createdAt).toLocaleDateString('ro-RO') : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
