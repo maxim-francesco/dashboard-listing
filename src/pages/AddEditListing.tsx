@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -450,7 +451,7 @@ const AddEditListing = () => {
     setIsDeletingVideo(true);
     try {
         await api.delete(`/listings/${listingId}/video`);
-        toast.success("Videoclipul a fost șters cu succes.");
+        toast.success("Videoclipul a fost șters");
         setYoutubeVideoId(null);
     } catch (error: any) {
         toast.error(error.response?.data?.message || "Eroare la ștergerea videoclipului.");
@@ -851,3 +852,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
