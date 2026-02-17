@@ -110,7 +110,7 @@ const AddEditListing = () => {
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
   // User email state for conditional rendering
-  const [userEmail, setUserEmail] = useState<string | null | undefined>(undefined);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('userEmail');
@@ -407,6 +407,13 @@ const AddEditListing = () => {
   const handleVideoUpload = async () => {
     if (!videoFile || !listingId) return;
 
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        toast.error("Sesiunea a expirat. Te rugăm să te autentifici din nou.");
+        navigate('/login');
+        return;
+    }
+
     const uploadFormData = new FormData();
     uploadFormData.append('video', videoFile); 
 
@@ -417,6 +424,7 @@ const AddEditListing = () => {
       const response = await api.post(`/listings/${listingId}/upload-video`, uploadFormData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
@@ -431,6 +439,9 @@ const AddEditListing = () => {
     } catch (error: any) {
         if (error.response?.status === 429) {
             toast.error("Capacitatea de procesare video a fost atinsă pentru astăzi. Această funcționalitate va fi extinsă în curând!", { duration: 6000 });
+        } else if (error.response?.status === 401) {
+             toast.error("Sesiune invalidă. Te rugăm să te autentifici din nou.");
+             navigate('/login');
         } else {
             toast.error(error.response?.data?.message || "A apărut o eroare la încărcarea video-ului.");
         }
