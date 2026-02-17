@@ -107,6 +107,7 @@ const AddEditListing = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
 
   const sensors = useSensors(
@@ -398,7 +399,6 @@ const AddEditListing = () => {
     if (!videoFile || !listingId) return;
 
     const uploadFormData = new FormData();
-    // The backend expects the file under the key 'video'
     uploadFormData.append('video', videoFile); 
 
     setIsUploadingVideo(true);
@@ -419,8 +419,12 @@ const AddEditListing = () => {
       
       setYoutubeVideoId(response.data.youtubeVideoId);
       toast.success("Video încărcat cu succes! ID-ul va fi salvat la final.");
-    } catch (error) {
-      toast.error("A apărut o eroare la încărcarea video-ului.");
+    } catch (error: any) {
+        if (error.response?.status === 429) {
+            toast.error("Capacitatea de procesare video a fost atinsă pentru astăzi. Această funcționalitate va fi extinsă în curând!", { duration: 6000 });
+        } else {
+            toast.error(error.response?.data?.message || "A apărut o eroare la încărcarea video-ului.");
+        }
     } finally {
       setIsUploadingVideo(false);
       setUploadProgress(null);
@@ -428,9 +432,21 @@ const AddEditListing = () => {
     }
   };
 
-  const handleRemoveVideo = () => {
-    if (window.confirm("Ești sigur că vrei să ștergi acest video? Acțiunea va fi salvată la următoarea actualizare a anunțului.")) {
+  const handleRemoveVideo = async () => {
+    if (!listingId) return;
+    if (!window.confirm("Ești sigur că vrei să ștergi acest video? Acesta va fi șters și de pe YouTube.")) {
+        return;
+    }
+    
+    setIsDeletingVideo(true);
+    try {
+        await api.delete(`/listings/${listingId}/video`);
+        toast.success("Videoclipul a fost șters cu succes.");
         setYoutubeVideoId(null);
+    } catch (error: any) {
+        toast.error(error.response?.data?.message || "Eroare la ștergerea videoclipului.");
+    } finally {
+        setIsDeletingVideo(false);
     }
   };
 
@@ -742,9 +758,9 @@ const AddEditListing = () => {
                         allowFullScreen
                     ></iframe>
                     </div>
-                    <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Șterge Video
+                    <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
+                      {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                      {isDeletingVideo ? 'Se șterge...' : 'Șterge Video'}
                     </Button>
                 </div>
                 ) : (
@@ -792,7 +808,7 @@ const AddEditListing = () => {
           <Button
             type="submit"
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            disabled={isLoading || isUploadingVideo}
+            disabled={isLoading || isUploadingVideo || isDeletingVideo}
           >
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
@@ -802,7 +818,7 @@ const AddEditListing = () => {
             variant="outline"
             onClick={() => navigate("/listings")}
             className="border-border hover:bg-secondary"
-            disabled={isUploadingVideo}
+            disabled={isUploadingVideo || isDeletingVideo}
           >
             Anulează
           </Button>
