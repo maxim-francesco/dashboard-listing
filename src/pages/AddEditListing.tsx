@@ -31,22 +31,6 @@ import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, Pointer
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 
-// JWT parsing helper function
-const parseJwt = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    console.error("Invalid token:", e);
-    return null;
-  }
-};
-
-
 interface Category {
   id: string;
   name: string;
@@ -126,18 +110,8 @@ const AddEditListing = () => {
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
-  // Auth state
-  const [user, setUser] = useState<{ userId: string } | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      setUser(parseJwt(token));
-    }
-    setIsAuthLoading(false);
-  }, []);
-
+  // Check for admin privileges directly from localStorage
+  const isVlcAdmin = localStorage.getItem('userEmail') === 'contact@vlc.ro';
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -427,13 +401,6 @@ const AddEditListing = () => {
   const handleVideoUpload = async () => {
     if (!videoFile || !listingId) return;
 
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        toast.error("Sesiunea a expirat. Te rugăm să te autentifici din nou.");
-        navigate('/login');
-        return;
-    }
-
     const uploadFormData = new FormData();
     uploadFormData.append('video', videoFile); 
 
@@ -447,7 +414,6 @@ const AddEditListing = () => {
         {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
           },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
@@ -544,10 +510,6 @@ const AddEditListing = () => {
         );
     }
   
-  console.log("DEBUG AUTH: ", user);
-  const authorizedUserId = 'cmlhxd6ws08ebrb29oklydubx';
-  const isVlcAdmin = user?.userId === authorizedUserId || localStorage.getItem('userEmail')?.toLowerCase() === 'contact@vlc.ro';
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -784,16 +746,7 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        {isAuthLoading ? (
-            <Card className="border-card-border bg-card mb-6">
-                <CardHeader>
-                    <CardTitle className="text-foreground">Prezentare Video</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <span>Se verifică permisiunile video...</span>
-                </CardContent>
-            </Card>
-        ) : isVlcAdmin ? (
+        {isVlcAdmin && (
           <Card className="border-card-border bg-card mb-6">
               <CardHeader>
                   <CardTitle className="text-foreground">Prezentare Video</CardTitle>
@@ -811,7 +764,7 @@ const AddEditListing = () => {
                             <video
                                 src={youtubeVideoId}
                                 controls
-                                className="w-full h-full object-contain">
+                                className="w-full rounded-lg">
                                 Browser-ul tău nu suportă tag-ul video.
                             </video>
                         ) : (
@@ -870,13 +823,7 @@ const AddEditListing = () => {
                   )}
               </CardContent>
           </Card>
-        ) : (
-          (() => {
-            console.log(`Access denied for user ID: ${user?.userId} and email: ${localStorage.getItem('userEmail')}`);
-            return null;
-          })()
         )}
-
 
         <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
           <Button
@@ -903,3 +850,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
