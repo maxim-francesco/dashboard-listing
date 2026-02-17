@@ -109,6 +109,8 @@ const AddEditListing = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
+  
+  const isVlcAdmin = localStorage.getItem('userEmail') === 'contact@vlc.ro';
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -414,12 +416,6 @@ const AddEditListing = () => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              setUploadProgress(percentCompleted);
-            }
-          },
           timeout: 300000, 
         }
       );
@@ -431,9 +427,6 @@ const AddEditListing = () => {
           toast.error("Încărcarea a durat prea mult și a fost anulată. Verifică conexiunea la internet.");
         } else if (error.response?.status === 429) {
             toast.error("Capacitatea de procesare video a fost atinsă pentru astăzi. Această funcționalitate va fi extinsă în curând!", { duration: 6000 });
-        } else if (error.response?.status === 401) {
-             toast.error("Sesiune invalidă. Te rugăm să te autentifici din nou.");
-             navigate('/login');
         } else {
             console.error("Upload error", error);
             toast.error(error.response?.data?.message || "A apărut o eroare la încărcarea video-ului.");
@@ -748,82 +741,86 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-card-border bg-card mb-6">
-            <CardHeader>
-                <CardTitle className="text-foreground">Prezentare Video</CardTitle>
-                <CardDescription>Încarcă un fișier video pentru anunț.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {!isEditing ? (
-                <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
-                    Salvează anunțul pentru a putea adăuga un video.
-                </div>
-                ) : youtubeVideoId ? (
-                <div>
-                    <div className="aspect-video rounded-lg overflow-hidden border bg-black">
-                    {(youtubeVideoId.startsWith('http') || youtubeVideoId.includes('cloudinary')) ? (
-                        <video
-                            src={youtubeVideoId}
-                            controls
-                            className="w-full rounded-lg">
-                            Browser-ul tău nu suportă tag-ul video.
-                        </video>
+        {isVlcAdmin && (
+            <Card className="border-card-border bg-card mb-6">
+                <CardHeader>
+                    <CardTitle className="text-foreground">Prezentare Video</CardTitle>
+                    <CardDescription>Încarcă un fișier video pentru anunț.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {!isEditing ? (
+                    <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
+                        Salvează anunțul pentru a putea adăuga un video.
+                    </div>
+                    ) : youtubeVideoId ? (
+                    <div>
+                        <div className="aspect-video rounded-lg overflow-hidden border bg-black">
+                        {(youtubeVideoId.startsWith('http') || youtubeVideoId.includes('cloudinary')) ? (
+                            <video
+                                src={youtubeVideoId}
+                                controls
+                                muted
+                                playsInline
+                                className="w-full h-full object-contain">
+                                Browser-ul tău nu suportă tag-ul video.
+                            </video>
+                        ) : (
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen>
+                            </iframe>
+                        )}
+                        </div>
+                        <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
+                        {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        {isDeletingVideo ? 'Se șterge...' : 'Șterge Video'}
+                        </Button>
+                    </div>
                     ) : (
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen>
-                        </iframe>
-                    )}
-                    </div>
-                    <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
-                    {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                    {isDeletingVideo ? 'Se șterge...' : 'Șterge Video'}
-                    </Button>
-                </div>
-                ) : (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                    <Label htmlFor="video-upload">Fișier Video (.mp4, .mov)</Label>
-                    <Input
-                        id="video-upload"
-                        type="file"
-                        accept="video/mp4,video/quicktime"
-                        onChange={handleVideoFileChange}
-                        className="flex-grow file:text-foreground file:font-medium"
-                        disabled={isUploadingVideo}
-                    />
-                    {videoFile && <p className="text-sm text-muted-foreground">Selectat: {videoFile.name}</p>}
-                    </div>
-                    
-                    {isUploadingVideo && uploadProgress !== null && (
-                    <div className="space-y-2">
-                        <Label>Progres încărcare</Label>
-                        <Progress value={uploadProgress} className="w-full" />
-                        <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
-                    </div>
-                    )}
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                        <Label htmlFor="video-upload">Fișier Video (.mp4, .mov)</Label>
+                        <Input
+                            id="video-upload"
+                            type="file"
+                            accept="video/mp4,video/quicktime"
+                            onChange={handleVideoFileChange}
+                            className="flex-grow file:text-foreground file:font-medium"
+                            disabled={isUploadingVideo}
+                        />
+                        {videoFile && <p className="text-sm text-muted-foreground">Selectat: {videoFile.name}</p>}
+                        </div>
+                        
+                        {isUploadingVideo && uploadProgress !== null && (
+                        <div className="space-y-2">
+                            <Label>Progres încărcare</Label>
+                            <Progress value={uploadProgress} className="w-full" />
+                            <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
+                        </div>
+                        )}
 
-                    <Button
-                    type="button"
-                    onClick={handleVideoUpload}
-                    disabled={!videoFile || isUploadingVideo}
-                    >
-                    {isUploadingVideo ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                        <UploadCloud className="w-4 h-4 mr-2" />
+                        <Button
+                        type="button"
+                        onClick={handleVideoUpload}
+                        disabled={!videoFile || isUploadingVideo}
+                        >
+                        {isUploadingVideo ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <UploadCloud className="w-4 h-4 mr-2" />
+                        )}
+                        {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video'}
+                        </Button>
+                    </div>
                     )}
-                    {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video'}
-                    </Button>
-                </div>
-                )}
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        )}
 
         <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
           <Button
