@@ -31,6 +31,22 @@ import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, Pointer
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 
+// JWT parsing helper function
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error("Invalid token:", e);
+    return null;
+  }
+};
+
+
 interface Category {
   id: string;
   name: string;
@@ -103,20 +119,23 @@ const AddEditListing = () => {
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // New state for video upload
+  // Video state
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
-  // User email state for conditional rendering
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  // Auth state
+  const [user, setUser] = useState<{ userId: string } | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('userEmail');
-    console.log("DEBUG AUTH from localStorage:", storedEmail);
-    setUserEmail(storedEmail);
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setUser(parseJwt(token));
+    }
+    setIsAuthLoading(false);
   }, []);
 
 
@@ -525,8 +544,9 @@ const AddEditListing = () => {
         );
     }
   
-  console.log('Current user email:', userEmail);
-  const isVlcAdmin = userEmail?.toLowerCase() === 'contact@vlc.ro';
+  console.log("DEBUG AUTH: ", user);
+  const authorizedUserId = 'cmlhxd6ws08ebrb29oklydubx';
+  const isVlcAdmin = user?.userId === authorizedUserId || localStorage.getItem('userEmail')?.toLowerCase() === 'contact@vlc.ro';
 
   return (
     <div className="space-y-6">
@@ -764,7 +784,7 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        {userEmail === undefined ? (
+        {isAuthLoading ? (
             <Card className="border-card-border bg-card mb-6">
                 <CardHeader>
                     <CardTitle className="text-foreground">Prezentare Video</CardTitle>
@@ -852,7 +872,7 @@ const AddEditListing = () => {
           </Card>
         ) : (
           (() => {
-            console.log('Access denied for email:', userEmail);
+            console.log(`Access denied for user ID: ${user?.userId} and email: ${localStorage.getItem('userEmail')}`);
             return null;
           })()
         )}
