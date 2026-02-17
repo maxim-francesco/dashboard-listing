@@ -39,6 +39,7 @@ interface PlatformStats {
   totalBusinesses: number;
   totalListings: number;
   totalViews: number;
+  totalActiveListings?: number; // Make it optional for safety
 }
 
 const onboardingFormSchema = z.object({
