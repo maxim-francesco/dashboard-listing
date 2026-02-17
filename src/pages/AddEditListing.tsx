@@ -420,7 +420,7 @@ const AddEditListing = () => {
         }
       );
       
-      setYoutubeVideoId(response.data.youtubeVideoId);
+      setYoutubeVideoId(response.data.videoUrl);
       toast.success("Video încărcat cu succes! URL-ul va fi salvat la final.");
     } catch (error: any) {
         if (error.code === 'ECONNABORTED') {
@@ -754,28 +754,21 @@ const AddEditListing = () => {
                     </div>
                     ) : youtubeVideoId ? (
                     <div>
-                        <div className="aspect-video rounded-lg overflow-hidden border bg-black">
-                        {(youtubeVideoId.startsWith('http') || youtubeVideoId.includes('cloudinary')) ? (
-                            <video
-                                src={youtubeVideoId}
-                                controls
-                                muted
-                                playsInline
-                                className="w-full h-full object-contain">
-                                Browser-ul tău nu suportă tag-ul video.
-                            </video>
+                        {youtubeVideoId.includes('cloudinary') ? (
+                            <video src={youtubeVideoId} controls className="w-full rounded-lg" />
                         ) : (
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                                title="YouTube video player"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen>
-                            </iframe>
+                            <div className="aspect-video rounded-lg overflow-hidden border bg-black">
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                                    title="YouTube video player"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen>
+                                </iframe>
+                            </div>
                         )}
-                        </div>
                         <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
                         {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                         {isDeletingVideo ? 'Se șterge...' : 'Șterge Video'}
@@ -847,3 +840,5 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
+
+    
