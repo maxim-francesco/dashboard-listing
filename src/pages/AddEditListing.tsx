@@ -110,13 +110,12 @@ const AddEditListing = () => {
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
   // User email state for conditional rendering
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('userEmail');
-    if (storedEmail) {
-      setUserEmail(storedEmail);
-    }
+    console.log("DEBUG AUTH from localStorage:", storedEmail);
+    setUserEmail(storedEmail);
   }, []);
 
 
@@ -510,6 +509,7 @@ const AddEditListing = () => {
     }
   
   console.log('Current user email:', userEmail);
+  const isVlcAdmin = userEmail?.toLowerCase() === 'contact@vlc.ro';
 
   return (
     <div className="space-y-6">
@@ -747,7 +747,16 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        {userEmail?.toLowerCase() === 'contact@vlc.ro' && (
+        {userEmail === undefined ? (
+            <Card className="border-card-border bg-card mb-6">
+                <CardHeader>
+                    <CardTitle className="text-foreground">Prezentare Video</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <span>Se verifică permisiunile video...</span>
+                </CardContent>
+            </Card>
+        ) : isVlcAdmin ? (
           <Card className="border-card-border bg-card mb-6">
               <CardHeader>
                   <CardTitle className="text-foreground">Prezentare Video</CardTitle>
@@ -824,6 +833,11 @@ const AddEditListing = () => {
                   )}
               </CardContent>
           </Card>
+        ) : (
+          (() => {
+            console.log('Video access denied for email:', userEmail);
+            return null;
+          })()
         )}
 
 
@@ -852,5 +866,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
