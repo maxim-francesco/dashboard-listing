@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
@@ -75,6 +75,7 @@ interface FullListingData {
     otherCosts: number | null;
     images: ExistingImage[];
     attributeValues: AttributeValueFromServer[];
+    youtubeVideoId?: string | null;
 }
 
 const AddEditListing = () => {
@@ -101,6 +102,13 @@ const AddEditListing = () => {
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // New state for video upload
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -124,8 +132,9 @@ const AddEditListing = () => {
         if (!listingId) return;
         setIsLoading(true);
         try {
-            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts } = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
+            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts, youtubeVideoId: fetchedYoutubeId } = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
             setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
+            setYoutubeVideoId(fetchedYoutubeId || null);
             
             const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
             const imagesWithRotation = sortedImages.map((img: any) => ({ ...img, rotation: 0 }));
@@ -211,9 +220,8 @@ const AddEditListing = () => {
             attributes: attributesPayload,
             purchasePrice: formData.purchasePrice === '' ? null : Number(formData.purchasePrice),
             otherCosts: formData.otherCosts === '' ? null : Number(formData.otherCosts),
+            youtubeVideoId,
         };
-        
-        console.log('3. Date trimise către backend:', listingPayload);
         
         let savedListingId;
         if (listingId) {
@@ -254,7 +262,7 @@ const AddEditListing = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations, queryClient]);
+  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations, queryClient, youtubeVideoId]);
 
   const handleAttributeChange = (attributeId: string, value: any) => {
     setAttributeValues(prev => ({
@@ -377,6 +385,55 @@ const AddEditListing = () => {
       });
     }
   }
+
+  const handleVideoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setVideoFile(event.target.files[0]);
+    } else {
+      setVideoFile(null);
+    }
+  };
+
+  const handleVideoUpload = async () => {
+    if (!videoFile || !listingId) return;
+
+    const uploadFormData = new FormData();
+    // The backend expects the file under the key 'video'
+    uploadFormData.append('video', videoFile); 
+
+    setIsUploadingVideo(true);
+    setUploadProgress(0);
+
+    try {
+      const response = await api.post(`/listings/${listingId}/upload-video`, uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        },
+      });
+      
+      setYoutubeVideoId(response.data.youtubeVideoId);
+      toast.success("Video încărcat cu succes! ID-ul va fi salvat la final.");
+    } catch (error) {
+      toast.error("A apărut o eroare la încărcarea video-ului.");
+    } finally {
+      setIsUploadingVideo(false);
+      setUploadProgress(null);
+      setVideoFile(null);
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    if (window.confirm("Ești sigur că vrei să ștergi acest video? Acțiunea va fi salvată la următoarea actualizare a anunțului.")) {
+        setYoutubeVideoId(null);
+    }
+  };
+
 
   const renderAttributeField = (attribute: Attribute) => {
     const value = attributeValues[attribute.id] ?? '';
@@ -662,11 +719,80 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
+        <Card className="border-card-border bg-card mb-6">
+            <CardHeader>
+                <CardTitle className="text-foreground">Prezentare Video</CardTitle>
+                <CardDescription>Încarcă un fișier video care va fi trimis pe YouTube.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {!isEditing ? (
+                <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
+                    Salvează anunțul pentru a putea adăuga un video.
+                </div>
+                ) : youtubeVideoId ? (
+                <div>
+                    <div className="aspect-video rounded-lg overflow-hidden border">
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    ></iframe>
+                    </div>
+                    <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Șterge Video
+                    </Button>
+                </div>
+                ) : (
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                    <Label htmlFor="video-upload">Fișier Video (.mp4, .mov)</Label>
+                    <Input
+                        id="video-upload"
+                        type="file"
+                        accept="video/mp4,video/quicktime"
+                        onChange={handleVideoFileChange}
+                        className="flex-grow file:text-foreground file:font-medium"
+                        disabled={isUploadingVideo}
+                    />
+                    {videoFile && <p className="text-sm text-muted-foreground">Selectat: {videoFile.name}</p>}
+                    </div>
+                    
+                    {isUploadingVideo && uploadProgress !== null && (
+                    <div className="space-y-2">
+                        <Label>Progres încărcare</Label>
+                        <Progress value={uploadProgress} className="w-full" />
+                        <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
+                    </div>
+                    )}
+
+                    <Button
+                    type="button"
+                    onClick={handleVideoUpload}
+                    disabled={!videoFile || isUploadingVideo}
+                    >
+                    {isUploadingVideo ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                        <UploadCloud className="w-4 h-4 mr-2" />
+                    )}
+                    {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video pe YouTube'}
+                    </Button>
+                </div>
+                )}
+            </CardContent>
+        </Card>
+
+
         <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
           <Button
             type="submit"
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            disabled={isLoading}
+            disabled={isLoading || isUploadingVideo}
           >
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
@@ -676,6 +802,7 @@ const AddEditListing = () => {
             variant="outline"
             onClick={() => navigate("/listings")}
             className="border-border hover:bg-secondary"
+            disabled={isUploadingVideo}
           >
             Anulează
           </Button>
