@@ -427,7 +427,7 @@ const AddEditListing = () => {
       });
       
       setYoutubeVideoId(response.data.youtubeVideoId);
-      toast.success("Video încărcat cu succes! ID-ul va fi salvat la final.");
+      toast.success("Video încărcat cu succes! URL-ul va fi salvat la final.");
     } catch (error: any) {
         if (error.response?.status === 429) {
             toast.error("Capacitatea de procesare video a fost atinsă pentru astăzi. Această funcționalitate va fi extinsă în curând!", { duration: 6000 });
@@ -443,7 +443,7 @@ const AddEditListing = () => {
 
   const handleRemoveVideo = async () => {
     if (!listingId) return;
-    if (!window.confirm("Ești sigur că vrei să ștergi acest video? Acesta va fi șters și de pe YouTube.")) {
+    if (!window.confirm("Ești sigur că vrei să ștergi acest video? Acesta va fi șters și de pe serverul de stocare.")) {
         return;
     }
     
@@ -750,7 +750,7 @@ const AddEditListing = () => {
           <Card className="border-card-border bg-card mb-6">
               <CardHeader>
                   <CardTitle className="text-foreground">Prezentare Video</CardTitle>
-                  <CardDescription>Încarcă un fișier video care va fi trimis pe YouTube.</CardDescription>
+                  <CardDescription>Încarcă un fișier video pentru anunț.</CardDescription>
               </CardHeader>
               <CardContent>
                   {!isEditing ? (
@@ -759,16 +759,25 @@ const AddEditListing = () => {
                   </div>
                   ) : youtubeVideoId ? (
                   <div>
-                      <div className="aspect-video rounded-lg overflow-hidden border">
-                      <iframe
-                          width="100%"
-                          height="100%"
-                          src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                          title="YouTube video player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                      ></iframe>
+                      <div className="aspect-video rounded-lg overflow-hidden border bg-black">
+                        {(youtubeVideoId.startsWith('http') || youtubeVideoId.includes('cloudinary')) ? (
+                            <video
+                                src={youtubeVideoId}
+                                controls
+                                className="w-full h-full object-contain">
+                                Browser-ul tău nu suportă tag-ul video.
+                            </video>
+                        ) : (
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen>
+                            </iframe>
+                        )}
                       </div>
                       <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
                         {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
@@ -808,7 +817,7 @@ const AddEditListing = () => {
                       ) : (
                           <UploadCloud className="w-4 h-4 mr-2" />
                       )}
-                      {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video pe YouTube'}
+                      {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video'}
                       </Button>
                   </div>
                   )}
