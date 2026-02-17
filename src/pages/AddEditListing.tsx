@@ -401,12 +401,6 @@ const AddEditListing = () => {
   const handleVideoUpload = async () => {
     if (!videoFile || !listingId) return;
 
-    const MAX_FILE_SIZE_MB = 20;
-    if (videoFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.error(`Fișierul este prea mare pentru serverul curent (Maxim ${MAX_FILE_SIZE_MB}MB)`);
-      return;
-    }
-
     const uploadFormData = new FormData();
     uploadFormData.append('video', videoFile); 
 
@@ -429,7 +423,7 @@ const AddEditListing = () => {
               setUploadProgress(percentCompleted);
             }
           },
-          timeout: 60000, 
+          timeout: 300000, 
         }
       );
       
