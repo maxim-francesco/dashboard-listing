@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -78,23 +77,6 @@ interface FullListingData {
     youtubeVideoId?: string | null;
 }
 
-// Helper function to decode JWT in a safe way
-const parseJwt = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    console.error("Invalid token:", e);
-    return null;
-  }
-};
-
-
 const AddEditListing = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
@@ -130,16 +112,9 @@ const AddEditListing = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-        const payload = parseJwt(token);
-        // This is an assumption. The user requested this logic.
-        // We will check the JWT payload schema.
-        // Based on backend code, the JWT contains: userId, businessId, role. It does NOT contain email.
-        // I will keep the logic as requested by the user, including the console.log for them to debug.
-        if (payload && payload.email) {
-            setUserEmail(payload.email);
-        }
+    const storedEmail = localStorage.getItem('userEmail');
+    if (storedEmail) {
+      setUserEmail(storedEmail);
     }
   }, []);
 

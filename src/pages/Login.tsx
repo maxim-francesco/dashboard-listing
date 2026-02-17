@@ -42,6 +42,7 @@ const Login = () => {
       );
       if (response.data && response.data.token) {
         localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userEmail', email);
         navigate('/');
       }
     } catch (err: any) {

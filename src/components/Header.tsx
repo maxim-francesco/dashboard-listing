@@ -31,6 +31,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const handleLogout = () => {
     // Remove the token from storage
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userEmail');
     // Navigate to the login page using the router
     navigate('/login');
   };
