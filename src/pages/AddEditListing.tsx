@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from 'axios';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -421,18 +422,22 @@ const AddEditListing = () => {
     setUploadProgress(0);
 
     try {
-      const response = await api.post(`/listings/${listingId}/upload-video`, uploadFormData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
-          }
-        },
-      });
+      const response = await axios.post(
+        `https://saas-platform-backend.onrender.com/api/listings/${listingId}/upload-video`,
+        uploadFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percentCompleted);
+            }
+          },
+        }
+      );
       
       setYoutubeVideoId(response.data.youtubeVideoId);
       toast.success("Video încărcat cu succes! URL-ul va fi salvat la final.");
@@ -443,6 +448,7 @@ const AddEditListing = () => {
              toast.error("Sesiune invalidă. Te rugăm să te autentifici din nou.");
              navigate('/login');
         } else {
+            console.error("Upload error", error);
             toast.error(error.response?.data?.message || "A apărut o eroare la încărcarea video-ului.");
         }
     } finally {
@@ -846,7 +852,7 @@ const AddEditListing = () => {
           </Card>
         ) : (
           (() => {
-            console.log('Video access denied for email:', userEmail);
+            console.log('Access denied for email:', userEmail);
             return null;
           })()
         )}
