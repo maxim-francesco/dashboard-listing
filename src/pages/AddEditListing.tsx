@@ -401,6 +401,12 @@ const AddEditListing = () => {
   const handleVideoUpload = async () => {
     if (!videoFile || !listingId) return;
 
+    const MAX_FILE_SIZE_MB = 20;
+    if (videoFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      toast.error(`Fișierul este prea mare pentru serverul curent (Maxim ${MAX_FILE_SIZE_MB}MB)`);
+      return;
+    }
+
     const uploadFormData = new FormData();
     uploadFormData.append('video', videoFile); 
 
@@ -408,8 +414,10 @@ const AddEditListing = () => {
     setUploadProgress(0);
 
     try {
+      const uploadUrl = `https://saas-platform-backend.onrender.com/api/listings/${listingId}/upload-video`;
+      
       const response = await axios.post(
-        `https://saas-platform-backend.onrender.com/api/listings/${listingId}/upload-video`,
+        uploadUrl,
         uploadFormData,
         {
           headers: {
@@ -421,13 +429,16 @@ const AddEditListing = () => {
               setUploadProgress(percentCompleted);
             }
           },
+          timeout: 60000, 
         }
       );
       
       setYoutubeVideoId(response.data.youtubeVideoId);
       toast.success("Video încărcat cu succes! URL-ul va fi salvat la final.");
     } catch (error: any) {
-        if (error.response?.status === 429) {
+        if (error.code === 'ECONNABORTED') {
+          toast.error("Încărcarea a durat prea mult și a fost anulată. Verifică conexiunea la internet.");
+        } else if (error.response?.status === 429) {
             toast.error("Capacitatea de procesare video a fost atinsă pentru astăzi. Această funcționalitate va fi extinsă în curând!", { duration: 6000 });
         } else if (error.response?.status === 401) {
              toast.error("Sesiune invalidă. Te rugăm să te autentifici din nou.");
@@ -850,5 +861,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
