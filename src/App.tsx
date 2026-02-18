@@ -24,6 +24,11 @@ import SoldListings from "./pages/SoldListings";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
 
+// New Legal Pages
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,6 +43,11 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/politica-de-confidentialitate-admin" element={<AdminPrivacyPolicy />} />
           <Route path="/termeni-admin" element={<AdminTerms />} />
+          
+          {/* Public Legal Pages */}
+          <Route path="/termeni-si-conditii" element={<TermsAndConditions />} />
+          <Route path="/politica-de-confidentialitate" element={<PrivacyPolicy />} />
+          <Route path="/politica-cookies" element={<CookiePolicy />} />
           
           {/* --- GROUP 2: Super Admin Route (Standalone) --- */}
           <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
