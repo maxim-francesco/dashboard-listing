@@ -16,30 +16,55 @@ const CookiePolicy = () => {
 
         <Card className="border-card-border shadow-sm">
           <CardHeader className="border-b border-border bg-card/50">
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">Politica de Cookies</CardTitle>
-            <p className="text-sm text-muted-foreground">Informații despre utilizarea modulelor cookie</p>
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">Politică de Cookie-uri</CardTitle>
+            <p className="text-sm text-muted-foreground">MAXIM FRANCESCO PERSOANĂ FIZICĂ AUTORIZATĂ</p>
           </CardHeader>
           <CardContent className="prose prose-slate max-w-none py-8 text-foreground">
-            <p>Această pagină explică modul în care platforma operată de <strong>MAXIM FRANCESCO PFA</strong> utilizează modulele cookie și tehnologii similare.</p>
+            <section>
+              <h3 className="text-xl font-semibold">1. Ce sunt modulele cookie?</h3>
+              <p>
+                Modulele cookie sunt fișiere text de mici dimensiuni, stocate pe dispozitivul dumneavoastră (calculator, telefon sau tabletă) atunci când accesați platforma noastră. Acestea sunt utilizate pentru a asigura funcționarea corectă a site-ului și pentru a îmbunătăți experiența de utilizare.
+              </p>
+            </section>
 
-            <h3>1. Ce sunt modulele cookie?</h3>
-            <p>Cookies sunt fișiere text de mici dimensiuni stocate pe dispozitivul dumneavoastră (calculator, telefon, tabletă) atunci când vizitați un site web. Acestea permit site-ului să "țină minte" acțiunile sau preferințele dumneavoastră pe o perioadă de timp.</p>
+            <section>
+              <h3 className="text-xl font-semibold">2. Tipuri de cookie-uri utilizate</h3>
+              <p>Platforma noastră utilizează următoarele categorii de module cookie:</p>
+              
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-bold text-primary mb-1">Cookie-uri Esențiale (Strict Necesare)</h4>
+                  <p className="text-sm">
+                    <strong>authToken:</strong> Acest cookie este vital pentru securitate. El memorează sesiunea de autentificare a administratorului, permițându-vă să rămâneți logat în panoul de control în timp ce navigați între pagini. Fără acesta, platforma nu poate funcționa.
+                  </p>
+                </div>
 
-            <h3>2. Ce tipuri de cookies folosim?</h3>
-            <ul>
-              <li><strong>Cookies esențiale:</strong> Necesar pentru funcționarea platformei (ex: menținerea sesiunii de logare a administratorului). Fără acestea, serviciul nu poate fi furnizat corect.</li>
-              <li><strong>Cookies de preferință:</strong> Folosite pentru a memora setări precum acceptul bannerului de cookies.</li>
-              <li><strong>Cookies de analiză (opțional):</strong> Putem folosi unelte precum Google Analytics pentru a înțelege cum este utilizată platforma, în scopul îmbunătățirii acesteia.</li>
-            </ul>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-bold text-primary mb-1">Cookie-uri de Preferințe</h4>
+                  <p className="text-sm">
+                    <strong>cookie_consent:</strong> Memorează alegerea dumneavoastră privind acceptarea politicilor noastre, astfel încât bannerul de informare să nu apară la fiecare vizită.
+                  </p>
+                </div>
+              </div>
+            </section>
 
-            <h3>3. Cum puteți controla cookies?</h3>
-            <p>Majoritatea browserelor vă permit să vizualizați, să ștergeți sau să blocați modulele cookie. Rețineți că blocarea tuturor modulelor cookie poate afecta negativ funcționalitatea platformei noastre.</p>
+            <section>
+              <h3 className="text-xl font-semibold">3. Cookie-uri de la Terți</h3>
+              <p>
+                Prestatorul MAXIM FRANCESCO PFA nu utilizează module cookie de tracking, publicitate sau analiză furnizate de terți (precum Google Analytics sau Facebook Pixel) în cadrul acestui panou de administrare fără consimțământul dumneavoastră prealabil și explicit.
+              </p>
+            </section>
 
-            <h3>4. Durata de stocare</h3>
-            <p>Unele cookies sunt șterse când închideți browserul (cookies de sesiune), în timp ce altele rămân pe dispozitiv până la expirare sau ștergere manuală (cookies persistente).</p>
+            <section>
+              <h3 className="text-xl font-semibold">4. Controlul modulelor cookie</h3>
+              <p>
+                Puteți controla și/sau șterge cookie-urile după cum doriți direct din setările browserului dumneavoastră. Puteți șterge toate cookie-urile care sunt deja pe calculator și puteți seta majoritatea browserelor să împiedice plasarea acestora. Totuși, dacă faceți acest lucru, este posibil să fiți nevoit să ajustați manual unele preferințe de fiecare dată când vizitați site-ul, iar unele servicii și funcționalități (precum logarea în cont) ar putea să nu funcționeze.
+              </p>
+            </section>
 
-            <h3>5. Actualizări</h3>
-            <p>Putem actualiza această politică periodic pentru a reflecta schimbările tehnologice sau legislative. Vă recomandăm să consultați această pagină regulat.</p>
+            <div className="mt-10 p-4 border-l-4 border-primary bg-primary/5 text-sm">
+              <p>Pentru orice întrebări suplimentare privind politica noastră de utilizare a modulelor cookie, ne puteți contacta la: <strong>maaximfrancesco@gmail.com</strong>.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
