@@ -20,35 +20,79 @@ const PrivacyPolicy = () => {
             <p className="text-sm text-muted-foreground">Conform Regulamentului (UE) 2016/679 (GDPR)</p>
           </CardHeader>
           <CardContent className="prose prose-slate max-w-none py-8 text-foreground">
-            <p><strong>MAXIM FRANCESCO PERSOANĂ FIZICĂ AUTORIZATĂ</strong> (CUI 52564061) acționează în calitate de operator de date. Protejarea datelor dumneavoastră cu caracter personal este o prioritate pentru noi.</p>
+            <section>
+              <h3 className="text-xl font-semibold">1. Identitatea Operatorului</h3>
+              <p>
+                Platforma este operată de <strong>MAXIM FRANCESCO PERSOANĂ FIZICĂ AUTORIZATĂ</strong>, cu sediul în România, CUI 52564061, Reg. Com. F2025036030001 (denumit în continuare „Operatorul”). Protejarea datelor dumneavoastră cu caracter personal este un angajament fundamental pentru noi.
+              </p>
+            </section>
 
-            <h3>1. Datele colectate</h3>
-            <p>Colectăm următoarele categorii de date:</p>
-            <ul>
-              <li><strong>Date de cont:</strong> Email, parolă (criptată), numele afacerii.</li>
-              <li><strong>Date de contact (prin formulare):</strong> Nume, telefon, email furnizate de vizitatori.</li>
-              <li><strong>Date tehnice:</strong> Adresa IP, tipul browserului, cookies esențiale.</li>
-            </ul>
+            <section>
+              <h3 className="text-xl font-semibold">2. Categorii de Date Prelucrate</h3>
+              <p>Colectăm și prelucrăm următoarele tipuri de date cu caracter personal:</p>
+              <ul>
+                <li><strong>Date de Identificare Cont:</strong> Adresa de email, parola (stocată sub formă de hash criptografic), numele afacerii/entității juridice.</li>
+                <li><strong>Date Media:</strong> Fișiere de tip imagine și video încărcate de utilizator pentru popularea anunțurilor auto.</li>
+                <li><strong>Date Tehnice și de Trafic:</strong> Adresa IP, tipul browserului, identificatori de dispozitiv, date colectate prin modulele cookie esențiale pentru menținerea sesiunii.</li>
+                <li><strong>Date de Contact Clienți:</strong> Nume, telefon și email furnizate voluntar de vizitatori prin formularele de contact ale anunțurilor.</li>
+              </ul>
+            </section>
 
-            <h3>2. Scopul prelucrării</h3>
-            <p>Prelucrăm aceste date pentru:</p>
-            <ul>
-              <li>Furnizarea accesului la panoul de administrare.</li>
-              <li>Facilitarea comunicării între administrator și potențialii clienți.</li>
-              <li>Îmbunătățirea securității platformei.</li>
-            </ul>
+            <section>
+              <h3 className="text-xl font-semibold">3. Scopul și Temeiul Juridic al Prelucrării</h3>
+              <p>Prelucrăm datele dumneavoastră în următoarele scopuri:</p>
+              <ul>
+                <li><strong>Furnizarea Serviciului (Art. 6 alin. 1 lit. b GDPR):</strong> Pentru crearea contului, autentificarea securizată și gestionarea inventarului de anunțuri auto.</li>
+                <li><strong>Securitate (Art. 6 alin. 1 lit. f GDPR):</strong> Protejarea platformei împotriva fraudelor și atacurilor cibernetice prin utilizarea token-urilor de tip JWT (JSON Web Token).</li>
+                <li><strong>Comunicare:</strong> Facilitarea legăturii între administratorul platformei și potențialii săi cumpărători prin intermediul mesajelor primite.</li>
+              </ul>
+            </section>
 
-            <h3>3. Temeiul juridic</h3>
-            <p>Prelucrarea se bazează pe necesitatea executării unui contract (furnizarea serviciului), pe consimțământul dumneavoastră (în cazul formularelor de contact) sau pe interesul nostru legitim (securitate).</p>
+            <section>
+              <h3 className="text-xl font-semibold">4. Destinatari și Transferul Datelor</h3>
+              <p>Datele dumneavoastră nu sunt vândute către terți. Acestea pot fi accesate de furnizori de servicii strict necesari funcționării platformei:</p>
+              <ul>
+                <li><strong>Cloudinary:</strong> Pentru stocarea și procesarea securizată a fișierelor media (imagini și video).</li>
+                <li><strong>Furnizori de Hosting:</strong> Pentru găzduirea bazei de date și a codului sursă al platformei.</li>
+                <li><strong>Autorități Publice:</strong> Doar în cazul unei obligații legale exprese.</li>
+              </ul>
+            </section>
 
-            <h3>4. Destinatarii datelor</h3>
-            <p>Datele nu sunt vândute către terți. Putem transmite date către furnizori de servicii tehnice (hosting, baze de date) doar în măsura necesară funcționării platformei, sub contracte de confidențialitate stricte.</p>
+            <section>
+              <h3 className="text-xl font-semibold">5. Securitatea Datelor</h3>
+              <p>
+                Implementăm măsuri tehnice și organizatorice avansate pentru a asigura integritatea datelor:
+              </p>
+              <ul>
+                <li>Criptarea comunicațiilor prin protocol SSL/TLS (HTTPS).</li>
+                <li>Utilizarea token-urilor JWT pentru protecția și autorizarea fiecărei sesiuni de lucru a administratorului.</li>
+                <li>Hashing ireversibil al parolelor, astfel încât nicio persoană din cadrul echipei tehnice să nu poată vizualiza parolele în format text.</li>
+              </ul>
+            </section>
 
-            <h3>5. Drepturile dumneavoastră</h3>
-            <p>Conform GDPR, beneficiați de dreptul de acces, rectificare, ștergere ("dreptul de a fi uitat"), restricționarea prelucrării, portabilitatea datelor și dreptul de a vă opune prelucrării. Pentru exercitarea acestor drepturi, ne puteți contacta la <strong>maaximfrancesco@gmail.com</strong>.</p>
+            <section>
+              <h3 className="text-xl font-semibold">6. Drepturile Dumneavoastră</h3>
+              <p>Conform GDPR, beneficiați de următoarele drepturi:</p>
+              <ul>
+                <li><strong>Dreptul de Acces:</strong> Puteți solicita o confirmare a datelor prelucrate de noi.</li>
+                <li><strong>Dreptul la Rectificare:</strong> Puteți solicita corectarea datelor inexacte sau incomplete.</li>
+                <li><strong>Dreptul la Ștergere („Dreptul de a fi uitat”):</strong> Puteți solicita ștergerea datelor dacă acestea nu mai sunt necesare scopurilor inițiale.</li>
+                <li><strong>Dreptul la Restricționarea Prelucrării:</strong> În anumite condiții, puteți solicita suspendarea prelucrării datelor.</li>
+                <li><strong>Dreptul la Portabilitate:</strong> Puteți solicita transmiterea datelor într-un format structurat.</li>
+              </ul>
+              <p>Pentru exercitarea acestor drepturi, ne puteți contacta la adresa de email: <strong>maaximfrancesco@gmail.com</strong>.</p>
+            </section>
 
-            <h3>6. Securitate</h3>
-            <p>Implementăm măsuri tehnice și organizatorice moderne (criptare SSL, hashing parole) pentru a preveni accesul neautorizat la datele dumneavoastră.</p>
+            <section>
+              <h3 className="text-xl font-semibold">7. Perioada de Retenție</h3>
+              <p>
+                Păstrăm datele cu caracter personal pe durata activității contului dumneavoastră de administrator. La solicitarea de închidere a contului, datele vor fi șterse sau anonimizate în termen de maxim 30 de zile, cu excepția datelor necesare pentru conformarea cu obligațiile legale fiscale sau juridice.
+              </p>
+            </section>
+
+            <div className="mt-10 p-4 bg-muted rounded-lg text-sm italic">
+              <p>Prezenta politică poate fi actualizată periodic. Vă recomandăm consultarea acestei pagini la fiecare utilizare majoră a serviciului.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
