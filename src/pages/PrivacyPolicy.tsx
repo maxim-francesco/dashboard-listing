@@ -17,7 +17,7 @@ const PrivacyPolicy = () => {
         <Card className="border-card-border shadow-sm">
           <CardHeader className="border-b border-border bg-card/50">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">Politică de Confidențialitate</CardTitle>
-            <p className="text-sm text-muted-foreground">Conform Regulamentului (UE) 2016/679 (GDPR)</p>
+            <p className="text-sm text-muted-foreground">Conform Regulamentului (UE) 2016/679 (GDPR) | Ultima actualizare: 18 februarie 2026</p>
           </CardHeader>
           <CardContent className="prose prose-slate max-w-none py-8 text-foreground">
             <section>

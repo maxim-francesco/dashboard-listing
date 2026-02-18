@@ -17,7 +17,10 @@ const CookiePolicy = () => {
         <Card className="border-card-border shadow-sm">
           <CardHeader className="border-b border-border bg-card/50">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">Politică de Cookie-uri</CardTitle>
-            <p className="text-sm text-muted-foreground">MAXIM FRANCESCO PERSOANĂ FIZICĂ AUTORIZATĂ</p>
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm text-muted-foreground">MAXIM FRANCESCO PERSOANĂ FIZICĂ AUTORIZATĂ</p>
+              <p className="text-sm text-muted-foreground italic">Ultima actualizare: 18 februarie 2026</p>
+            </div>
           </CardHeader>
           <CardContent className="prose prose-slate max-w-none py-8 text-foreground">
             <section>
