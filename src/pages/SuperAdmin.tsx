@@ -149,12 +149,11 @@ const SuperAdmin = () => {
     setBusinessStructure(null);
 
     try {
-      // Correct endpoint as per instructions
       const res = await api.get(`/super-admin/businesses/${business.id}/structure`);
       setBusinessStructure(res.data);
     } catch (error) {
       console.error("Failed to fetch structure", error);
-      toast.error("Nu s-au putut încărca datele tehnice. Asigură-te că ruta este configurată corect.");
+      toast.error("Nu s-au putut încărca datele tehnice.");
     } finally {
       setIsLoadingStructure(false);
     }
@@ -513,7 +512,7 @@ const SuperAdmin = () => {
                                             <Tags className="h-3 w-3" /> Categorii și Atribute
                                         </p>
                                         
-                                        {businessStructure.categories.length === 0 ? (
+                                        {!businessStructure.categories || businessStructure.categories.length === 0 ? (
                                             <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-md text-muted-foreground text-sm">
                                                 <AlertCircle className="h-4 w-4" />
                                                 Acest business nu are categorii configurate.
@@ -530,7 +529,7 @@ const SuperAdmin = () => {
                                                         </AccordionTrigger>
                                                         <AccordionContent className="px-3 pb-3">
                                                             <div className="space-y-2 mt-2 pl-2 border-l-2 border-primary/20">
-                                                                {cat.attributes.length === 0 ? (
+                                                                {!cat.attributes || cat.attributes.length === 0 ? (
                                                                     <p className="text-[11px] text-muted-foreground italic">Niciun atribut definit.</p>
                                                                 ) : (
                                                                     cat.attributes.map((attr) => (
