@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Icons
@@ -39,7 +39,7 @@ interface PlatformStats {
   totalBusinesses: number;
   totalListings: number;
   totalViews: number;
-  totalActiveListings?: number; // Make it optional for safety
+  totalActiveListings?: number;
 }
 
 const onboardingFormSchema = z.object({
@@ -86,7 +86,7 @@ const SuperAdmin = () => {
   
   useEffect(() => {
     if (businesses) {
-      console.log('Businesses Data:', businesses);
+      console.log('[SuperAdmin] Businesses Data:', businesses);
     }
   }, [businesses]);
 
@@ -153,15 +153,17 @@ const SuperAdmin = () => {
   };
 
   const TableSkeleton = () => (
-    [...Array(3)].map((_, i) => (
-        <TableRow key={i}>
-            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
-        </TableRow>
-    ))
+    <>
+      {[...Array(3)].map((_, i) => (
+          <TableRow key={i}>
+              <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
+          </TableRow>
+      ))}
+    </>
   );
 
   return (
