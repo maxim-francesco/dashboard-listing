@@ -148,15 +148,6 @@ const SuperAdmin = () => {
     setBusinessStructure(null);
 
     try {
-      // Pasul 1: Preluăm categoriile business-ului
-      // Notă: Folosim o rută publică sau de admin care permite businessId
-      const categoriesRes = await api.get(`/public/listings/search?businessId=${business.id}&limit=1`);
-      
-      // Dacă backend-ul nu oferă o listă directă de categorii cu ID-uri via businessId în API-ul public,
-      // va trebui să folosim o rută de super-admin sau să le extragem din lista de business-uri dacă ar fi incluse.
-      // Aici simulăm preluarea structurii. 
-      // Într-un mediu real, am folosi api.get(`/super-admin/businesses/${business.id}/structure`)
-      
       const res = await api.get(`/super-admin/businesses/${business.id}/structure`);
       setBusinessStructure(res.data);
     } catch (error) {
@@ -318,7 +309,7 @@ const SuperAdmin = () => {
                                         <FormControl>
                                         <RadioGroupItem value="auto" />
                                         </FormControl>
-                                        <FormLabel className="font-normal">Auto</ExternalId>
+                                        <FormLabel className="font-normal">Auto</FormLabel>
                                     </FormItem>
                                     <FormItem className="flex items-center space-x-3 space-y-0">
                                         <FormControl>
@@ -363,7 +354,7 @@ const SuperAdmin = () => {
                             name="password"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Parolă Admin</ExternalId>
+                                <FormLabel>Parolă Admin</FormLabel>
                                 <div className="flex gap-2">
                                     <FormControl>
                                         <Input type="text" placeholder="Parolă sigură" {...field} />
