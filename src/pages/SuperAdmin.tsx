@@ -34,7 +34,8 @@ import {
   Copy, 
   Check, 
   Database, 
-  Tags
+  Tags,
+  AlertCircle
 } from "lucide-react";
 
 // API
@@ -148,11 +149,12 @@ const SuperAdmin = () => {
     setBusinessStructure(null);
 
     try {
+      // Correct endpoint as per instructions
       const res = await api.get(`/super-admin/businesses/${business.id}/structure`);
       setBusinessStructure(res.data);
     } catch (error) {
       console.error("Failed to fetch structure", error);
-      toast.error("Nu s-a putut încărca structura tehnică. Verificați permisiunile.");
+      toast.error("Nu s-au putut încărca datele tehnice. Asigură-te că ruta este configurată corect.");
     } finally {
       setIsLoadingStructure(false);
     }
@@ -214,13 +216,13 @@ const SuperAdmin = () => {
   const CopyableId = ({ id, label }: { id: string; label?: string }) => (
     <div className="flex items-center gap-2 group">
       {label && <span className="text-xs font-medium text-muted-foreground min-w-[80px]">{label}:</span>}
-      <code className="bg-muted px-2 py-1 rounded text-[11px] font-mono text-primary border border-border overflow-hidden truncate max-w-[200px]">
+      <code className="bg-muted px-2 py-1 rounded text-[11px] font-mono text-primary border border-border overflow-hidden truncate flex-1">
         {id}
       </code>
       <Button 
         variant="ghost" 
         size="icon" 
-        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" 
+        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" 
         onClick={() => handleCopy(id)}
       >
         {copiedId === id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
@@ -510,31 +512,43 @@ const SuperAdmin = () => {
                                         <p className="text-xs font-bold text-muted-foreground uppercase mb-3 flex items-center gap-2">
                                             <Tags className="h-3 w-3" /> Categorii și Atribute
                                         </p>
-                                        <Accordion type="single" collapsible className="w-full">
-                                            {businessStructure.categories.map((cat) => (
-                                                <AccordionItem key={cat.id} value={cat.id} className="border-b-0 mb-2 bg-muted/30 rounded-md overflow-hidden">
-                                                    <AccordionTrigger className="px-3 py-2 hover:bg-muted/50 hover:no-underline transition-colors">
-                                                        <div className="flex flex-col items-start text-left">
-                                                            <span className="font-semibold text-sm">{cat.name}</span>
-                                                            <span className="text-[10px] font-mono text-muted-foreground">{cat.id}</span>
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent className="px-3 pb-3">
-                                                        <div className="space-y-2 mt-2 pl-2 border-l-2 border-primary/20">
-                                                            {cat.attributes.map((attr) => (
-                                                                <div key={attr.id} className="flex flex-col gap-1 py-1">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <span className="text-xs font-medium">{attr.name}</span>
-                                                                        <span className="text-[9px] px-1.5 py-0.5 bg-background rounded border text-muted-foreground uppercase">{attr.type}</span>
-                                                                    </div>
-                                                                    <CopyableId id={attr.id} />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            ))}
-                                        </Accordion>
+                                        
+                                        {businessStructure.categories.length === 0 ? (
+                                            <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-md text-muted-foreground text-sm">
+                                                <AlertCircle className="h-4 w-4" />
+                                                Acest business nu are categorii configurate.
+                                            </div>
+                                        ) : (
+                                            <Accordion type="single" collapsible className="w-full">
+                                                {businessStructure.categories.map((cat) => (
+                                                    <AccordionItem key={cat.id} value={cat.id} className="border-b-0 mb-2 bg-muted/30 rounded-md overflow-hidden">
+                                                        <AccordionTrigger className="px-3 py-2 hover:bg-muted/50 hover:no-underline transition-colors">
+                                                            <div className="flex flex-col items-start text-left">
+                                                                <span className="font-semibold text-sm">{cat.name}</span>
+                                                                <span className="text-[10px] font-mono text-muted-foreground">{cat.id}</span>
+                                                            </div>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent className="px-3 pb-3">
+                                                            <div className="space-y-2 mt-2 pl-2 border-l-2 border-primary/20">
+                                                                {cat.attributes.length === 0 ? (
+                                                                    <p className="text-[11px] text-muted-foreground italic">Niciun atribut definit.</p>
+                                                                ) : (
+                                                                    cat.attributes.map((attr) => (
+                                                                        <div key={attr.id} className="flex flex-col gap-1 py-1">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-xs font-medium">{attr.name}</span>
+                                                                                <span className="text-[9px] px-1.5 py-0.5 bg-background rounded border text-muted-foreground uppercase">{attr.type}</span>
+                                                                            </div>
+                                                                            <CopyableId id={attr.id} />
+                                                                        </div>
+                                                                    ))
+                                                                )}
+                                                            </div>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
