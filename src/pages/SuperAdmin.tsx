@@ -153,11 +153,21 @@ const SuperAdmin = () => {
       const res = await api.get(`/super-admin/businesses/${business.id}/structure`);
       console.log('[SuperAdmin] Structure received from server:', res.data);
       
-      // Ensure we have a valid structure object
-      if (res.data) {
-        setBusinessStructure(res.data);
+      // The backend returns an array of categories directly.
+      // We shape it into our BusinessStructure interface.
+      if (res.data && Array.isArray(res.data)) {
+        setBusinessStructure({
+          id: business.id,
+          name: business.name,
+          categories: res.data
+        });
       } else {
-        console.warn('[SuperAdmin] Server returned empty structure data.');
+        console.warn('[SuperAdmin] Server returned empty or invalid structure data.');
+        setBusinessStructure({
+          id: business.id,
+          name: business.name,
+          categories: []
+        });
       }
     } catch (error) {
       console.error("[SuperAdmin] Failed to fetch structure:", error);
@@ -517,12 +527,7 @@ const SuperAdmin = () => {
                             <CardDescription>Configurație tehnică pentru afacerea selectată.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {!selectedBusinessForAPI ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                                    <Terminal className="h-8 w-8 mb-2 opacity-20" />
-                                    <p className="text-sm">Selectează un business din listă pentru a vedea structura tehnică.</p>
-                                </div>
-                            ) : isLoadingStructure ? (
+                            {isLoadingStructure ? (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -531,6 +536,11 @@ const SuperAdmin = () => {
                                     <Skeleton className="h-10 w-full" />
                                     <Skeleton className="h-24 w-full" />
                                     <Skeleton className="h-24 w-full" />
+                                </div>
+                            ) : !selectedBusinessForAPI ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                                    <Terminal className="h-8 w-8 mb-2 opacity-20" />
+                                    <p className="text-sm">Selectează un business din listă pentru a vedea structura tehnică.</p>
                                 </div>
                             ) : businessStructure ? (
                                 <div className="space-y-6">
@@ -556,25 +566,28 @@ const SuperAdmin = () => {
                                                         <AccordionTrigger className="px-3 py-2 hover:bg-muted/50 hover:no-underline transition-colors">
                                                             <div className="flex flex-col items-start text-left">
                                                                 <span className="font-semibold text-sm">{cat.name}</span>
-                                                                <span className="text-[10px] font-mono text-muted-foreground">{cat.id}</span>
+                                                                <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[150px]">{cat.id}</span>
                                                             </div>
                                                         </AccordionTrigger>
                                                         <AccordionContent className="px-3 pb-3">
-                                                            <div className="space-y-2 mt-2 pl-2 border-l-2 border-primary/20">
+                                                            <div className="space-y-4 mt-2 pl-2 border-l-2 border-primary/20">
                                                                 <CopyableId id={cat.id} label="ID Categ." />
                                                                 <div className="h-px bg-border/50 my-2" />
+                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Atribute disponibile:</p>
                                                                 {!cat.attributes || cat.attributes.length === 0 ? (
                                                                     <p className="text-[11px] text-muted-foreground italic">Niciun atribut definit.</p>
                                                                 ) : (
-                                                                    cat.attributes.map((attr) => (
-                                                                        <div key={attr.id} className="flex flex-col gap-1 py-1">
-                                                                            <div className="flex justify-between items-center">
-                                                                                <span className="text-xs font-medium">{attr.name}</span>
-                                                                                <span className="text-[9px] px-1.5 py-0.5 bg-background rounded border text-muted-foreground uppercase">{attr.type}</span>
+                                                                    <div className="space-y-3">
+                                                                        {cat.attributes.map((attr) => (
+                                                                            <div key={attr.id} className="flex flex-col gap-1 py-1 border-b border-border/30 last:border-0 pb-2">
+                                                                                <div className="flex justify-between items-center mb-1">
+                                                                                    <span className="text-xs font-semibold text-foreground">{attr.name}</span>
+                                                                                    <span className="text-[9px] px-1.5 py-0.5 bg-secondary rounded border text-muted-foreground uppercase">{attr.type}</span>
+                                                                                </div>
+                                                                                <CopyableId id={attr.id} />
                                                                             </div>
-                                                                            <CopyableId id={attr.id} />
-                                                                        </div>
-                                                                    ))
+                                                                        ))}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </AccordionContent>
