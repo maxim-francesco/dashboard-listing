@@ -40,6 +40,7 @@ import {
 
 // API
 import api, { onboardNewClient, getPlatformStats, getAllBusinesses } from "@/services/api";
+import { cn } from "@/lib/utils";
 
 // Types
 interface Business {
@@ -56,7 +57,6 @@ interface PlatformStats {
   totalBusinesses: number;
   totalListings: number;
   totalViews: number;
-  totalActiveListings?: number;
 }
 
 interface AttributeDetail {
@@ -144,15 +144,23 @@ const SuperAdmin = () => {
   };
 
   const fetchBusinessStructure = async (business: Business) => {
+    console.log(`[SuperAdmin] Fetching structure for business: ${business.name} (${business.id})`);
     setSelectedBusinessForAPI(business);
     setIsLoadingStructure(true);
     setBusinessStructure(null);
 
     try {
       const res = await api.get(`/super-admin/businesses/${business.id}/structure`);
-      setBusinessStructure(res.data);
+      console.log('[SuperAdmin] Structure received from server:', res.data);
+      
+      // Ensure we have a valid structure object
+      if (res.data) {
+        setBusinessStructure(res.data);
+      } else {
+        console.warn('[SuperAdmin] Server returned empty structure data.');
+      }
     } catch (error) {
-      console.error("Failed to fetch structure", error);
+      console.error("[SuperAdmin] Failed to fetch structure:", error);
       toast.error("Nu s-au putut încărca datele tehnice.");
     } finally {
       setIsLoadingStructure(false);
@@ -222,7 +230,10 @@ const SuperAdmin = () => {
         variant="ghost" 
         size="icon" 
         className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" 
-        onClick={() => handleCopy(id)}
+        onClick={(e) => {
+          e.stopPropagation(); // Avoid triggering row click
+          handleCopy(id);
+        }}
       >
         {copiedId === id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
       </Button>
@@ -278,7 +289,7 @@ const SuperAdmin = () => {
         </div>
         
         {/* Main Content with Tabs */}
-        <Tabs defaultValue="onboarding" className="w-full">
+        <Tabs defaultValue="management" className="w-full">
             <TabsList className="grid w-full grid-cols-2 max-w-lg">
                 <TabsTrigger value="onboarding">Onboarding Client Nou</TabsTrigger>
                 <TabsTrigger value="management">Management Afaceri</TabsTrigger>
@@ -412,7 +423,7 @@ const SuperAdmin = () => {
                     <Card className="lg:col-span-2">
                         <CardHeader>
                             <CardTitle>Listă Afaceri</CardTitle>
-                            <CardDescription>Vizualizează și gestionează toți clienții de pe platformă.</CardDescription>
+                            <CardDescription>Selectează o afacere pentru a-i vedea detaliile tehnice de integrare.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -429,7 +440,14 @@ const SuperAdmin = () => {
                                         <TableSkeleton />
                                     ) : (
                                         businesses?.map((business) => (
-                                        <TableRow key={business.id} className={selectedBusinessForAPI?.id === business.id ? "bg-primary/5" : ""}>
+                                        <TableRow 
+                                          key={business.id} 
+                                          className={cn(
+                                            "cursor-pointer transition-colors",
+                                            selectedBusinessForAPI?.id === business.id ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
+                                          )}
+                                          onClick={() => fetchBusinessStructure(business)}
+                                        >
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col">
                                                     <span>{business.name}</span>
@@ -446,8 +464,11 @@ const SuperAdmin = () => {
                                                                 <Button 
                                                                     variant="ghost" 
                                                                     size="icon" 
-                                                                    onClick={() => fetchBusinessStructure(business)}
                                                                     className={selectedBusinessForAPI?.id === business.id ? "text-primary" : ""}
+                                                                    onClick={(e) => {
+                                                                      e.stopPropagation();
+                                                                      fetchBusinessStructure(business);
+                                                                    }}
                                                                 >
                                                                     <Terminal className="h-4 w-4" />
                                                                 </Button>
@@ -460,7 +481,14 @@ const SuperAdmin = () => {
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button variant="ghost" size="icon" onClick={() => toast.info(`Personificare ${business.name}`)}>
+                                                                <Button 
+                                                                  variant="ghost" 
+                                                                  size="icon" 
+                                                                  onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toast.info(`Personificare ${business.name}`);
+                                                                  }}
+                                                                >
                                                                     <Eye className="h-4 w-4" />
                                                                 </Button>
                                                             </TooltipTrigger>
@@ -486,7 +514,7 @@ const SuperAdmin = () => {
                                 <Database className="h-5 w-5 text-primary" />
                                 Detalii Integrare API
                             </CardTitle>
-                            <CardDescription>ID-uri tehnice pentru OLX/Autovit</CardDescription>
+                            <CardDescription>Configurație tehnică pentru afacerea selectată.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {!selectedBusinessForAPI ? (
@@ -496,6 +524,10 @@ const SuperAdmin = () => {
                                 </div>
                             ) : isLoadingStructure ? (
                                 <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                      <span className="text-sm">Se încarcă structura...</span>
+                                    </div>
                                     <Skeleton className="h-10 w-full" />
                                     <Skeleton className="h-24 w-full" />
                                     <Skeleton className="h-24 w-full" />
@@ -503,7 +535,7 @@ const SuperAdmin = () => {
                             ) : businessStructure ? (
                                 <div className="space-y-6">
                                     <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-                                        <p className="text-xs font-bold text-primary uppercase mb-2">Business Principal</p>
+                                        <p className="text-xs font-bold text-primary uppercase mb-2">Afacere: {businessStructure.name}</p>
                                         <CopyableId id={businessStructure.id} label="ID Firmă" />
                                     </div>
 
@@ -529,6 +561,8 @@ const SuperAdmin = () => {
                                                         </AccordionTrigger>
                                                         <AccordionContent className="px-3 pb-3">
                                                             <div className="space-y-2 mt-2 pl-2 border-l-2 border-primary/20">
+                                                                <CopyableId id={cat.id} label="ID Categ." />
+                                                                <div className="h-px bg-border/50 my-2" />
                                                                 {!cat.attributes || cat.attributes.length === 0 ? (
                                                                     <p className="text-[11px] text-muted-foreground italic">Niciun atribut definit.</p>
                                                                 ) : (
