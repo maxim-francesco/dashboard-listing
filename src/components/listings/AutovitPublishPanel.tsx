@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Upload, EyeOff, Share2, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink, Upload, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { 
   getAutovitStatus, 
-  publishToAutovit, 
   unpublishFromAutovit, 
-  exportToOLX 
+  publishToAutovitAndOLX 
 } from "@/services/api";
 import AutovitStatusBadge from "./AutovitStatusBadge";
+import { cn } from "@/lib/utils";
 
 interface AutovitPublishPanelProps {
   listingId: string;
@@ -17,7 +18,7 @@ interface AutovitPublishPanelProps {
 }
 
 /**
- * Panou de control pentru publicarea și gestionarea statusului anunțului pe Autovit și OLX.
+ * Panou de control simplificat pentru publicarea anunțului pe Autovit și OLX simultan.
  */
 const AutovitPublishPanel = ({ listingId, onStatusChange }: AutovitPublishPanelProps) => {
   const [status, setStatus] = useState<{ autovitId: string | null; autovitStatus: string | null }>({
@@ -48,23 +49,43 @@ const AutovitPublishPanel = ({ listingId, onStatusChange }: AutovitPublishPanelP
     }
   }, [listingId]);
 
-  const handleAction = async (action: () => Promise<any>, successMessage: string) => {
+  const handlePublish = async () => {
     setIsActionLoading(true);
     try {
-      await action();
-      toast.success(successMessage);
+      const response = await publishToAutovitAndOLX(listingId);
+      toast.success(response.data.message || "Anunțul a fost publicat pe Autovit & OLX!");
       await fetchStatus();
       if (onStatusChange) onStatusChange();
     } catch (error: any) {
-      const message = error.response?.data?.message || "A apărut o eroare în timpul procesării cererii.";
+      const message = error.response?.data?.message || "A apărut o eroare la publicare.";
       toast.error(message);
     } finally {
       setIsActionLoading(false);
     }
   };
 
+  const handleDeactivate = async () => {
+    setIsActionLoading(true);
+    try {
+      await unpublishFromAutovit(listingId);
+      toast.success("Anunțul a fost dezactivat de pe platformele externe.");
+      await fetchStatus();
+      if (onStatusChange) onStatusChange();
+    } catch (error: any) {
+      const message = error.response?.data?.message || "A apărut o eroare la dezactivare.";
+      toast.error(message);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const isPublished = status.autovitStatus === "active";
+
   return (
-    <Card className="border-card-border bg-card">
+    <Card className={cn(
+      "border-card-border bg-card transition-all duration-300",
+      isPublished && "border-success/50 shadow-sm shadow-success/10 bg-success/5"
+    )}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <ExternalLink className="w-5 h-5 text-primary" />
@@ -78,62 +99,78 @@ const AutovitPublishPanel = ({ listingId, onStatusChange }: AutovitPublishPanelP
             <span className="text-sm">Se verifică statusul sincronizării...</span>
           </div>
         ) : (
-          <>
-            <AutovitStatusBadge 
-              autovitId={status.autovitId} 
-              autovitStatus={status.autovitStatus} 
-            />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <AutovitStatusBadge 
+                    autovitId={status.autovitId} 
+                    autovitStatus={status.autovitStatus} 
+                />
+                
+                {isPublished && (
+                    <Badge className="bg-success text-success-foreground py-1 px-3 flex items-center gap-1.5 font-bold animate-in fade-in zoom-in duration-300">
+                        <CheckCircle2 className="w-4 h-4" />
+                        ✓ Publicat pe Autovit & OLX
+                    </Badge>
+                )}
+            </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              {(!status.autovitStatus || status.autovitStatus === "inactive") ? (
+            <div className="pt-2">
+              {status.autovitId === null ? (
+                <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground italic">
+                        Adaugă cel puțin o imagine pentru a putea publica anunțul.
+                    </p>
+                    <Button 
+                        disabled
+                        size="sm"
+                        className="w-full sm:w-auto opacity-50 cursor-not-allowed"
+                    >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Publică pe Autovit & OLX
+                    </Button>
+                </div>
+              ) : !isPublished ? (
                 <Button 
-                  onClick={() => handleAction(() => publishToAutovit(listingId), "Anunțul a fost publicat cu succes pe Autovit!")}
+                  onClick={handlePublish}
                   disabled={isActionLoading}
-                  size="sm"
-                  className="bg-primary hover:bg-primary-hover text-primary-foreground font-medium"
+                  size="lg"
+                  className="w-full sm:w-auto bg-success hover:bg-success/90 text-success-foreground font-bold shadow-md transition-all active:scale-95"
                 >
                   {isActionLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Se publică...
+                    </>
                   ) : (
-                    <Upload className="w-4 h-4 mr-2" />
+                    <>
+                        <Upload className="w-5 h-5 mr-2" />
+                        Publică pe Autovit & OLX
+                    </>
                   )}
-                  Publică pe Autovit
                 </Button>
-              ) : status.autovitStatus === "active" ? (
-                <>
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleAction(() => unpublishFromAutovit(listingId), "Anunțul a fost dezactivat de pe Autovit.")}
-                    disabled={isActionLoading}
-                    size="sm"
-                    className="border-border hover:bg-secondary text-foreground"
-                  >
-                    {isActionLoading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 mr-2" />
-                    )}
-                    Dezactivează Autovit
-                  </Button>
-
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleAction(() => exportToOLX(listingId), "Anunțul a fost exportat cu succes pe OLX!")}
-                    disabled={isActionLoading}
-                    size="sm"
-                    className="border-border hover:bg-secondary text-foreground"
-                  >
-                    {isActionLoading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Share2 className="w-4 h-4 mr-2" />
-                    )}
-                    Exportă pe OLX
-                  </Button>
-                </>
-              ) : null}
+              ) : (
+                <Button 
+                  variant="outline"
+                  onClick={handleDeactivate}
+                  disabled={isActionLoading}
+                  size="sm"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+                >
+                  {isActionLoading ? (
+                    <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Se dezactivează...
+                    </>
+                  ) : (
+                    <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Dezactivează
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

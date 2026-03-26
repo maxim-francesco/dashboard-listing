@@ -305,5 +305,8 @@ export const unpublishFromAutovit = (listingId: string) =>
 export const exportToOLX = (listingId: string) =>
   api.post(`/autovit/${listingId}/export-olx`);
 
+export const publishToAutovitAndOLX = (listingId: string) =>
+  api.post(`/autovit/${listingId}/publish`);
+
 
 export default api;
