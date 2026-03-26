@@ -30,6 +30,7 @@ import api from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
+import AutovitStatusBadge from "@/components/listings/AutovitStatusBadge";
 
 interface Listing {
   id: string;
@@ -46,6 +47,8 @@ interface Listing {
   _count?: {
     views: number;
   };
+  autovitId?: string | null;
+  autovitStatus?: string | null;
 }
 
 interface Business {
@@ -157,7 +160,7 @@ const Listings = () => {
                 return `"${listingTitle}" a fost șters cu succes.`;
             },
             error: (err) => {
-                return "Nu s-a putut șterge anunțul. Te rugăm să încerci din nou.";
+                return "Nu s-a putut șterge anunțul. Te rugăm să încercați din nou.";
             }
         });
     }
@@ -251,6 +254,7 @@ const Listings = () => {
                     <TableHead className="text-foreground font-medium">Vizualizări</TableHead>
                     <TableHead className="text-foreground font-medium">Dată Creare</TableHead>
                     <TableHead className="text-foreground font-medium">Status</TableHead>
+                    <TableHead className="text-foreground font-medium">Autovit</TableHead>
                     <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -295,6 +299,13 @@ const Listings = () => {
                             <Badge className={getStatusColor(listing.status)}>
                                 {listing.status}
                             </Badge>
+                        </TableCell>
+                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
+                            <span className="font-semibold text-foreground md:hidden">Autovit</span>
+                            <AutovitStatusBadge 
+                              autovitId={listing.autovitId ?? null} 
+                              autovitStatus={listing.autovitStatus ?? null} 
+                            />
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 md:text-right">
                              <span className="font-semibold text-foreground md:hidden">Acțiuni</span>
