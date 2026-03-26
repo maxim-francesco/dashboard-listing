@@ -742,10 +742,9 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
-        {isEditing && (
+        {isEditing && listingId && (
           <AutovitPublishPanel 
-            listingId={listingId!}
-            onStatusChange={() => {}} 
+            listingId={listingId}
           />
         )}
 
