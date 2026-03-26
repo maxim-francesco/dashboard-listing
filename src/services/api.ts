@@ -292,5 +292,18 @@ export const getAllBusinesses = async () => {
   return response.data;
 }
 
+// Autovit Integration
+export const getAutovitStatus = (listingId: string) =>
+  api.get(`/autovit/${listingId}/status`);
+
+export const publishToAutovit = (listingId: string) =>
+  api.post(`/autovit/${listingId}/activate`);
+
+export const unpublishFromAutovit = (listingId: string) =>
+  api.post(`/autovit/${listingId}/deactivate`);
+
+export const exportToOLX = (listingId: string) =>
+  api.post(`/autovit/${listingId}/export-olx`);
+
 
 export default api;
