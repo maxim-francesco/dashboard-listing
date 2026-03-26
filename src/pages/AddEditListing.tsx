@@ -30,6 +30,7 @@ import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
+import AutovitPublishPanel from "@/components/listings/AutovitPublishPanel";
 
 interface Category {
   id: string;
@@ -741,6 +742,13 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
+        {isEditing && (
+          <AutovitPublishPanel 
+            listingId={listingId!}
+            onStatusChange={() => {}} 
+          />
+        )}
+
         {isVlcAdmin && (
             <Card className="border-card-border bg-card mb-6">
                 <CardHeader>
@@ -815,7 +823,7 @@ const AddEditListing = () => {
             </Card>
         )}
 
-        <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
+        <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mt-6">
           <Button
             type="submit"
             className="bg-primary hover:bg-primary-hover text-primary-foreground"
@@ -840,5 +848,3 @@ const AddEditListing = () => {
 };
 
 export default AddEditListing;
-
-    
