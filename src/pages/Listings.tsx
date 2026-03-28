@@ -101,6 +101,7 @@ const ListingActionDropdown = ({
       const res = await publishToAutovitAndOLX(listing.id);
       toast.success(res.data.message || "Publicat pe Autovit & OLX!");
       setAutovitStatus("active");
+      setIsOpen(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Eroare la publicare.");
     } finally {
@@ -114,6 +115,7 @@ const ListingActionDropdown = ({
       await unpublishFromAutovit(listing.id);
       toast.success("Anunț dezactivat de pe Autovit & OLX.");
       setAutovitStatus("inactive");
+      setIsOpen(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Eroare la dezactivare.");
     } finally {
@@ -122,7 +124,7 @@ const ListingActionDropdown = ({
   };
 
   return (
-    <DropdownMenu onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
           <span className="sr-only">Deschide meniu</span>
@@ -169,14 +171,12 @@ const ListingActionDropdown = ({
 
         <DropdownMenuSeparator />
 
-        {autovitId === null ? (
-          <DropdownMenuItem disabled className="text-muted-foreground">
-            <Upload className="mr-2 h-4 w-4 opacity-50" />
-            <span>Autovit: fără imagini</span>
-          </DropdownMenuItem>
-        ) : autovitStatus !== "active" ? (
+        {autovitStatus !== "active" ? (
           <DropdownMenuItem
-            onClick={handlePublishAutovit}
+            onSelect={(e) => {
+              e.preventDefault();
+              handlePublishAutovit();
+            }}
             disabled={isAutovitLoading}
             className="cursor-pointer text-success hover:!text-success-foreground hover:!bg-success"
           >
@@ -185,11 +185,14 @@ const ListingActionDropdown = ({
             ) : (
               <Upload className="mr-2 h-4 w-4" />
             )}
-            <span>Publică pe Autovit & OLX</span>
+            <span>{isAutovitLoading ? "Se publică..." : "Publică pe Autovit & OLX"}</span>
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
-            onClick={handleDeactivateAutovit}
+            onSelect={(e) => {
+              e.preventDefault();
+              handleDeactivateAutovit();
+            }}
             disabled={isAutovitLoading}
             className="cursor-pointer text-destructive hover:!text-destructive-foreground hover:!bg-destructive"
           >
@@ -198,7 +201,7 @@ const ListingActionDropdown = ({
             ) : (
               <EyeOff className="mr-2 h-4 w-4" />
             )}
-            <span>Dezactivează Autovit & OLX</span>
+            <span>{isAutovitLoading ? "Se dezactivează..." : "Dezactivează Autovit & OLX"}</span>
           </DropdownMenuItem>
         )}
 

@@ -115,21 +115,7 @@ const AutovitPublishPanel = ({ listingId, onStatusChange }: AutovitPublishPanelP
             </div>
 
             <div className="pt-2">
-              {status.autovitId === null ? (
-                <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground italic">
-                        Adaugă cel puțin o imagine pentru a putea publica anunțul.
-                    </p>
-                    <Button 
-                        disabled
-                        size="sm"
-                        className="w-full sm:w-auto opacity-50 cursor-not-allowed"
-                    >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Publică pe Autovit & OLX
-                    </Button>
-                </div>
-              ) : !isPublished ? (
+              {!isPublished ? (
                 <Button 
                   onClick={handlePublish}
                   disabled={isActionLoading}
