@@ -17,16 +17,21 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "react-hot-toast";
 import { format } from 'date-fns';
-import api from "@/services/api";
+import api, { 
+  getAutovitStatus, 
+  publishToAutovitAndOLX, 
+  unpublishFromAutovit 
+} from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
@@ -55,6 +60,169 @@ interface Business {
   listingUrlPattern: string | null;
 }
 
+// Componentă separată pentru meniul de acțiuni pentru a gestiona starea per rând
+const ListingActionDropdown = ({ 
+  listing, 
+  onDelete, 
+  onClone, 
+  onSold, 
+  onGeneratePdf, 
+  onShowQr,
+  isPdfLoading 
+}: { 
+  listing: Listing; 
+  onDelete: (id: string, title: string) => void;
+  onClone: (id: string) => void;
+  onSold: (listing: Listing) => void;
+  onGeneratePdf: (listing: Listing) => void;
+  onShowQr: (listing: Listing) => void;
+  isPdfLoading: boolean;
+}) => {
+  const navigate = useNavigate();
+  const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
+  const [autovitId, setAutovitId] = useState<string | null>(null);
+  const [isAutovitLoading, setIsAutovitLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && listing.id) {
+      getAutovitStatus(listing.id)
+        .then(res => {
+          setAutovitStatus(res.data.autovitStatus);
+          setAutovitId(res.data.autovitId);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, listing.id]);
+
+  const handlePublishAutovit = async () => {
+    setIsAutovitLoading(true);
+    try {
+      const res = await publishToAutovitAndOLX(listing.id);
+      toast.success(res.data.message || "Publicat pe Autovit & OLX!");
+      setAutovitStatus("active");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Eroare la publicare.");
+    } finally {
+      setIsAutovitLoading(false);
+    }
+  };
+
+  const handleDeactivateAutovit = async () => {
+    setIsAutovitLoading(true);
+    try {
+      await unpublishFromAutovit(listing.id);
+      toast.success("Anunț dezactivat de pe Autovit & OLX.");
+      setAutovitStatus("inactive");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Eroare la dezactivare.");
+    } finally {
+      setIsAutovitLoading(false);
+    }
+  };
+
+  return (
+    <DropdownMenu onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Deschide meniu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-popover border-border min-w-[200px]">
+        <DropdownMenuItem
+          onClick={() => onGeneratePdf(listing)}
+          disabled={isPdfLoading}
+          className="cursor-pointer"
+        >
+          {isPdfLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+              <FileText className="mr-2 h-4 w-4" />
+          )}
+          <span>{isPdfLoading ? 'Se generează...' : 'Generează PDF'}</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={() => onShowQr(listing)}
+          className="cursor-pointer"
+        >
+          <QrCode className="mr-2 h-4 w-4" />
+          <span>Arată cod QR</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={() => onSold(listing)}
+          className="cursor-pointer"
+        >
+          <ClipboardCheck className="mr-2 h-4 w-4" />
+          <span>Marchează ca Vândut</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={() => onClone(listing.id)}
+          className="cursor-pointer"
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          <span>Clonează</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {autovitId === null ? (
+          <DropdownMenuItem disabled className="text-muted-foreground">
+            <Upload className="mr-2 h-4 w-4 opacity-50" />
+            <span>Autovit: fără imagini</span>
+          </DropdownMenuItem>
+        ) : autovitStatus !== "active" ? (
+          <DropdownMenuItem
+            onClick={handlePublishAutovit}
+            disabled={isAutovitLoading}
+            className="cursor-pointer text-success hover:!text-success-foreground hover:!bg-success"
+          >
+            {isAutovitLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            <span>Publică pe Autovit & OLX</span>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={handleDeactivateAutovit}
+            disabled={isAutovitLoading}
+            className="cursor-pointer text-destructive hover:!text-destructive-foreground hover:!bg-destructive"
+          >
+            {isAutovitLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <EyeOff className="mr-2 h-4 w-4" />
+            )}
+            <span>Dezactivează Autovit & OLX</span>
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={() => navigate(`/listings/${listing.id}/edit`)}
+          className="cursor-pointer"
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          <span>Editează</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={() => onDelete(listing.id, listing.title)}
+          className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          <span>Șterge</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -309,63 +477,15 @@ const Listings = () => {
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 md:text-right">
                              <span className="font-semibold text-foreground md:hidden">Acțiuni</span>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Deschide meniu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-popover border-border">
-                                  <DropdownMenuItem
-                                    onClick={() => handleGeneratePdf(listing)}
-                                    disabled={isGeneratingPdf && pdfListing?.id === listing.id}
-                                    className="cursor-pointer"
-                                  >
-                                    {isGeneratingPdf && pdfListing?.id === listing.id ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FileText className="mr-2 h-4 w-4" />
-                                    )}
-                                    <span>{isGeneratingPdf && pdfListing?.id === listing.id ? 'Se generează...' : 'Generează PDF'}</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleShowQrCode(listing)}
-                                    className="cursor-pointer"
-                                  >
-                                    <QrCode className="mr-2 h-4 w-4" />
-                                    <span>Arată cod QR</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleOpenSoldModal(listing)}
-                                    className="cursor-pointer"
-                                  >
-                                    <ClipboardCheck className="mr-2 h-4 w-4" />
-                                    <span>Marchează ca Vândut</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleCloneListing(listing.id)}
-                                    className="cursor-pointer"
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    <span>Clonează</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => navigate(`/listings/${listing.id}/edit`)}
-                                    className="cursor-pointer"
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Editează</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteListing(listing.id, listing.title)}
-                                    className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Șterge</span>
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                             <ListingActionDropdown 
+                                listing={listing}
+                                onDelete={handleDeleteListing}
+                                onClone={handleCloneListing}
+                                onSold={handleOpenSoldModal}
+                                onGeneratePdf={handleGeneratePdf}
+                                onShowQr={handleShowQrCode}
+                                isPdfLoading={isGeneratingPdf && pdfListing?.id === listing.id}
+                             />
                         </TableCell>
                     </TableRow>
                     ))}
