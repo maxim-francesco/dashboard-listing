@@ -86,12 +86,16 @@ const ListingActionDropdown = ({
 
   useEffect(() => {
     if (isOpen && listing.id) {
+      console.log(`[DEBUG] Listing for ${listing.id}:`, listing);
       getAutovitStatus(listing.id)
         .then(res => {
+          console.log(`[DEBUG] Autovit Status for ${listing.id}:`, res.data);
           setAutovitStatus(res.data.autovitStatus);
           setAutovitId(res.data.autovitId);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error(`[DEBUG] Failed to fetch Autovit status for ${listing.id}:`, err);
+        });
     }
   }, [isOpen, listing.id]);
 

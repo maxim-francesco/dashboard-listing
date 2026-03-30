@@ -2,6 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 // Create a new axios instance
+console.log("[DEBUG] API Service Loaded - Version: 1.0.2 - Path: dashboard-listing/src/services/api.ts");
 const api = axios.create({
   baseURL: 'https://saas-platform-backend.onrender.com/api'
 });
