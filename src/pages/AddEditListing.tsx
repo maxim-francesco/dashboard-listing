@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import axios from 'axios';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -408,9 +407,9 @@ const AddEditListing = () => {
     setUploadProgress(0);
 
     try {
-      const uploadUrl = `https://saas-platform-backend.onrender.com/api/listings/${listingId}/upload-video`;
+      const uploadUrl = `/listings/${listingId}/upload-video`;
       
-      const response = await axios.post(
+      const response = await api.post(
         uploadUrl,
         uploadFormData,
         {
