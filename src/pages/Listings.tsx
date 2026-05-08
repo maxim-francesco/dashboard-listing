@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,7 @@ const ListingActionDropdown = ({
   const [autovitId, setAutovitId] = useState<string | null>(null);
   const [isAutovitLoading, setIsAutovitLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
 
   useEffect(() => {
     if (isOpen && listing.id) {
@@ -124,6 +126,23 @@ const ListingActionDropdown = ({
       toast.error(err.response?.data?.message || "Eroare la dezactivare.");
     } finally {
       setIsAutovitLoading(false);
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    if (!listing.images || listing.images.length === 0) {
+      toast.error('Acest anunț nu are imagini de descărcat.');
+      return;
+    }
+    setIsZipping(true);
+    toast.loading('Se pregătește arhiva...', { id: 'zip-toast' });
+    try {
+      await downloadImagesAsZip(listing.images, listing.title);
+      toast.success('Arhiva a fost descărcată cu succes!', { id: 'zip-toast' });
+    } catch (error) {
+      toast.error('A apărut o eroare la crearea arhivei.', { id: 'zip-toast' });
+    } finally {
+      setIsZipping(false);
     }
   };
 
@@ -171,6 +190,19 @@ const ListingActionDropdown = ({
         >
           <Copy className="mr-2 h-4 w-4" />
           <span>Clonează</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={handleDownloadZip}
+          disabled={isZipping}
+          className="cursor-pointer"
+        >
+          {isZipping ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Archive className="mr-2 h-4 w-4" />
+          )}
+          <span>{isZipping ? 'Se descarcă...' : 'Descarcă poze (ZIP)'}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

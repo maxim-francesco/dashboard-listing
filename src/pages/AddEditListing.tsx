@@ -23,13 +23,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2 } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 import AutovitPublishPanel from "@/components/listings/AutovitPublishPanel";
+import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
 
 interface Category {
   id: string;
@@ -109,6 +110,7 @@ const AddEditListing = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
   
   const isVlcAdmin = localStorage.getItem('userEmail') === 'contact@vlc.ro';
 
@@ -456,6 +458,23 @@ const AddEditListing = () => {
     }
   };
 
+  const handleDownloadZip = async () => {
+    if (!existingImages || existingImages.length === 0) {
+      toast.error('Acest anunț nu are imagini de descărcat.');
+      return;
+    }
+    setIsZipping(true);
+    toast.loading('Se pregătește arhiva...', { id: 'zip-toast' });
+    try {
+      await downloadImagesAsZip(existingImages, formData.title || 'anunt');
+      toast.success('Arhiva a fost descărcată cu succes!', { id: 'zip-toast' });
+    } catch (error) {
+      toast.error('A apărut o eroare la crearea arhivei.', { id: 'zip-toast' });
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
 
   const renderAttributeField = (attribute: Attribute) => {
     const value = attributeValues[attribute.id] ?? '';
@@ -643,8 +662,25 @@ const AddEditListing = () => {
         )}
 
         <Card className="border-card-border bg-card mb-6">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-foreground">Fotografii Anunț</CardTitle>
+            {isEditing && existingImages.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadZip}
+                disabled={isZipping}
+                className="border-border hover:bg-secondary"
+              >
+                {isZipping ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Archive className="w-4 h-4 mr-2" />
+                )}
+                {isZipping ? 'Se descarcă...' : 'Descarcă poze (ZIP)'}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {isEditing && existingImages.length > 0 && (
