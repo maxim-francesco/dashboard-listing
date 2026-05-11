@@ -23,7 +23,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive, Check, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api, { rotateImage } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
@@ -72,6 +72,7 @@ interface FullListingData {
     id: string;
     title: string;
     description: string;
+    internalNotes: string | null;
     categoryId: string;
     purchasePrice: number | null;
     otherCosts: number | null;
@@ -90,6 +91,7 @@ const AddEditListing = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    internalNotes: "",
     categoryId: "",
     purchasePrice: "" as number | "",
     otherCosts: "" as number | "",
@@ -137,8 +139,8 @@ const AddEditListing = () => {
         if (!listingId) return;
         setIsLoading(true);
         try {
-            const { title, description, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts, youtubeVideoId: fetchedYoutubeId } = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
-            setFormData({ title, description, categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
+            const { title, description, internalNotes, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts, youtubeVideoId: fetchedYoutubeId } = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
+            setFormData({ title, description, internalNotes: internalNotes ?? "", categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
             setYoutubeVideoId(fetchedYoutubeId || null);
             
             const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
@@ -221,6 +223,7 @@ const AddEditListing = () => {
         const listingPayload = { 
             title: formData.title, 
             description: formData.description, 
+            internalNotes: formData.internalNotes,
             categoryId: formData.categoryId, 
             attributes: attributesPayload,
             purchasePrice: formData.purchasePrice === '' ? null : Number(formData.purchasePrice),
@@ -500,16 +503,6 @@ const AddEditListing = () => {
             className="bg-background border-border focus:border-primary"
           />
         );
-      case "BOOLEAN":
-        return (
-          <div className="flex items-center h-10">
-            <Checkbox
-              id={attribute.id}
-              checked={!!value}
-              onCheckedChange={(checked) => handleAttributeChange(attribute.id, checked)}
-            />
-          </div>
-        );
       default:
         return null;
     }
@@ -584,34 +577,7 @@ const AddEditListing = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label htmlFor="purchasePrice" className="text-foreground font-medium">
-                        Preț Achiziție (€)
-                    </Label>
-                    <Input
-                        id="purchasePrice"
-                        type="number"
-                        placeholder="ex: 12000"
-                        value={formData.purchasePrice}
-                        onChange={(e) => setFormData(prev => ({ ...prev, purchasePrice: e.target.value === '' ? '' : Number(e.target.value) }))}
-                        className="bg-background border-border focus:border-primary"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="otherCosts" className="text-foreground font-medium">
-                        Alte Costuri (€)
-                    </Label>
-                    <Input
-                        id="otherCosts"
-                        type="number"
-                        placeholder="ex: 500"
-                        value={formData.otherCosts}
-                        onChange={(e) => setFormData(prev => ({ ...prev, otherCosts: e.target.value === '' ? '' : Number(e.target.value) }))}
-                        className="bg-background border-border focus:border-primary"
-                    />
-                </div>
-            </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="description" className="text-foreground font-medium">
@@ -629,6 +595,29 @@ const AddEditListing = () => {
           </CardContent>
         </Card>
 
+        <Card className="border-card-border bg-card mb-6">
+          <CardHeader>
+            <CardTitle className="text-foreground">Notițe Interne</CardTitle>
+            <CardDescription>
+              Aceste notițe sunt vizibile doar pentru tine și nu apar pe pagina publică a anunțului.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="internalNotes" className="text-foreground font-medium">
+                Observații private
+              </Label>
+              <Textarea
+                id="internalNotes"
+                placeholder="ex: Client X interesat, preț negociabil până la 12500€, are mică zgârietură pe portieră dreapta..."
+                value={formData.internalNotes}
+                onChange={(e) => setFormData(prev => ({ ...prev, internalNotes: e.target.value }))}
+                className="bg-background border-border focus:border-primary min-h-[120px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {formData.categoryId && Object.keys(attributes).length > 0 && (
           <Card className="border-card-border bg-card mb-6">
             <CardHeader>
@@ -643,16 +632,59 @@ const AddEditListing = () => {
                       {groupName}
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-                        {groupAttributes.map((attribute) => (
-                          <div key={attribute.id} className="space-y-2">
-                            <Label htmlFor={attribute.id} className="text-foreground font-medium">
-                              {attribute.name}
-                            </Label>
-                            {renderAttributeField(attribute)}
+                      {/* Input fields for STRING and NUMBER attributes */}
+                      {groupAttributes.filter(attr => attr.type !== 'BOOLEAN').length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                          {groupAttributes
+                            .filter(attr => attr.type !== 'BOOLEAN')
+                            .map((attribute) => (
+                              <div key={attribute.id} className="space-y-2">
+                                <Label htmlFor={attribute.id} className="text-foreground font-medium">
+                                  {attribute.name}
+                                </Label>
+                                {renderAttributeField(attribute)}
+                              </div>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Chips for BOOLEAN attributes */}
+                      {groupAttributes.filter(attr => attr.type === 'BOOLEAN').length > 0 && (
+                        <div className="pt-4">
+                          {groupAttributes.filter(attr => attr.type !== 'BOOLEAN').length > 0 && (
+                            <div className="border-t border-border my-4" />
+                          )}
+                          <Label className="text-foreground font-medium mb-3 block">
+                            Dotări
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {groupAttributes
+                              .filter(attr => attr.type === 'BOOLEAN')
+                              .map((attribute) => {
+                                const isActive = !!attributeValues[attribute.id];
+                                return (
+                                  <button
+                                    key={attribute.id}
+                                    type="button"
+                                    onClick={() => handleAttributeChange(attribute.id, !isActive)}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                                      isActive
+                                        ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                                        : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                                    }`}
+                                  >
+                                    {isActive ? (
+                                      <Check className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <Plus className="w-3.5 h-3.5 opacity-60" />
+                                    )}
+                                    <span>{attribute.name}</span>
+                                  </button>
+                                );
+                              })}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </AccordionContent>
                   </AccordionItem>
                 ))}

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +31,8 @@ import { format } from 'date-fns';
 import api, { 
   getAutovitStatus, 
   publishToAutovitAndOLX, 
-  unpublishFromAutovit 
+  unpublishFromAutovit,
+  resetViewsForListing
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
@@ -85,6 +86,8 @@ const ListingActionDropdown = ({
   const [isAutovitLoading, setIsAutovitLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
+  const [isResettingViews, setIsResettingViews] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (isOpen && listing.id) {
@@ -146,6 +149,23 @@ const ListingActionDropdown = ({
     }
   };
 
+  const handleResetViews = async () => {
+    if (!window.confirm(`Sigur vrei să resetezi vizualizările pentru "${listing.title}"? Numărul va începe de la 0.`)) {
+      return;
+    }
+    setIsResettingViews(true);
+    try {
+      await resetViewsForListing(listing.id);
+      toast.success('Vizualizările au fost resetate.');
+      queryClient.invalidateQueries({ queryKey: ['listings'] });
+      setIsOpen(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Eroare la resetarea vizualizărilor.');
+    } finally {
+      setIsResettingViews(false);
+    }
+  };
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -203,6 +223,22 @@ const ListingActionDropdown = ({
             <Archive className="mr-2 h-4 w-4" />
           )}
           <span>{isZipping ? 'Se descarcă...' : 'Descarcă poze (ZIP)'}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            handleResetViews();
+          }}
+          disabled={isResettingViews}
+          className="cursor-pointer"
+        >
+          {isResettingViews ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
+          <span>{isResettingViews ? 'Se resetează...' : 'Resetează vizualizări'}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

@@ -310,4 +310,14 @@ export const publishToAutovitAndOLX = (listingId: string) =>
   api.post(`/autovit/${listingId}/publish`);
 
 
+// Messages
+export const toggleMessageRead = (messageId: string, isRead: boolean) =>
+  api.patch(`/messages/${messageId}/read`, { isRead });
+
+export const deleteMessage = (messageId: string) =>
+  api.delete(`/messages/${messageId}`);
+
+export const resetViewsForListing = (listingId: string) =>
+  api.delete(`/views/listing/${listingId}`);
+
 export default api;
