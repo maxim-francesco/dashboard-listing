@@ -114,7 +114,7 @@ const AddEditListing = () => {
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   
-  const isVlcAdmin = localStorage.getItem('userEmail') === 'contact@vlc.ro';
+  const hasVideoFeature = localStorage.getItem('userEmail') === 'contact@vlc.ro' || localStorage.getItem('userEmail') === 'contact@nitu.ro';
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -815,7 +815,7 @@ const AddEditListing = () => {
           />
         )}
 
-        {isVlcAdmin && (
+        {hasVideoFeature && (
             <Card className="border-card-border bg-card mb-6">
                 <CardHeader>
                     <CardTitle className="text-foreground">Prezentare Video</CardTitle>
