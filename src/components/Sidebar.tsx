@@ -10,6 +10,7 @@ import {
   Star,
   ClipboardCheck,
   BarChart3,
+  PenTool,
 } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Mesaje", href: "/messages", icon: Mail },
   { name: "Recenzii", href: "/reviews", icon: Star },
+  { name: "Blog", href: "/blog", icon: PenTool },
   { name: "Rapoarte", href: "/reports", icon: BarChart3 },
 ];
 

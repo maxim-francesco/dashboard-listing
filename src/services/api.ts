@@ -320,4 +320,57 @@ export const deleteMessage = (messageId: string) =>
 export const resetViewsForListing = (listingId: string) =>
   api.delete(`/views/listing/${listingId}`);
 
+// ── BLOG ──────────────────────────────────────────
+
+export interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  content: string
+  category: string
+  categoryKey: string
+  readTime: string
+  coverImage: string | null
+  publishedAt: string
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+  businessId: string
+}
+
+export interface CreateBlogPostData {
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  categoryKey: string
+  readTime: string
+  coverImage?: string | null
+  isPublished: boolean
+}
+
+// Get all posts (admin)
+export const getBlogPosts = async (): Promise<BlogPost[]> => {
+  const { data } = await api.get('/blog')
+  return data
+}
+
+// Create post
+export const createBlogPost = async (postData: CreateBlogPostData): Promise<BlogPost> => {
+  const { data } = await api.post('/blog', postData)
+  return data
+}
+
+// Update post
+export const updateBlogPost = async (postId: string, postData: Partial<CreateBlogPostData>): Promise<BlogPost> => {
+  const { data } = await api.put(`/blog/${postId}`, postData)
+  return data
+}
+
+// Delete post
+export const deleteBlogPost = async (postId: string): Promise<void> => {
+  await api.delete(`/blog/${postId}`)
+}
+
 export default api;

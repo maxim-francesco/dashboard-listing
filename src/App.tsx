@@ -24,6 +24,10 @@ import SoldListings from "./pages/SoldListings";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
 
+// Blog Pages
+import BlogList from "./pages/Blog/BlogList";
+import BlogForm from "./pages/Blog/BlogForm";
+
 // New Legal Pages
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -69,6 +73,10 @@ const App = () => (
               <Route path="/settings" element={<BusinessSettings />} />
               <Route path="/settings/attribute-groups" element={<AttributeGroups />} />
               <Route path="/reports" element={<ProfitabilityReport />} />
+              
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/new" element={<BlogForm />} />
+              <Route path="/blog/:postId/edit" element={<BlogForm />} />
             </Route>
           </Route>
 
