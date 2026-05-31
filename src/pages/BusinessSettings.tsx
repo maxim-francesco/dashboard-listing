@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Image as ImageIcon, Trash2, Save, Link as LinkIcon } from "lucide-react";
+import { Loader2, Upload, Image as ImageIcon, Trash2, Save, Link as LinkIcon, Copy } from "lucide-react";
 import api, { deleteBanner } from "@/services/api";
 import { toast } from "react-hot-toast";
 
@@ -232,6 +232,43 @@ const BusinessSettings = () => {
                     {isSavingSettings ? 'Se salvează...' : 'Salvează Setările'}
                 </Button>
              </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Feed Catalog (Facebook / Google)</CardTitle>
+          <CardDescription>
+            Folosește acest link pentru a sincroniza automat anunțurile active pe Facebook Catalog, Google Merchant Center sau alte platforme de promovare.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="feed-url" className="font-medium">Link Feed XML / CSV</Label>
+            <div className="flex gap-2">
+              <Input
+                id="feed-url"
+                readOnly
+                value={`${api.defaults.baseURL}/public/listings/csv-feed?businessId=${business?.id || ""}`}
+                className="bg-muted select-all flex-grow font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${api.defaults.baseURL}/public/listings/csv-feed?businessId=${business?.id || ""}`);
+                  toast.success("Link copiat în clipboard!");
+                }}
+                title="Copiază link-ul"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Feed-ul conține automat toate mașinile active (In Stock) cu preț, titlu, descriere, link public și poze, respectând formatul standard de catalog.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

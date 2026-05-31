@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -430,6 +430,119 @@ const Listings = () => {
     setIsSoldModalOpen(true);
   };
 
+  const handleExportExcel = () => {
+    if (listings.length === 0) {
+      toast.error("Nu există anunțuri de exportat.");
+      return;
+    }
+
+    try {
+      // Helper to strip HTML tags
+      const stripHtml = (html: string) => {
+        if (!html) return "";
+        let text = html.replace(/<[^>]*>/g, "");
+        text = text
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'");
+        return text.trim();
+      };
+
+      // Helper to escape CSV fields
+      const escapeCsv = (str: any) => {
+        if (str === null || str === undefined) return '""';
+        const clean = str.toString().replace(/"/g, '""');
+        return `"${clean}"`;
+      };
+
+      const headers = [
+        "Post Id",
+        "brand",
+        "link",
+        "availability",
+        "condition",
+        "price",
+        "title",
+        "description",
+        "image_link"
+      ];
+
+      const csvLines = [headers.join(",")];
+
+      listings.forEach((listing) => {
+        const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
+        const brand = listing.title;
+        
+        // Build URL
+        let link = businessSettings?.listingUrlPattern || "https://example.com/anunt/{id}";
+        if (link.includes("{slug}")) {
+          link = link.replace("{slug}", listing.slug || listing.id);
+        }
+        if (link.includes("{id}")) {
+          link = link.replace("{id}", listing.id);
+        }
+
+        const availability = "In Stock";
+        const condition = "Used";
+        
+        // Format price
+        let finalPrice = "";
+        if (listing.price) {
+          finalPrice = `${listing.price} EUR`;
+        } else {
+          const priceAttr = listing.attributeValues?.find(
+            (av: any) => 
+              av.attribute?.name?.toLowerCase() === "price" || 
+              av.attribute?.name?.toLowerCase() === "pret" ||
+              av.attribute?.name?.toLowerCase() === "preț"
+          );
+          const priceVal = priceAttr?.numberValue || priceAttr?.stringValue;
+          if (priceVal) {
+            finalPrice = `${priceVal} EUR`;
+          }
+        }
+
+        const title = listing.title;
+        const description = stripHtml(listing.description);
+        const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
+
+        const row = [
+          escapeCsv(id),
+          escapeCsv(brand),
+          escapeCsv(link),
+          escapeCsv(availability),
+          escapeCsv(condition),
+          escapeCsv(finalPrice),
+          escapeCsv(title),
+          escapeCsv(description),
+          escapeCsv(image_link)
+        ];
+
+        csvLines.push(row.join(","));
+      });
+
+      const csvContent = csvLines.join("\n");
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      
+      // Trigger download
+      const linkEl = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      linkEl.setAttribute("href", url);
+      linkEl.setAttribute("download", `export-masini-${format(new Date(), "yyyy-MM-dd")}.csv`);
+      document.body.appendChild(linkEl);
+      linkEl.click();
+      document.body.removeChild(linkEl);
+      
+      toast.success("Fișierul Excel (CSV) a fost descărcat cu succes!");
+    } catch (error) {
+      console.error("Eroare la exportul Excel:", error);
+      toast.error("A apărut o eroare la exportul Excel.");
+    }
+  };
+
   const getStatusColor = (status: string) => {
     return status === "Activ" 
       ? "bg-success-light text-success border-success/20"
@@ -451,13 +564,23 @@ const Listings = () => {
           </p>
         </div>
         
-        <Button 
-          onClick={() => navigate("/listings/new")}
-          className="bg-primary hover:bg-primary-hover text-primary-foreground w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Adaugă Anunț Nou
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Exportă Excel
+          </Button>
+          <Button 
+            onClick={() => navigate("/listings/new")}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Adaugă Anunț Nou
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
