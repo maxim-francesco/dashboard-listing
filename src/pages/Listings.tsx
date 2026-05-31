@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet, Link } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,7 @@ import api, {
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
+import CatalogPreviewModal from "@/components/modals/CatalogPreviewModal";
 import AutovitStatusBadge from "@/components/listings/AutovitStatusBadge";
 
 interface Listing {
@@ -311,6 +312,7 @@ const Listings = () => {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrListing, setQrListing] = useState<{id: string, slug: string} | null>(null);
   const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -578,20 +580,6 @@ const Listings = () => {
     }
   };
 
-  const handleCopyFeedLink = () => {
-    let domain = "https://carsleasing.ro"; // fallback default
-    if (businessSettings?.listingUrlPattern) {
-      try {
-        const url = new URL(businessSettings.listingUrlPattern);
-        domain = `${url.protocol}//${url.host}`;
-      } catch (e) {
-        console.error("Failed to parse listingUrlPattern:", e);
-      }
-    }
-    const feedUrl = `${domain}/fisier.csv`;
-    navigator.clipboard.writeText(feedUrl);
-    toast.success("Link direct catalog copiat în clipboard!");
-  };
 
   const getStatusColor = (status: string) => {
     return status === "Activ" 
@@ -624,12 +612,12 @@ const Listings = () => {
             Exportă Excel
           </Button>
           <Button
-            onClick={handleCopyFeedLink}
+            onClick={() => setIsPreviewModalOpen(true)}
             variant="outline"
             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
           >
-            <Link className="w-4 h-4 mr-2" />
-            Copiază Link Feed
+            <Eye className="w-4 h-4 mr-2" />
+            Previzualizează Feed
           </Button>
           <Button 
             onClick={() => navigate("/listings/new")}
@@ -770,6 +758,13 @@ const Listings = () => {
         listingId={qrListing?.id || null}
         listingSlug={qrListing?.slug || null}
         urlPattern={businessSettings?.listingUrlPattern || null}
+      />
+
+      <CatalogPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        listings={listings}
+        businessSettings={businessSettings}
       />
 
       {/* Hidden container for PDF generation */}
