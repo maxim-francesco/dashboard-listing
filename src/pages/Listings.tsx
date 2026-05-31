@@ -440,7 +440,11 @@ const Listings = () => {
       // Helper to strip HTML tags
       const stripHtml = (html: string) => {
         if (!html) return "";
-        let text = html.replace(/<[^>]*>/g, "");
+        let text = html
+          .replace(/<\/p>/gi, " ")
+          .replace(/<br\s*\/?>/gi, " ")
+          .replace(/<\/div>/gi, " ");
+        text = text.replace(/<[^>]*>/g, "");
         text = text
           .replace(/&nbsp;/g, " ")
           .replace(/&amp;/g, "&")
@@ -448,6 +452,8 @@ const Listings = () => {
           .replace(/&gt;/g, ">")
           .replace(/&quot;/g, '"')
           .replace(/&#039;/g, "'");
+        // Collapse all whitespaces, including newlines, into a single space
+        text = text.replace(/\s+/g, " ");
         return text.trim();
       };
 
