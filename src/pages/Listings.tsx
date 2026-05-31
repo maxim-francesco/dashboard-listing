@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet, Link } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +59,7 @@ interface Listing {
 }
 
 interface Business {
+  id: string;
   listingUrlPattern: string | null;
 }
 
@@ -577,6 +578,21 @@ const Listings = () => {
     }
   };
 
+  const handleCopyFeedLink = () => {
+    let domain = "https://carsleasing.ro"; // fallback default
+    if (businessSettings?.listingUrlPattern) {
+      try {
+        const url = new URL(businessSettings.listingUrlPattern);
+        domain = `${url.protocol}//${url.host}`;
+      } catch (e) {
+        console.error("Failed to parse listingUrlPattern:", e);
+      }
+    }
+    const feedUrl = `${domain}/fisier.csv`;
+    navigator.clipboard.writeText(feedUrl);
+    toast.success("Link direct catalog copiat în clipboard!");
+  };
+
   const getStatusColor = (status: string) => {
     return status === "Activ" 
       ? "bg-success-light text-success border-success/20"
@@ -606,6 +622,14 @@ const Listings = () => {
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Exportă Excel
+          </Button>
+          <Button
+            onClick={handleCopyFeedLink}
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+          >
+            <Link className="w-4 h-4 mr-2" />
+            Copiază Link Feed
           </Button>
           <Button 
             onClick={() => navigate("/listings/new")}
