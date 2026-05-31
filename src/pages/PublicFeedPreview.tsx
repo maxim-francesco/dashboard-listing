@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Copy, Link as LinkIcon, FileSpreadsheet, Check } from "lucide-react";
+import { Loader2, Link as LinkIcon, FileSpreadsheet, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface Listing {
@@ -33,18 +31,6 @@ const PublicFeedPreview = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Determine friendly domain based on businessId
-  const getFriendlyUrl = (id: string) => {
-    if (id === "cmhomcpoi02x1ut2cpips3mo3") {
-      return "https://carsleasing.ro/fisier.csv";
-    }
-    // Fallback to backend feed directly
-    return `https://saas-platform-backend.onrender.com/api/public/listings/csv-feed?businessId=${id}`;
-  };
-
-  const feedUrl = businessId ? getFriendlyUrl(businessId) : "";
 
   useEffect(() => {
     const fetchPublicListings = async () => {
@@ -83,13 +69,7 @@ const PublicFeedPreview = () => {
     fetchPublicListings();
   }, [businessId]);
 
-  const handleCopyLink = () => {
-    if (!feedUrl) return;
-    navigator.clipboard.writeText(feedUrl);
-    setCopiedLink(true);
-    toast.success("Link feed catalog copiat!");
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+
 
   // Helper to strip HTML tags
   const stripHtml = (html: string) => {
@@ -148,55 +128,26 @@ const PublicFeedPreview = () => {
   return (
     <div className="min-h-screen bg-background py-8 px-4 md:px-8 max-w-7xl mx-auto space-y-6">
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/60 pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/60 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
             <FileSpreadsheet className="h-8 w-8 text-primary" />
-            Previzualizare Catalog Anunțuri (CSV/Feed)
+            Previzualizare Catalog
           </h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">
-            Această pagină publică afișează în timp real datele formatate pentru catalogul Facebook, Google Merchant și Excel.
+          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+            Această pagină publică afișează datele mașinilor formatate pentru catalog.
           </p>
         </div>
+        <Button
+          onClick={() => {
+            window.location.href = `https://saas-platform-backend.onrender.com/api/public/listings/csv-feed?businessId=${businessId}`;
+          }}
+          className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 shadow-md"
+        >
+          <Download className="h-4 w-4" />
+          Descarcă CSV
+        </Button>
       </div>
-
-      {/* Share / Info Card */}
-      <Card className="border-card-border bg-card/60 backdrop-blur-sm shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-foreground">Link Catalog Direct</CardTitle>
-          <CardDescription>
-            Copiază acest link pentru a-l integra în campaniile de Facebook Ads / Google Merchant sau pentru a-l deschide direct în Excel.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="public-feed-link" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
-              URL Catalog CSV
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="public-feed-link"
-                readOnly
-                value={feedUrl}
-                className="bg-background select-all font-mono text-xs text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 border-border"
-              />
-              <Button
-                type="button"
-                onClick={handleCopyLink}
-                className="bg-primary hover:bg-primary/95 text-primary-foreground px-4 flex-shrink-0"
-              >
-                {copiedLink ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                {copiedLink ? "Copiat" : "Copiază Link"}
-              </Button>
-            </div>
-            {businessId === "cmhomcpoi02x1ut2cpips3mo3" && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Acest link conține un redirect automat către feed-ul live generat direct de pe serverul bazei de date.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Main Table Preview */}
       <Card className="border-card-border bg-card shadow-md overflow-hidden">
