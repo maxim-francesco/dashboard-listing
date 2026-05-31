@@ -457,6 +457,18 @@ const Listings = () => {
         return text.trim();
       };
 
+      // Helper to get attribute value
+      const getAttrValue = (listing: any, name: string) => {
+        const av = listing.attributeValues?.find(
+          (item: any) => item.attribute?.name?.toLowerCase() === name.toLowerCase()
+        );
+        if (!av) return "";
+        if (av.stringValue !== null && av.stringValue !== undefined) return av.stringValue;
+        if (av.numberValue !== null && av.numberValue !== undefined) return av.numberValue.toString();
+        if (av.booleanValue !== null && av.booleanValue !== undefined) return av.booleanValue ? "Da" : "Nu";
+        return "";
+      };
+
       // Helper to escape CSV fields
       const escapeCsv = (str: any) => {
         if (str === null || str === undefined) return '""';
@@ -466,21 +478,38 @@ const Listings = () => {
 
       const headers = [
         "Post Id",
-        "brand",
-        "link",
-        "availability",
-        "condition",
-        "price",
-        "title",
-        "description",
-        "image_link"
+        "Marca",
+        "Model",
+        "An",
+        "Kilometraj",
+        "Combustibil",
+        "Cutie Viteze",
+        "Capacitate Cilindrica",
+        "Putere (CP)",
+        "Pret",
+        "Link",
+        "Availability",
+        "Condition",
+        "Titlu",
+        "Descriere"
       ];
 
       const csvLines = [headers.join(",")];
 
       listings.forEach((listing) => {
         const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
-        const brand = listing.title;
+        
+        // Extragere marca si model din titlu
+        const titleWords = listing.title.trim().split(/\s+/);
+        const marca = titleWords[0] || "";
+        const model = titleWords[1] || "";
+
+        const an = getAttrValue(listing, "An fabricație") || getAttrValue(listing, "An");
+        const kilometraj = listing.mileage || getAttrValue(listing, "Kilometraj");
+        const combustibil = getAttrValue(listing, "Combustibil");
+        const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
+        const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
+        const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
         
         // Build URL
         let link = businessSettings?.listingUrlPattern || "https://example.com/anunt/{id}";
@@ -499,13 +528,7 @@ const Listings = () => {
         if (listing.price) {
           finalPrice = `${listing.price} EUR`;
         } else {
-          const priceAttr = listing.attributeValues?.find(
-            (av: any) => 
-              av.attribute?.name?.toLowerCase() === "price" || 
-              av.attribute?.name?.toLowerCase() === "pret" ||
-              av.attribute?.name?.toLowerCase() === "preț"
-          );
-          const priceVal = priceAttr?.numberValue || priceAttr?.stringValue;
+          const priceVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
           if (priceVal) {
             finalPrice = `${priceVal} EUR`;
           }
@@ -513,18 +536,23 @@ const Listings = () => {
 
         const title = listing.title;
         const description = stripHtml(listing.description);
-        const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
 
         const row = [
           escapeCsv(id),
-          escapeCsv(brand),
+          escapeCsv(marca),
+          escapeCsv(model),
+          escapeCsv(an),
+          escapeCsv(kilometraj),
+          escapeCsv(combustibil),
+          escapeCsv(cutie_viteze),
+          escapeCsv(capacitate_cilindrica),
+          escapeCsv(putere_cp),
+          escapeCsv(finalPrice),
           escapeCsv(link),
           escapeCsv(availability),
           escapeCsv(condition),
-          escapeCsv(finalPrice),
           escapeCsv(title),
-          escapeCsv(description),
-          escapeCsv(image_link)
+          escapeCsv(description)
         ];
 
         csvLines.push(row.join(","));
