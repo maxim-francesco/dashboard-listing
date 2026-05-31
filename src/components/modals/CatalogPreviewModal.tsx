@@ -149,10 +149,40 @@ const CatalogPreviewModal = ({
         </DialogHeader>
 
         {/* Public Link Bar */}
-        <div className="bg-muted/50 border border-border/80 rounded-lg p-4 my-2 flex flex-col md:flex-row md:items-center gap-4 flex-shrink-0">
-          <div className="flex-grow space-y-1">
+        <div className="bg-muted/50 border border-border/80 rounded-lg p-4 my-2 flex flex-col gap-4 flex-shrink-0">
+          <div className="space-y-1">
+            <Label htmlFor="preview-page-url" className="text-xs font-semibold text-primary uppercase tracking-wider">
+              1. Link Previzualizare Web (Tabel Public fără Login)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="preview-page-url"
+                readOnly
+                value={`${window.location.origin}/public-feed/${businessSettings?.id || ""}`}
+                className="bg-background select-all font-mono text-xs text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 border-border"
+              />
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/public-feed/${businessSettings?.id || ""}`);
+                  toast.success("Link previzualizare publică copiat!");
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copiază Link
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Oricine deschide acest link va vedea tabelul interactiv de mașini direct în browser, fără să aibă cont sau să fie autentificat.
+            </p>
+          </div>
+
+          <div className="space-y-1 border-t border-border/50 pt-4">
             <Label htmlFor="preview-feed-url" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Link Catalog Public (Direct)
+              2. Link Catalog Sincronizare (CSV / Facebook / Google Ads)
             </Label>
             <div className="flex gap-2">
               <Input
@@ -163,15 +193,18 @@ const CatalogPreviewModal = ({
               />
               <Button
                 type="button"
-                variant="default"
+                variant="outline"
                 size="sm"
                 onClick={copyFeedLink}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground flex-shrink-0"
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copiază Link
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Link de sincronizare pentru campanii sau pentru descărcare directă ca fișier CSV.
+            </p>
           </div>
         </div>
 

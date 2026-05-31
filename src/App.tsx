@@ -23,6 +23,7 @@ import AdminReviewsPage from "./pages/AdminReviewsPage";
 import SoldListings from "./pages/SoldListings";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
+import PublicFeedPreview from "./pages/PublicFeedPreview";
 
 // Blog Pages
 import BlogList from "./pages/Blog/BlogList";
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/termeni-si-conditii" element={<TermsAndConditions />} />
           <Route path="/politica-de-confidentialitate" element={<PrivacyPolicy />} />
           <Route path="/politica-cookies" element={<CookiePolicy />} />
+          <Route path="/public-feed/:businessId" element={<PublicFeedPreview />} />
           
           {/* --- GROUP 2: Super Admin Route (Standalone) --- */}
           <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
