@@ -83,6 +83,12 @@ const CatalogPreviewModal = ({
     if (link.includes("{id}")) {
       link = link.replace("{id}", listing.id);
     }
+    // Build image links
+    const imageLink = listing.images?.[0]?.url || "";
+    const additionalImageLinks = listing.images
+      ? listing.images.slice(1).map((img: any) => img.url).join(",")
+      : "";
+
     const availability = "In Stock";
     const condition = "Used";
     let finalPrice = "";
@@ -112,6 +118,8 @@ const CatalogPreviewModal = ({
       putere_cp,
       price: finalPrice,
       link,
+      imageLink,
+      additionalImageLinks,
       availability,
       condition,
       title,
@@ -227,6 +235,8 @@ const CatalogPreviewModal = ({
                 <TableHead className="font-semibold text-foreground">Condiție</TableHead>
                 <TableHead className="font-semibold text-foreground">Titlu</TableHead>
                 <TableHead className="font-semibold text-foreground max-w-[200px]">Link</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
                 <span className="sr-only">Descriere</span>
               </TableRow>
             </TableHeader>
@@ -260,6 +270,17 @@ const CatalogPreviewModal = ({
                         <LinkIcon className="h-3 w-3 inline" />
                         {row.link}
                       </a>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.imageLink}>
+                      {row.imageLink ? (
+                        <a href={row.imageLink} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                          <LinkIcon className="h-3 w-3 inline" />
+                          {row.imageLink}
+                        </a>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.additionalImageLinks}>
+                      {row.additionalImageLinks || "-"}
                     </TableCell>
                   </TableRow>
                 ))

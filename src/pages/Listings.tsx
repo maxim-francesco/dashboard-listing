@@ -491,6 +491,8 @@ const Listings = () => {
         "Putere (CP)",
         "Pret",
         "Link",
+        "image_link",
+        "additional_image_link",
         "Availability",
         "Condition",
         "Titlu",
@@ -523,6 +525,12 @@ const Listings = () => {
           link = link.replace("{id}", listing.id);
         }
 
+        // Build image links
+        const imageLink = listing.images?.[0]?.url || "";
+        const additionalImageLinks = listing.images
+          ? listing.images.slice(1).map((img: any) => img.url).join(",")
+          : "";
+
         const availability = "In Stock";
         const condition = "Used";
         
@@ -552,6 +560,8 @@ const Listings = () => {
           escapeCsv(putere_cp),
           escapeCsv(finalPrice),
           escapeCsv(link),
+          escapeCsv(imageLink),
+          escapeCsv(additionalImageLinks),
           escapeCsv(availability),
           escapeCsv(condition),
           escapeCsv(title),

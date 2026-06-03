@@ -24,6 +24,7 @@ interface Listing {
   mileage: number | null;
   autovitId?: string | null;
   attributeValues: any[];
+  images?: { url: string }[];
 }
 
 const PublicFeedPreview = () => {
@@ -173,6 +174,8 @@ const PublicFeedPreview = () => {
                   <TableHead className="font-semibold text-foreground">Condition</TableHead>
                   <TableHead className="font-semibold text-foreground">Titlu</TableHead>
                   <TableHead className="font-semibold text-foreground max-w-[200px]">Link</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,6 +233,24 @@ const PublicFeedPreview = () => {
                             <LinkIcon className="h-3 w-3 inline" />
                             {link}
                           </a>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={listing.images?.[0]?.url || ""}>
+                          {listing.images?.[0]?.url ? (
+                            <a
+                              href={listing.images[0].url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline flex items-center gap-1"
+                            >
+                              <LinkIcon className="h-3 w-3 inline" />
+                              {listing.images[0].url}
+                            </a>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={listing.images ? listing.images.slice(1).map(img => img.url).join(",") : ""}>
+                          {listing.images && listing.images.length > 1
+                            ? listing.images.slice(1).map(img => img.url).join(",")
+                            : "-"}
                         </TableCell>
                       </TableRow>
                     );
