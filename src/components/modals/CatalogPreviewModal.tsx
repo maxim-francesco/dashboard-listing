@@ -234,7 +234,6 @@ const CatalogPreviewModal = ({
                 <TableHead className="font-semibold text-foreground">Status</TableHead>
                 <TableHead className="font-semibold text-foreground">Condiție</TableHead>
                 <TableHead className="font-semibold text-foreground">Titlu</TableHead>
-                <TableHead className="font-semibold text-foreground max-w-[200px]">Link</TableHead>
                 <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
                 <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
                 <span className="sr-only">Descriere</span>
@@ -264,12 +263,6 @@ const CatalogPreviewModal = ({
                     <TableCell>{row.condition}</TableCell>
                     <TableCell className="max-w-[200px] truncate" title={row.title}>
                       {row.title}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs max-w-[200px] truncate" title={row.link}>
-                      <a href={row.link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                        <LinkIcon className="h-3 w-3 inline" />
-                        {row.link}
-                      </a>
                     </TableCell>
                     <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.imageLink}>
                       {row.imageLink ? (

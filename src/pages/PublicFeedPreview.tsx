@@ -173,7 +173,6 @@ const PublicFeedPreview = () => {
                   <TableHead className="font-semibold text-foreground">Availability</TableHead>
                   <TableHead className="font-semibold text-foreground">Condition</TableHead>
                   <TableHead className="font-semibold text-foreground">Titlu</TableHead>
-                  <TableHead className="font-semibold text-foreground max-w-[200px]">Link</TableHead>
                   <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
                   <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
                 </TableRow>
@@ -222,17 +221,6 @@ const PublicFeedPreview = () => {
                         <TableCell>{condition}</TableCell>
                         <TableCell className="max-w-[200px] truncate" title={listing.title}>
                           {listing.title}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs max-w-[200px] truncate" title={link}>
-                          <a
-                            href={link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline flex items-center gap-1"
-                          >
-                            <LinkIcon className="h-3 w-3 inline" />
-                            {link}
-                          </a>
                         </TableCell>
                         <TableCell className="font-mono text-xs max-w-[150px] truncate" title={listing.images?.[0]?.url || ""}>
                           {listing.images?.[0]?.url ? (
