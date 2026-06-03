@@ -499,7 +499,7 @@ const Listings = () => {
         "Description"
       ];
 
-      const csvLines = [headers.join(",")];
+      const csvLines = [headers.join(";")];
 
       listings.forEach((listing) => {
         const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
@@ -571,7 +571,7 @@ const Listings = () => {
           escapeCsv(description)
         ];
 
-        csvLines.push(row.join(","));
+        csvLines.push(row.join(";"));
       });
 
       const csvContent = csvLines.join("\n");
