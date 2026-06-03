@@ -480,22 +480,23 @@ const Listings = () => {
       };
 
       const headers = [
-        "Post Id",
+        "Link",
+        "ID",
         "Marca",
         "Model",
-        "An",
-        "Kilometraj",
-        "Combustibil",
-        "Cutie Viteze",
+        "Year",
+        "Mileage",
+        "Fuel_Type",
+        "Transmise",
         "Capacitate Cilindrica",
         "Putere (CP)",
-        "Pret",
+        "Price",
         "image_link",
-        "additional_image_link",
+        "additional_image",
         "Availability",
         "Condition",
-        "Titlu",
-        "Descriere"
+        "Title",
+        "Description"
       ];
 
       const csvLines = [headers.join(",")];
@@ -517,6 +518,9 @@ const Listings = () => {
         
         // Build URL
         let link = businessSettings?.listingUrlPattern || "https://example.com/anunt/{id}";
+        if (businessSettings?.id === "cmhomcpoi02x1ut2cpips3mo3") {
+          link = "https://www.carsleasing.ro/stoc/{id}";
+        }
         if (link.includes("{slug}")) {
           link = link.replace("{slug}", listing.slug || listing.id);
         }
@@ -548,6 +552,7 @@ const Listings = () => {
         const description = stripHtml(listing.description);
 
         const row = [
+          escapeCsv(link),
           escapeCsv(id),
           escapeCsv(marca),
           escapeCsv(model),
@@ -569,7 +574,7 @@ const Listings = () => {
         csvLines.push(row.join(","));
       });
 
-      const csvContent = "sep=,\n" + csvLines.join("\n");
+      const csvContent = csvLines.join("\n");
       const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
       
       // Trigger download

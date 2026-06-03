@@ -160,27 +160,29 @@ const PublicFeedPreview = () => {
             <Table>
               <TableHeader className="bg-muted/70">
                 <TableRow className="border-border">
-                  <TableHead className="font-semibold text-foreground">Post Id</TableHead>
-                  <TableHead className="font-semibold text-foreground">Marcă</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[150px]">Link</TableHead>
+                  <TableHead className="font-semibold text-foreground">ID</TableHead>
+                  <TableHead className="font-semibold text-foreground">Marca</TableHead>
                   <TableHead className="font-semibold text-foreground">Model</TableHead>
-                  <TableHead className="font-semibold text-foreground">An</TableHead>
-                  <TableHead className="font-semibold text-foreground">Kilometraj</TableHead>
-                  <TableHead className="font-semibold text-foreground">Combustibil</TableHead>
-                  <TableHead className="font-semibold text-foreground">Cutie</TableHead>
-                  <TableHead className="font-semibold text-foreground">Cilindree</TableHead>
-                  <TableHead className="font-semibold text-foreground">Putere</TableHead>
-                  <TableHead className="font-semibold text-foreground">Preț</TableHead>
+                  <TableHead className="font-semibold text-foreground">Year</TableHead>
+                  <TableHead className="font-semibold text-foreground">Mileage</TableHead>
+                  <TableHead className="font-semibold text-foreground">Fuel_Type</TableHead>
+                  <TableHead className="font-semibold text-foreground">Transmise</TableHead>
+                  <TableHead className="font-semibold text-foreground">Capacitate Cilindrica</TableHead>
+                  <TableHead className="font-semibold text-foreground">Putere (CP)</TableHead>
+                  <TableHead className="font-semibold text-foreground">Price</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[150px]">image_link</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[150px]">additional_image</TableHead>
                   <TableHead className="font-semibold text-foreground">Availability</TableHead>
                   <TableHead className="font-semibold text-foreground">Condition</TableHead>
-                  <TableHead className="font-semibold text-foreground">Titlu</TableHead>
-                  <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
-                  <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
+                  <TableHead className="font-semibold text-foreground">Title</TableHead>
+                  <TableHead className="font-semibold text-foreground max-w-[200px]">Description</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {listings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={17} className="text-center py-12 text-muted-foreground">
                       Nu există mașini active în acest catalog.
                     </TableCell>
                   </TableRow>
@@ -198,15 +200,50 @@ const PublicFeedPreview = () => {
                     const putere = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
 
                     // Build link
-                    const friendlyDomain = businessId === "cmhomcpoi02x1ut2cpips3mo3" ? "https://carsleasing.ro" : "https://example.com";
-                    const link = `${friendlyDomain}/anunturi/${listing.slug || listing.id}`;
+                    let link = "https://example.com/anunt/{id}";
+                    if (businessId === "cmhomcpoi02x1ut2cpips3mo3") {
+                      link = "https://www.carsleasing.ro/stoc/{id}";
+                    }
+                    if (link.includes("{slug}")) {
+                      link = link.replace("{slug}", listing.slug || listing.id);
+                    }
+                    if (link.includes("{id}")) {
+                      link = link.replace("{id}", listing.id);
+                    }
 
                     const availability = "In Stock";
                     const condition = "Used";
-                    const priceStr = listing.price ? `${listing.price} EUR` : "";
+                    
+                    let priceStr = "";
+                    if (listing.price) {
+                      priceStr = `${listing.price} EUR`;
+                    } else {
+                      const priceVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
+                      if (priceVal) {
+                        priceStr = `${priceVal} EUR`;
+                      }
+                    }
+
+                    const imageLink = listing.images?.[0]?.url || "";
+                    const additionalImageLinks = listing.images
+                      ? listing.images.slice(1).map((img: any) => img.url).join(",")
+                      : "";
+
+                    const description = stripHtml(listing.description);
 
                     return (
                       <TableRow key={listing.id} className="border-border hover:bg-muted/30">
+                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={link}>
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            <LinkIcon className="h-3 w-3 inline" />
+                            {link}
+                          </a>
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{id}</TableCell>
                         <TableCell className="font-medium text-foreground">{marca}</TableCell>
                         <TableCell className="font-medium text-foreground">{model}</TableCell>
@@ -217,28 +254,29 @@ const PublicFeedPreview = () => {
                         <TableCell>{cilindree}</TableCell>
                         <TableCell>{putere}</TableCell>
                         <TableCell className="font-semibold text-primary">{priceStr}</TableCell>
-                        <TableCell>{availability}</TableCell>
-                        <TableCell>{condition}</TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={listing.title}>
-                          {listing.title}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={listing.images?.[0]?.url || ""}>
-                          {listing.images?.[0]?.url ? (
+                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={imageLink}>
+                          {imageLink ? (
                             <a
-                              href={listing.images[0].url}
+                              href={imageLink}
                               target="_blank"
                               rel="noreferrer"
                               className="text-primary hover:underline flex items-center gap-1"
                             >
                               <LinkIcon className="h-3 w-3 inline" />
-                              {listing.images[0].url}
+                              {imageLink}
                             </a>
                           ) : "-"}
                         </TableCell>
-                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={listing.images ? listing.images.slice(1).map(img => img.url).join(",") : ""}>
-                          {listing.images && listing.images.length > 1
-                            ? listing.images.slice(1).map(img => img.url).join(",")
-                            : "-"}
+                        <TableCell className="font-mono text-xs max-w-[150px] truncate" title={additionalImageLinks}>
+                          {additionalImageLinks || "-"}
+                        </TableCell>
+                        <TableCell>{availability}</TableCell>
+                        <TableCell>{condition}</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={listing.title}>
+                          {listing.title}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={description}>
+                          {description}
                         </TableCell>
                       </TableRow>
                     );

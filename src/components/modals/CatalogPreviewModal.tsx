@@ -77,6 +77,9 @@ const CatalogPreviewModal = ({
     const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
 
     let link = businessSettings?.listingUrlPattern || "https://example.com/anunt/{id}";
+    if (businessSettings?.id === "cmhomcpoi02x1ut2cpips3mo3") {
+      link = "https://www.carsleasing.ro/stoc/{id}";
+    }
     if (link.includes("{slug}")) {
       link = link.replace("{slug}", listing.slug || listing.id);
     }
@@ -107,6 +110,7 @@ const CatalogPreviewModal = ({
     const description = stripHtml(listing.description);
 
     return {
+      link,
       id,
       marca,
       model,
@@ -117,7 +121,6 @@ const CatalogPreviewModal = ({
       capacitate_cilindrica,
       putere_cp,
       price: finalPrice,
-      link,
       imageLink,
       additionalImageLinks,
       availability,
@@ -221,34 +224,41 @@ const CatalogPreviewModal = ({
           <Table>
             <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
               <TableRow className="border-border">
-                <TableHead className="font-semibold text-foreground">Post Id</TableHead>
-                <TableHead className="font-semibold text-foreground">Marcă</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[150px]">Link</TableHead>
+                <TableHead className="font-semibold text-foreground">ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Marca</TableHead>
                 <TableHead className="font-semibold text-foreground">Model</TableHead>
-                <TableHead className="font-semibold text-foreground">An</TableHead>
-                <TableHead className="font-semibold text-foreground">Kilometraj</TableHead>
-                <TableHead className="font-semibold text-foreground">Combustibil</TableHead>
-                <TableHead className="font-semibold text-foreground">Transmisie</TableHead>
-                <TableHead className="font-semibold text-foreground">Cilindree</TableHead>
-                <TableHead className="font-semibold text-foreground">Putere</TableHead>
-                <TableHead className="font-semibold text-foreground">Preț</TableHead>
-                <TableHead className="font-semibold text-foreground">Status</TableHead>
-                <TableHead className="font-semibold text-foreground">Condiție</TableHead>
-                <TableHead className="font-semibold text-foreground">Titlu</TableHead>
-                <TableHead className="font-semibold text-foreground max-w-[150px]">Image Link</TableHead>
-                <TableHead className="font-semibold text-foreground max-w-[150px]">Additional Images</TableHead>
-                <span className="sr-only">Descriere</span>
+                <TableHead className="font-semibold text-foreground">Year</TableHead>
+                <TableHead className="font-semibold text-foreground">Mileage</TableHead>
+                <TableHead className="font-semibold text-foreground">Fuel_Type</TableHead>
+                <TableHead className="font-semibold text-foreground">Transmise</TableHead>
+                <TableHead className="font-semibold text-foreground">Capacitate Cilindrica</TableHead>
+                <TableHead className="font-semibold text-foreground">Putere (CP)</TableHead>
+                <TableHead className="font-semibold text-foreground">Price</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[150px]">image_link</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[150px]">additional_image</TableHead>
+                <TableHead className="font-semibold text-foreground">Availability</TableHead>
+                <TableHead className="font-semibold text-foreground">Condition</TableHead>
+                <TableHead className="font-semibold text-foreground">Title</TableHead>
+                <TableHead className="font-semibold text-foreground max-w-[200px]">Description</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {previewRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
                     Nu există anunțuri active de previzualizat.
                   </TableCell>
                 </TableRow>
               ) : (
                 previewRows.map((row, idx) => (
                   <TableRow key={row.id + "-" + idx} className="border-border hover:bg-muted/30">
+                    <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.link}>
+                      <a href={row.link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                        <LinkIcon className="h-3 w-3 inline" />
+                        {row.link}
+                      </a>
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{row.id}</TableCell>
                     <TableCell className="font-medium">{row.marca}</TableCell>
                     <TableCell className="font-medium">{row.model}</TableCell>
@@ -259,11 +269,6 @@ const CatalogPreviewModal = ({
                     <TableCell>{row.capacitate_cilindrica}</TableCell>
                     <TableCell>{row.putere_cp}</TableCell>
                     <TableCell className="font-semibold text-primary">{row.price}</TableCell>
-                    <TableCell>{row.availability}</TableCell>
-                    <TableCell>{row.condition}</TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={row.title}>
-                      {row.title}
-                    </TableCell>
                     <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.imageLink}>
                       {row.imageLink ? (
                         <a href={row.imageLink} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
@@ -274,6 +279,14 @@ const CatalogPreviewModal = ({
                     </TableCell>
                     <TableCell className="font-mono text-xs max-w-[150px] truncate" title={row.additionalImageLinks}>
                       {row.additionalImageLinks || "-"}
+                    </TableCell>
+                    <TableCell>{row.availability}</TableCell>
+                    <TableCell>{row.condition}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={row.title}>
+                      {row.title}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={row.description}>
+                      {row.description}
                     </TableCell>
                   </TableRow>
                 ))
