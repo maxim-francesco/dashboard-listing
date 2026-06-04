@@ -177,12 +177,13 @@ const PublicFeedPreview = () => {
                   <TableHead className="font-semibold text-foreground">Condition</TableHead>
                   <TableHead className="font-semibold text-foreground">Title</TableHead>
                   <TableHead className="font-semibold text-foreground max-w-[200px]">Description</TableHead>
+                  <TableHead className="font-semibold text-foreground">quantity_to_sell_on_facebook</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {listings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={17} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={18} className="text-center py-12 text-muted-foreground">
                       Nu există mașini active în acest catalog.
                     </TableCell>
                   </TableRow>
@@ -230,6 +231,7 @@ const PublicFeedPreview = () => {
                       : "";
 
                     const description = stripHtml(listing.description);
+                    const quantity = "1";
 
                     return (
                       <TableRow key={listing.id} className="border-border hover:bg-muted/30">
@@ -278,6 +280,7 @@ const PublicFeedPreview = () => {
                         <TableCell className="max-w-[200px] truncate" title={description}>
                           {description}
                         </TableCell>
+                        <TableCell className="font-mono text-xs">{quantity}</TableCell>
                       </TableRow>
                     );
                   })

@@ -127,6 +127,7 @@ const CatalogPreviewModal = ({
       condition,
       title,
       description,
+      quantity: "1",
     };
   });
 
@@ -241,12 +242,13 @@ const CatalogPreviewModal = ({
                 <TableHead className="font-semibold text-foreground">Condition</TableHead>
                 <TableHead className="font-semibold text-foreground">Title</TableHead>
                 <TableHead className="font-semibold text-foreground max-w-[200px]">Description</TableHead>
+                <TableHead className="font-semibold text-foreground">quantity_to_sell_on_facebook</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {previewRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={18} className="text-center py-8 text-muted-foreground">
                     Nu există anunțuri active de previzualizat.
                   </TableCell>
                 </TableRow>
@@ -288,6 +290,7 @@ const CatalogPreviewModal = ({
                     <TableCell className="max-w-[200px] truncate" title={row.description}>
                       {row.description}
                     </TableCell>
+                    <TableCell className="font-mono text-xs">{row.quantity}</TableCell>
                   </TableRow>
                 ))
               )}
