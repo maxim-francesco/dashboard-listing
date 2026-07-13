@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Accordion,
@@ -22,38 +13,55 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive, Check, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
-import api, { rotateImage } from "@/services/api";
+import api, { rotateImage, getMakes, getModelsByMake, getFeatures } from "@/services/api";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 import AutovitPublishPanel from "@/components/listings/AutovitPublishPanel";
 import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface Attribute {
-  id: string;
-  name: string;
-  type: "STRING" | "NUMBER" | "BOOLEAN";
-  group?: { id: string; name: string } | null;
-}
-
-interface GroupedAttributes {
-    [groupName: string]: Attribute[];
-}
-
-interface AttributeValueFromServer {
-    attributeId: string;
-    stringValue?: string | null;
-    numberValue?: number | null;
-    booleanValue?: boolean | null;
-}
+import { cn } from "@/lib/utils";
+import {
+  FUEL_TYPES,
+  FUEL_TYPE_LABELS,
+  GEARBOX_TYPES,
+  GEARBOX_LABELS,
+  DRIVETRAINS,
+  DRIVETRAIN_LABELS,
+  BODY_TYPES,
+  BODY_TYPE_LABELS,
+  POLLUTION_NORMS,
+  POLLUTION_NORM_LABELS,
+  COLORS,
+  COLOR_LABELS,
+  UPHOLSTERIES,
+  UPHOLSTERY_LABELS,
+  AIR_CONDITIONINGS,
+  AIR_CONDITIONING_LABELS,
+  LISTING_STATUSES,
+  STATUS_LABELS,
+  getOptions,
+  normalizeString,
+  mapFuelType,
+  mapGearbox,
+  mapDrivetrain,
+  mapBodyType,
+  mapPollutionNorm,
+  mapColor,
+  mapUpholstery,
+  mapAirConditioning
+} from "@/lib/enums";
 
 interface ExistingImage {
     id: string;
@@ -68,12 +76,22 @@ interface ImageFileState {
   previewUrl: string;
 }
 
+interface AttributeValueFromServer {
+    attributeId: string;
+    stringValue?: string | null;
+    numberValue?: number | null;
+    booleanValue?: boolean | null;
+    attribute?: {
+      name: string;
+      type: string;
+    } | null;
+}
+
 interface FullListingData {
     id: string;
     title: string;
     description: string;
     internalNotes: string | null;
-    categoryId: string;
     purchasePrice: number | null;
     otherCosts: number | null;
     images: ExistingImage[];
@@ -87,26 +105,65 @@ const AddEditListing = () => {
   const queryClient = useQueryClient();
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
+
+  // Makes, Models, Features catalogs
+  const [makes, setMakes] = useState<any[]>([]);
+  const [models, setModels] = useState<any[]>([]);
+  const [features, setFeatures] = useState<Record<string, any[]>>({});
   
-  const [formData, setFormData] = useState({
+  // Search combobox popover state
+  const [makeSearchOpen, setMakeSearchOpen] = useState(false);
+  const [modelSearchOpen, setModelSearchOpen] = useState(false);
+
+  // Form State
+  const [fields, setFields] = useState({
     title: "",
     description: "",
     internalNotes: "",
-    categoryId: "",
+    makeId: "",
+    modelId: "",
+    variant: "",
+    year: "" as number | "",
+    mileage: "" as number | "",
+    vin: "",
+    firstRegistrationAt: "",
+    countryOfOrigin: "",
+    registeredInRo: false,
+    fuelType: "",
+    gearbox: "",
+    drivetrain: "",
+    bodyType: "",
+    engineCapacity: "" as number | "",
+    powerHp: "" as number | "",
+    pollutionNorm: "",
+    co2Emissions: "" as number | "",
+    color: "",
+    colorDetail: "",
+    upholstery: "",
+    airConditioning: "",
+    doors: "" as number | "",
+    seats: "" as number | "",
+    vatDeductible: false,
+    noAccidents: false,
+    serviceBook: false,
+    firstOwner: false,
+    ownerCount: "" as number | "",
+    warrantyMonths: "" as number | "",
+    price: "" as number | "",
     purchasePrice: "" as number | "",
+    sellingPrice: "" as number | "",
     otherCosts: "" as number | "",
+    status: "AVAILABLE",
   });
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [attributes, setAttributes] = useState<GroupedAttributes>({});
-  const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   
+  // Image & Video State
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFileState[]>([]);
   const [pendingRotations, setPendingRotations] = useState<{ [key: string]: number }>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Video state
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -124,80 +181,212 @@ const AddEditListing = () => {
     })
   );
 
+  // Field change helper
+  const handleFieldChange = (key: keyof typeof fields, value: any) => {
+    setFields(prev => ({ ...prev, [key]: value }));
+  };
 
-  useEffect(() => {
-    const fetchCategories = async () => {
+  // Feature Toggle helper
+  const handleFeatureToggle = (id: string) => {
+    setSelectedFeatures(prev =>
+      prev.includes(id) ? prev.filter(fId => fId !== id) : [...prev, id]
+    );
+  };
+
+  // Dynamic make and model handling
+  const handleMakeChange = async (makeId: string) => {
+    handleFieldChange("makeId", makeId);
+    handleFieldChange("modelId", "");
+    setModels([]);
+    if (makeId) {
       try {
-        const response = await api.get("/categories");
-        setCategories(response.data);
-      } catch (error) {
-        toast.error("Nu s-au putut încărca categoriile.");
+        const modelsData = await getModelsByMake(makeId);
+        setModels(modelsData);
+      } catch (err) {
+        toast.error("Nu s-au putut încărca modelele pentru marca selectată.");
       }
-    };
-
-    const fetchListingData = async () => {
-        if (!listingId) return;
-        setIsLoading(true);
-        try {
-            const { title, description, internalNotes, categoryId, attributeValues: fetchedAttributeValues, images, purchasePrice, otherCosts, youtubeVideoId: fetchedYoutubeId } = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
-            setFormData({ title, description, internalNotes: internalNotes ?? "", categoryId, purchasePrice: purchasePrice ?? "", otherCosts: otherCosts ?? "" });
-            setYoutubeVideoId(fetchedYoutubeId || null);
-            
-            const sortedImages = (images || []).sort((a: ExistingImage, b: ExistingImage) => a.order - b.order);
-            const imagesWithRotation = sortedImages.map((img: any) => ({ ...img, rotation: 0 }));
-
-            setExistingImages(imagesWithRotation);
-            
-            const valuesObject = fetchedAttributeValues.reduce((acc: Record<string, any>, val: AttributeValueFromServer) => {
-                const rawValue = val.stringValue ?? val.numberValue ?? val.booleanValue;
-                acc[val.attributeId] = rawValue === null ? '' : rawValue;
-                return acc;
-            }, {});
-            setAttributeValues(valuesObject);
-
-        } catch (error) {
-            toast.error("Nu s-au putut încărca datele anunțului pentru editare.");
-            navigate('/listings');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    fetchCategories();
-    if (isEditing) {
-        fetchListingData();
     }
-  }, [listingId, isEditing, navigate]);
+  };
 
+  // Fetch catalogs and populate listing data on mount / edit
   useEffect(() => {
-    const fetchAttributesForCategory = async () => {
-      if (formData.categoryId) {
-        try {
-          const response = await api.get(`/categories/${formData.categoryId}/attributes`);
-          
-          setAttributes(response.data);
+    const loadCatalogAndListing = async () => {
+      setIsLoading(true);
+      try {
+        // 1. Fetch makes and features catalogs
+        const [makesData, featuresData] = await Promise.all([
+          getMakes(),
+          getFeatures()
+        ]);
+        setMakes(makesData);
+        setFeatures(featuresData);
+        
+        const allFeaturesList = Object.values(featuresData).flat() as { id: string; name: string; slug: string }[];
 
-          if (!isEditing || Object.keys(attributeValues).length === 0) {
-              const initialValues: Record<string, any> = {};
-              Object.values(response.data).flat().forEach((attr: Attribute) => {
-                  initialValues[attr.id] = attr.type === 'BOOLEAN' ? false : '';
-              });
-              setAttributeValues(initialValues);
+        // 2. If editing, fetch listing and map legacy attributes to fixed schema
+        if (isEditing && listingId) {
+          const fetched = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
+          setYoutubeVideoId(fetched.youtubeVideoId || null);
+          const sortedImages = (fetched.images || []).sort((a, b) => a.order - b.order);
+          setExistingImages(sortedImages.map(img => ({ ...img, rotation: 0 })));
+
+          const updatedFields = {
+            title: fetched.title || "",
+            description: fetched.description || "",
+            internalNotes: fetched.internalNotes || "",
+            makeId: "",
+            modelId: "",
+            variant: "",
+            year: "" as number | "",
+            mileage: "" as number | "",
+            vin: "",
+            firstRegistrationAt: "",
+            countryOfOrigin: "",
+            registeredInRo: false,
+            fuelType: "",
+            gearbox: "",
+            drivetrain: "",
+            bodyType: "",
+            engineCapacity: "" as number | "",
+            powerHp: "" as number | "",
+            pollutionNorm: "",
+            co2Emissions: "" as number | "",
+            color: "",
+            colorDetail: "",
+            upholstery: "",
+            airConditioning: "",
+            doors: "" as number | "",
+            seats: "" as number | "",
+            vatDeductible: false,
+            noAccidents: false,
+            serviceBook: false,
+            firstOwner: false,
+            ownerCount: "" as number | "",
+            warrantyMonths: "" as number | "",
+            price: "" as number | "",
+            purchasePrice: fetched.purchasePrice ?? "" as number | "",
+            sellingPrice: "" as number | "",
+            otherCosts: fetched.otherCosts ?? "" as number | "",
+            status: "AVAILABLE",
+          };
+
+          const avs = fetched.attributeValues || [];
+          const matchedFeatureIds: string[] = [];
+
+          // Retrieve make and models
+          const makeAttr = avs.find(a => normalizeString(a.attribute?.name) === "marca");
+          if (makeAttr?.stringValue) {
+            const matchedMake = makesData.find((m: any) => normalizeString(m.name) === normalizeString(makeAttr.stringValue));
+            if (matchedMake) {
+              updatedFields.makeId = matchedMake.id;
+              
+              // Load models synchronously for this make to resolve modelId
+              const modelsData = await getModelsByMake(matchedMake.id);
+              setModels(modelsData);
+              
+              const modelAttr = avs.find(a => normalizeString(a.attribute?.name) === "model");
+              if (modelAttr?.stringValue) {
+                const matchedModel = modelsData.find((m: any) => normalizeString(m.name) === normalizeString(modelAttr.stringValue));
+                if (matchedModel) {
+                  updatedFields.modelId = matchedModel.id;
+                }
+              }
+            }
           }
-        } catch (error) {
-          toast.error("Nu s-au putut încărca atributele pentru categoria selectată.");
-          setAttributes({});
+
+          // Map legacy EAV to fields
+          for (const av of avs) {
+            const name = normalizeString(av.attribute?.name);
+            const valStr = av.stringValue;
+            const valNum = av.numberValue;
+            const valBool = av.booleanValue;
+            
+            if (name === "variant") {
+              updatedFields.variant = valStr || "";
+            } else if (name === "an" || name === "an fabricatie" || name === "anul fabricatiei") {
+              updatedFields.year = valNum ?? "";
+            } else if (name === "kilometraj") {
+              updatedFields.mileage = valNum ?? "";
+            } else if (name === "pret" || name === "preț") {
+              updatedFields.price = valNum ?? "";
+            } else if (name === "combustibil") {
+              updatedFields.fuelType = mapFuelType(valStr) || "";
+            } else if (name === "cutie de viteze") {
+              updatedFields.gearbox = mapGearbox(valStr) || "";
+            } else if (name === "capacitate cilindrica") {
+              updatedFields.engineCapacity = valNum ?? "";
+            } else if (name === "putere (cp)" || name === "putere") {
+              updatedFields.powerHp = valNum ?? "";
+            } else if (name === "caroserie") {
+              updatedFields.bodyType = mapBodyType(valStr) || "";
+            } else if (name === "tractiune") {
+              updatedFields.drivetrain = mapDrivetrain(valStr) || "";
+            } else if (name === "norma de poluare" || name === "norma poluare") {
+              updatedFields.pollutionNorm = mapPollutionNorm(valStr) || "";
+            } else if (name === "culoare") {
+              updatedFields.color = mapColor(valStr) || "";
+            } else if (name === "culoare detaliu") {
+              updatedFields.colorDetail = valStr || "";
+            } else if (name === "tapiterie" || name === "tapițerie") {
+              updatedFields.upholstery = mapUpholstery(valStr) || "";
+            } else if (name === "climatizare") {
+              updatedFields.airConditioning = mapAirConditioning(valStr) || "";
+            } else if (name === "numar usi" || name === "numar de usi" || name === "usi" || name === "numar portiere") {
+              updatedFields.doors = valNum ?? "";
+            } else if (name === "numar locuri") {
+              updatedFields.seats = valNum ?? "";
+            } else if (name === "vin" || name === "serie sasiu (vin)" || name === "serie sasiu") {
+              updatedFields.vin = valStr || "";
+            } else if (name === "tara de origine" || name === "tara") {
+              updatedFields.countryOfOrigin = valStr ? valStr.substring(0, 2).toUpperCase() : "";
+            } else if (name === "prima inmatriculare") {
+              updatedFields.firstRegistrationAt = valStr ? valStr.substring(0, 10) : "";
+            } else if (name === "inmatriculat" || name === "inmatriculata") {
+              updatedFields.registeredInRo = valBool ?? false;
+            } else if (name === "tva deductibil") {
+              updatedFields.vatDeductible = valBool ?? false;
+            } else if (name === "fara accident" || name === "fara accident in istoric") {
+              updatedFields.noAccidents = valBool ?? false;
+            } else if (name === "carte service" || name === "carte de service") {
+              updatedFields.serviceBook = valBool ?? false;
+            } else if (name === "primul proprietar") {
+              updatedFields.firstOwner = valBool ?? false;
+            } else if (name === "numar proprietari") {
+              updatedFields.ownerCount = valNum ?? "";
+            } else if (name === "garantie (luni)" || name === "garantie") {
+              updatedFields.warrantyMonths = valNum ?? "";
+            } else if (name === "status") {
+              updatedFields.status = valStr || "AVAILABLE";
+            }
+            
+            // Map boolean features
+            if (valBool === true) {
+              const matched = allFeaturesList.find(f => {
+                const normF = normalizeString(f.name);
+                const normSlug = normalizeString(f.slug);
+                return name === normF || name === normSlug || name.includes(normSlug) || normSlug.includes(name);
+              });
+              if (matched) {
+                matchedFeatureIds.push(matched.id);
+              }
+            }
+          }
+
+          setFields(updatedFields);
+          setSelectedFeatures(matchedFeatureIds);
         }
-      } else {
-        setAttributes({});
+      } catch (err) {
+        console.error(err);
+        toast.error("Eroare la încărcarea catalogului sau datelor anunțului.");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchAttributesForCategory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.categoryId, isEditing]);
+    loadCatalogAndListing();
+  }, [listingId, isEditing]);
 
-
+  // Form Submit Logic
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -206,29 +395,60 @@ const AddEditListing = () => {
         const rotationIds = Object.keys(pendingRotations);
         if (rotationIds.length > 0) {
             const rotationPromises = rotationIds.map(id =>
-            rotateImage(id, pendingRotations[id])
+              rotateImage(id, pendingRotations[id])
             );
             const results = await Promise.allSettled(rotationPromises);
             results.forEach((result, index) => {
-            if (result.status === 'rejected') {
-                console.error(`Failed to rotate image ${rotationIds[index]}:`, result.reason);
-            }
+              if (result.status === 'rejected') {
+                  console.error(`Failed to rotate image ${rotationIds[index]}:`, result.reason);
+              }
             });
         }
 
-        const attributesPayload = Object.entries(attributeValues)
-            .map(([key, value]) => ({ attributeId: key, value }))
-            .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined);
+        const parseNum = (v: any) => (v === "" || v === null || v === undefined) ? null : Number(v);
 
-        const listingPayload = { 
-            title: formData.title, 
-            description: formData.description, 
-            internalNotes: formData.internalNotes,
-            categoryId: formData.categoryId, 
-            attributes: attributesPayload,
-            purchasePrice: formData.purchasePrice === '' ? null : Number(formData.purchasePrice),
-            otherCosts: formData.otherCosts === '' ? null : Number(formData.otherCosts),
-            youtubeVideoId,
+        // Build write contract payload
+        const listingPayload = {
+            title: fields.title,
+            description: fields.description || null,
+            internalNotes: fields.internalNotes || null,
+            makeId: fields.makeId || null,
+            modelId: fields.modelId || null,
+            variant: fields.variant || null,
+            year: parseNum(fields.year),
+            mileage: parseNum(fields.mileage),
+            vin: fields.vin || null,
+            firstRegistrationAt: fields.firstRegistrationAt || null,
+            countryOfOrigin: fields.countryOfOrigin ? fields.countryOfOrigin.toUpperCase() : null,
+            registeredInRo: fields.registeredInRo,
+            fuelType: fields.fuelType || null,
+            gearbox: fields.gearbox || null,
+            drivetrain: fields.drivetrain || null,
+            bodyType: fields.bodyType || null,
+            engineCapacity: parseNum(fields.engineCapacity),
+            powerHp: parseNum(fields.powerHp),
+            pollutionNorm: fields.pollutionNorm || null,
+            co2Emissions: parseNum(fields.co2Emissions),
+            color: fields.color || null,
+            colorDetail: fields.colorDetail || null,
+            upholstery: fields.upholstery || null,
+            airConditioning: fields.airConditioning || null,
+            doors: parseNum(fields.doors),
+            seats: parseNum(fields.seats),
+            vatDeductible: fields.vatDeductible,
+            noAccidents: fields.noAccidents,
+            serviceBook: fields.serviceBook,
+            firstOwner: fields.firstOwner,
+            ownerCount: parseNum(fields.ownerCount),
+            warrantyMonths: parseNum(fields.warrantyMonths),
+            price: parseNum(fields.price),
+            purchasePrice: parseNum(fields.purchasePrice),
+            sellingPrice: parseNum(fields.sellingPrice),
+            otherCosts: parseNum(fields.otherCosts),
+            status: fields.status || "AVAILABLE",
+            youtubeVideoId: youtubeVideoId || null,
+            featureIds: selectedFeatures,
+            extraSpecs: {}
         };
         
         let savedListingId;
@@ -240,15 +460,17 @@ const AddEditListing = () => {
             savedListingId = response.data.id;
         }
 
+        // Parallel/Sequential new image uploads
         if (imageFiles && imageFiles.length > 0) {
             for (const imageObject of imageFiles) {
-                const formData = new FormData();
-                formData.append('image', imageObject.file);
-                formData.append('rotation', String(imageObject.rotation));
-                await api.post(`/listings/${savedListingId}/images`, formData);
+                const imgFormData = new FormData();
+                imgFormData.append('image', imageObject.file);
+                imgFormData.append('rotation', String(imageObject.rotation));
+                await api.post(`/listings/${savedListingId}/images`, imgFormData);
             }
         }
         
+        // Reorder images
         if (existingImages && existingImages.length > 0) {
             const currentImages = existingImages;
             const sortedImageIds = [...currentImages]
@@ -266,19 +488,14 @@ const AddEditListing = () => {
         navigate('/listings');
 
     } catch (error) {
+        console.error(error);
         toast.error('A apărut o eroare la salvarea anunțului.');
     } finally {
         setIsLoading(false);
     }
-  }, [listingId, formData, attributeValues, imageFiles, existingImages, navigate, pendingRotations, queryClient, youtubeVideoId]);
+  }, [listingId, fields, selectedFeatures, imageFiles, existingImages, navigate, pendingRotations, queryClient, youtubeVideoId]);
 
-  const handleAttributeChange = (attributeId: string, value: any) => {
-    setAttributeValues(prev => ({
-      ...prev,
-      [attributeId]: value
-    }));
-  };
-  
+  // Image & Video Handlers
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files).map(file => ({
@@ -295,10 +512,10 @@ const AddEditListing = () => {
       const sequentialUpload = async () => {
           const responses = [];
           for (const imageObject of newFiles) {
-            const formData = new FormData();
-            formData.append('image', imageObject.file);
-            formData.append('rotation', String(imageObject.rotation));
-            const response = await api.post(`/listings/${listingId}/images`, formData);
+            const imgFormData = new FormData();
+            imgFormData.append('image', imageObject.file);
+            imgFormData.append('rotation', String(imageObject.rotation));
+            const response = await api.post(`/listings/${listingId}/images`, imgFormData);
             responses.push(response);
           }
           return responses;
@@ -339,7 +556,7 @@ const AddEditListing = () => {
   };
   
   const handleRotateExistingImage = (imageIndex: number, direction: 'left' | 'right') => {
-    let imageId: string | undefined;
+    let imgId: string | undefined;
     let newAngle: number = 0;
   
     setExistingImages(currentImages => {
@@ -353,14 +570,14 @@ const AddEditListing = () => {
         imageToUpdate.rotation = finalAngle;
         newImages[imageIndex] = imageToUpdate;
         
-        imageId = imageToUpdate.id;
+        imgId = imageToUpdate.id;
         newAngle = finalAngle;
         
         return newImages;
     });
 
-    if (imageId) {
-        setPendingRotations(prev => ({ ...prev, [imageId as string]: newAngle }));
+    if (imgId) {
+        setPendingRotations(prev => ({ ...prev, [imgId as string]: newAngle }));
     }
   };
 
@@ -376,9 +593,7 @@ const AddEditListing = () => {
               setExistingImages(currentImages => currentImages.filter(img => img.id !== imageId));
               return "Imaginea a fost ștearsă cu succes.";
           },
-          error: (err) => {
-              return "Nu s-a putut șterge imaginea. Te rugăm să încerci din nou.";
-          }
+          error: () => "Nu s-a putut șterge imaginea. Te rugăm să încerci din nou."
       });
   };
 
@@ -413,14 +628,11 @@ const AddEditListing = () => {
 
     try {
       const uploadUrl = `/listings/${listingId}/upload-video`;
-      
       const response = await api.post(
         uploadUrl,
         uploadFormData,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 300000, 
         }
       );
@@ -469,59 +681,30 @@ const AddEditListing = () => {
     setIsZipping(true);
     toast.loading('Se pregătește arhiva...', { id: 'zip-toast' });
     try {
-      await downloadImagesAsZip(existingImages, formData.title || 'anunt');
+      await downloadImagesAsZip(existingImages, fields.title || 'anunt');
       toast.success('Arhiva a fost descărcată cu succes!', { id: 'zip-toast' });
     } catch (error) {
-      toast.error('A apărut o eroare la crearea arhivei.', { id: 'zip-toast' });
+      toast.error('A apărut o eroare la crearea ararchivei.', { id: 'zip-toast' });
     } finally {
       setIsZipping(false);
     }
   };
 
+  if (isLoading && isEditing && makes.length === 0) {
+      return (
+          <div className="flex justify-center items-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="ml-4 text-muted-foreground">Se încarcă datele anunțului...</p>
+          </div>
+      );
+  }
 
-  const renderAttributeField = (attribute: Attribute) => {
-    const value = attributeValues[attribute.id] ?? '';
-
-    switch (attribute.type) {
-      case "NUMBER":
-        return (
-          <Input
-            id={attribute.id}
-            type="number"
-            value={value}
-            onChange={(e) => handleAttributeChange(attribute.id, e.target.value === '' ? '' : parseFloat(e.target.value))}
-            className="bg-background border-border focus:border-primary"
-          />
-        );
-      case "STRING":
-        return (
-          <Input
-            id={attribute.id}
-            type="text"
-            value={value}
-            onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
-            className="bg-background border-border focus:border-primary"
-          />
-        );
-      default:
-        return null;
-    }
-  };
-  
-    if (isLoading && isEditing) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="ml-4 text-muted-foreground">Se încarcă datele anunțului...</p>
-            </div>
-        );
-    }
-  
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Button
           variant="outline"
+          type="button"
           onClick={() => navigate("/listings")}
           className="border-border hover:bg-secondary w-full sm:w-auto"
         >
@@ -539,161 +722,636 @@ const AddEditListing = () => {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <Card className="border-card-border bg-card mb-6">
-          <CardHeader>
-            <CardTitle className="text-foreground">Informații de Bază</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Accordion type="multiple" defaultValue={["generale", "identitate", "tehnic", "istoric", "dotari"]} className="w-full space-y-6">
+          
+          {/* SECȚIUNEA 1: DETALII GENERALE */}
+          <AccordionItem value="generale" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Detalii Generale
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                <Label htmlFor="title" className="text-foreground font-medium">
-                    Titlul Anunțului
-                </Label>
-                <Input
+                  <Label htmlFor="title" className="text-foreground font-medium">Titlul Anunțului</Label>
+                  <Input
                     id="title"
                     placeholder="ex: Volkswagen Golf 7"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    value={fields.title}
+                    onChange={(e) => handleFieldChange("title", e.target.value)}
                     className="bg-background border-border focus:border-primary"
                     required
-                />
+                  />
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="category" className="text-foreground font-medium">
-                    Categorie
-                </Label>
-                <Select value={formData.categoryId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))} required>
+                  <Label htmlFor="status" className="text-foreground font-medium">Status</Label>
+                  <Select value={fields.status} onValueChange={(val) => handleFieldChange("status", val)}>
                     <SelectTrigger className="bg-background border-border focus:border-primary">
-                    <SelectValue placeholder="Selectează categoria" />
+                      <SelectValue placeholder="Alege status" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                    {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                      {getOptions(STATUS_LABELS, LISTING_STATUSES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
-                    ))}
+                      ))}
                     </SelectContent>
-                </Select>
+                  </Select>
                 </div>
-            </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="purchasePrice" className="text-foreground font-medium">Preț Achiziție (€)</Label>
+                  <Input
+                    id="purchasePrice"
+                    type="number"
+                    placeholder="ex: 12000"
+                    value={fields.purchasePrice}
+                    onChange={(e) => handleFieldChange("purchasePrice", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otherCosts" className="text-foreground font-medium">Alte Costuri/Reparații (€)</Label>
+                  <Input
+                    id="otherCosts"
+                    type="number"
+                    placeholder="ex: 350"
+                    value={fields.otherCosts}
+                    onChange={(e) => handleFieldChange("otherCosts", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-foreground font-medium">Preț Vânzare (€)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    placeholder="ex: 14500"
+                    value={fields.price}
+                    onChange={(e) => handleFieldChange("price", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Introdu o descriere detaliată a mașinii"
+                  value={fields.description}
+                  onChange={(e) => handleFieldChange("description", e.target.value)}
+                  className="bg-background border-border focus:border-primary min-h-[120px]"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-foreground font-medium">
-                Descriere
-              </Label>
-              <Textarea
-                id="description"
-                placeholder="Introdu o descriere detaliată a produsului"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="bg-background border-border focus:border-primary min-h-[120px]"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="internalNotes" className="text-foreground font-medium">Notițe Private (Admin Only)</Label>
+                <Textarea
+                  id="internalNotes"
+                  placeholder="Observații private (negociere, defecte nespecificate public etc.)"
+                  value={fields.internalNotes}
+                  onChange={(e) => handleFieldChange("internalNotes", e.target.value)}
+                  className="bg-background border-border focus:border-primary min-h-[80px]"
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
-          </CardContent>
-        </Card>
-
-        <Card className="border-card-border bg-card mb-6">
-          <CardHeader>
-            <CardTitle className="text-foreground">Notițe Interne</CardTitle>
-            <CardDescription>
-              Aceste notițe sunt vizibile doar pentru tine și nu apar pe pagina publică a anunțului.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="internalNotes" className="text-foreground font-medium">
-                Observații private
-              </Label>
-              <Textarea
-                id="internalNotes"
-                placeholder="ex: Client X interesat, preț negociabil până la 12500€, are mică zgârietură pe portieră dreapta..."
-                value={formData.internalNotes}
-                onChange={(e) => setFormData(prev => ({ ...prev, internalNotes: e.target.value }))}
-                className="bg-background border-border focus:border-primary min-h-[120px]"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {formData.categoryId && Object.keys(attributes).length > 0 && (
-          <Card className="border-card-border bg-card mb-6">
-            <CardHeader>
-              <CardTitle className="text-foreground">Detalii Specifice</CardTitle>
-              <CardDescription>Completați detaliile specifice categoriei selectate.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="multiple" className="w-full space-y-4">
-                {Object.entries(attributes).map(([groupName, groupAttributes]) => (
-                  <AccordionItem value={groupName} key={groupName} className="border border-border rounded-lg bg-background/50 px-4">
-                    <AccordionTrigger className="text-lg font-semibold text-foreground hover:no-underline">
-                      {groupName}
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      {/* Input fields for STRING and NUMBER attributes */}
-                      {groupAttributes.filter(attr => attr.type !== 'BOOLEAN').length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-                          {groupAttributes
-                            .filter(attr => attr.type !== 'BOOLEAN')
-                            .map((attribute) => (
-                              <div key={attribute.id} className="space-y-2">
-                                <Label htmlFor={attribute.id} className="text-foreground font-medium">
-                                  {attribute.name}
-                                </Label>
-                                {renderAttributeField(attribute)}
-                              </div>
+          {/* SECȚIUNEA 2: IDENTITATE */}
+          <AccordionItem value="identitate" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Identitate Vehicul
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2 flex flex-col justify-end">
+                  <Label className="text-foreground font-medium mb-1">Marcă</Label>
+                  <Popover open={makeSearchOpen} onOpenChange={setMakeSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={makeSearchOpen}
+                        className="w-full justify-between bg-background border-border text-foreground hover:bg-secondary font-normal"
+                      >
+                        {fields.makeId
+                          ? makes.find((m) => m.id === fields.makeId)?.name || "Selectează marca"
+                          : "Selectează marca"}
+                        <span className="ml-2 h-4 w-4 shrink-0 opacity-50">▼</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0 bg-popover border-border z-[100]">
+                      <Command>
+                        <CommandInput placeholder="Căutare marcă..." className="border-none focus:ring-0" />
+                        <CommandList className="max-h-[300px] overflow-y-auto">
+                          <CommandEmpty>Nu s-a găsit nicio marcă.</CommandEmpty>
+                          <CommandGroup>
+                            {makes.map((make) => (
+                              <CommandItem
+                                key={make.id}
+                                value={make.name}
+                                onSelect={() => {
+                                  handleMakeChange(make.id);
+                                  setMakeSearchOpen(false);
+                                }}
+                                className="text-foreground hover:bg-secondary cursor-pointer flex items-center justify-between p-2"
+                              >
+                                <span>{make.name}</span>
+                                {fields.makeId === make.id && <Check className="h-4 w-4 text-primary" />}
+                              </CommandItem>
                             ))}
-                        </div>
-                      )}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                      {/* Chips for BOOLEAN attributes */}
-                      {groupAttributes.filter(attr => attr.type === 'BOOLEAN').length > 0 && (
-                        <div className="pt-4">
-                          {groupAttributes.filter(attr => attr.type !== 'BOOLEAN').length > 0 && (
-                            <div className="border-t border-border my-4" />
-                          )}
-                          <Label className="text-foreground font-medium mb-3 block">
-                            Dotări
-                          </Label>
-                          <div className="flex flex-wrap gap-2">
-                            {groupAttributes
-                              .filter(attr => attr.type === 'BOOLEAN')
-                              .map((attribute) => {
-                                const isActive = !!attributeValues[attribute.id];
-                                return (
-                                  <button
-                                    key={attribute.id}
-                                    type="button"
-                                    onClick={() => handleAttributeChange(attribute.id, !isActive)}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                                      isActive
-                                        ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
-                                        : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
-                                    }`}
-                                  >
-                                    {isActive ? (
-                                      <Check className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <Plus className="w-3.5 h-3.5 opacity-60" />
-                                    )}
-                                    <span>{attribute.name}</span>
-                                  </button>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-        )}
+                <div className="space-y-2 flex flex-col justify-end">
+                  <Label className="text-foreground font-medium mb-1">Model</Label>
+                  <Popover open={modelSearchOpen} onOpenChange={setModelSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={modelSearchOpen}
+                        disabled={!fields.makeId}
+                        className="w-full justify-between bg-background border-border text-foreground hover:bg-secondary font-normal disabled:opacity-50"
+                      >
+                        {fields.modelId
+                          ? models.find((m) => m.id === fields.modelId)?.name || "Selectează modelul"
+                          : "Selectează modelul"}
+                        <span className="ml-2 h-4 w-4 shrink-0 opacity-50">▼</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0 bg-popover border-border z-[100]">
+                      <Command>
+                        <CommandInput placeholder="Căutare model..." className="border-none focus:ring-0" />
+                        <CommandList className="max-h-[300px] overflow-y-auto">
+                          <CommandEmpty>Nu s-a găsit niciun model.</CommandEmpty>
+                          <CommandGroup>
+                            {models.map((model) => (
+                              <CommandItem
+                                key={model.id}
+                                value={model.name}
+                                onSelect={() => {
+                                  handleFieldChange("modelId", model.id);
+                                  setModelSearchOpen(false);
+                                }}
+                                className="text-foreground hover:bg-secondary cursor-pointer flex items-center justify-between p-2"
+                              >
+                                <span>{model.name}</span>
+                                {fields.modelId === model.id && <Check className="h-4 w-4 text-primary" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-        <Card className="border-card-border bg-card mb-6">
+                <div className="space-y-2">
+                  <Label htmlFor="variant" className="text-foreground font-medium">Variantă / Motorizare</Label>
+                  <Input
+                    id="variant"
+                    placeholder="ex: 2.0 TDI BlueMotion"
+                    value={fields.variant}
+                    onChange={(e) => handleFieldChange("variant", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="year" className="text-foreground font-medium">An Fabricație</Label>
+                  <Input
+                    id="year"
+                    type="number"
+                    placeholder="ex: 2018"
+                    value={fields.year}
+                    onChange={(e) => handleFieldChange("year", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mileage" className="text-foreground font-medium">Kilometraj (km)</Label>
+                  <Input
+                    id="mileage"
+                    type="number"
+                    placeholder="ex: 145000"
+                    value={fields.mileage}
+                    onChange={(e) => handleFieldChange("mileage", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vin" className="text-foreground font-medium">Serie Șasiu (VIN)</Label>
+                  <Input
+                    id="vin"
+                    placeholder="ex: WVWZZZ1JZ..."
+                    value={fields.vin}
+                    onChange={(e) => handleFieldChange("vin", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div className="space-y-2">
+                  <Label htmlFor="firstRegistrationAt" className="text-foreground font-medium">Data primei înmatriculări</Label>
+                  <Input
+                    id="firstRegistrationAt"
+                    type="date"
+                    value={fields.firstRegistrationAt}
+                    onChange={(e) => handleFieldChange("firstRegistrationAt", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="countryOfOrigin" className="text-foreground font-medium">Țară Origine (2 litere)</Label>
+                  <Input
+                    id="countryOfOrigin"
+                    placeholder="ex: DE"
+                    maxLength={2}
+                    value={fields.countryOfOrigin}
+                    onChange={(e) => handleFieldChange("countryOfOrigin", e.target.value.toUpperCase())}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-6">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange("registeredInRo", !fields.registeredInRo)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                      fields.registeredInRo
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                        : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                    }`}
+                  >
+                    {fields.registeredInRo ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 opacity-60" />}
+                    <span>Înmatriculat în România</span>
+                  </button>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* SECȚIUNEA 3: DETALII TEHNICE */}
+          <AccordionItem value="tehnic" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Specificații Tehnic-Mecanice
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Combustibil</Label>
+                  <Select value={fields.fuelType} onValueChange={(val) => handleFieldChange("fuelType", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege combustibil" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(FUEL_TYPE_LABELS, FUEL_TYPES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Cutie de Viteze</Label>
+                  <Select value={fields.gearbox} onValueChange={(val) => handleFieldChange("gearbox", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege transmisie" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(GEARBOX_LABELS, GEARBOX_TYPES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Tracțiune</Label>
+                  <Select value={fields.drivetrain} onValueChange={(val) => handleFieldChange("drivetrain", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege tracțiune" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(DRIVETRAIN_LABELS, DRIVETRAINS).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Tip Caroserie</Label>
+                  <Select value={fields.bodyType} onValueChange={(val) => handleFieldChange("bodyType", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege caroserie" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(BODY_TYPE_LABELS, BODY_TYPES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="engineCapacity" className="text-foreground font-medium">Capacitate Cilindrică (cm³)</Label>
+                  <Input
+                    id="engineCapacity"
+                    type="number"
+                    placeholder="ex: 1998"
+                    value={fields.engineCapacity}
+                    onChange={(e) => handleFieldChange("engineCapacity", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="powerHp" className="text-foreground font-medium">Putere (CP)</Label>
+                  <Input
+                    id="powerHp"
+                    type="number"
+                    placeholder="ex: 150"
+                    value={fields.powerHp}
+                    onChange={(e) => handleFieldChange("powerHp", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Normă Poluare</Label>
+                  <Select value={fields.pollutionNorm} onValueChange={(val) => handleFieldChange("pollutionNorm", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege norma" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(POLLUTION_NORM_LABELS, POLLUTION_NORMS).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="co2Emissions" className="text-foreground font-medium">Emisii CO2 (g/km)</Label>
+                  <Input
+                    id="co2Emissions"
+                    type="number"
+                    placeholder="ex: 119"
+                    value={fields.co2Emissions}
+                    onChange={(e) => handleFieldChange("co2Emissions", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Culoare</Label>
+                  <Select value={fields.color} onValueChange={(val) => handleFieldChange("color", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege culoare" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(COLOR_LABELS, COLORS).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="colorDetail" className="text-foreground font-medium">Detaliu Culoare</Label>
+                  <Input
+                    id="colorDetail"
+                    placeholder="ex: Negru Metalizat Pearl"
+                    value={fields.colorDetail}
+                    onChange={(e) => handleFieldChange("colorDetail", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Tapițerie</Label>
+                  <Select value={fields.upholstery} onValueChange={(val) => handleFieldChange("upholstery", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege tapițerie" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(UPHOLSTERY_LABELS, UPHOLSTERIES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Climatizare</Label>
+                  <Select value={fields.airConditioning} onValueChange={(val) => handleFieldChange("airConditioning", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege climatizare" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(AIR_CONDITIONING_LABELS, AIR_CONDITIONINGS).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="doors" className="text-foreground font-medium">Număr Portiere</Label>
+                  <Input
+                    id="doors"
+                    type="number"
+                    placeholder="ex: 5"
+                    value={fields.doors}
+                    onChange={(e) => handleFieldChange("doors", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="seats" className="text-foreground font-medium">Număr Locuri</Label>
+                  <Input
+                    id="seats"
+                    type="number"
+                    placeholder="ex: 5"
+                    value={fields.seats}
+                    onChange={(e) => handleFieldChange("seats", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* SECȚIUNEA 4: ISTORIC & COMERCIAL */}
+          <AccordionItem value="istoric" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Istoric, Stare & Garanție
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange("vatDeductible", !fields.vatDeductible)}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-all ${
+                    fields.vatDeductible
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                      : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                  }`}
+                >
+                  {fields.vatDeductible ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 opacity-60" />}
+                  <span>TVA Deductibil</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange("noAccidents", !fields.noAccidents)}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-all ${
+                    fields.noAccidents
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                      : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                  }`}
+                >
+                  {fields.noAccidents ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 opacity-60" />}
+                  <span>Fără Accidente în Istoric</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange("serviceBook", !fields.serviceBook)}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-all ${
+                    fields.serviceBook
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                      : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                  }`}
+                >
+                  {fields.serviceBook ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 opacity-60" />}
+                  <span>Carte Service</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange("firstOwner", !fields.firstOwner)}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-all ${
+                    fields.firstOwner
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                      : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                  }`}
+                >
+                  {fields.firstOwner ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 opacity-60" />}
+                  <span>Primul Proprietar</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ownerCount" className="text-foreground font-medium">Număr proprietari anteriori</Label>
+                  <Input
+                    id="ownerCount"
+                    type="number"
+                    placeholder="ex: 1"
+                    value={fields.ownerCount}
+                    onChange={(e) => handleFieldChange("ownerCount", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="warrantyMonths" className="text-foreground font-medium">Garanție Dealership (luni)</Label>
+                  <Input
+                    id="warrantyMonths"
+                    type="number"
+                    placeholder="ex: 12"
+                    value={fields.warrantyMonths}
+                    onChange={(e) => handleFieldChange("warrantyMonths", e.target.value)}
+                    className="bg-background border-border focus:border-primary"
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* SECȚIUNEA 5: DOTĂRI (CHIPS GROUPED) */}
+          <AccordionItem value="dotari" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Dotări & Opționale
+            </AccordionTrigger>
+            <AccordionContent className="space-y-6 pt-2">
+              {features && Object.keys(features).length > 0 ? (
+                Object.entries(features).map(([groupName, groupFeatures]) => (
+                  <div key={groupName} className="space-y-2">
+                    <h4 className="font-semibold text-primary text-xs uppercase tracking-wider border-b border-border pb-1 mb-3">
+                      {groupName}
+                    </h4>
+                    <div className="flex flex-wrap gap-2 pb-4">
+                      {groupFeatures.map((feat: any) => {
+                        const isActive = selectedFeatures.includes(feat.id);
+                        return (
+                          <button
+                            key={feat.id}
+                            type="button"
+                            onClick={() => handleFeatureToggle(feat.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                              isActive
+                                ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary-hover'
+                                : 'bg-background text-foreground border-border hover:border-primary hover:bg-secondary'
+                            }`}
+                          >
+                            {isActive ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5 opacity-60" />
+                            )}
+                            <span>{feat.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">Se încarcă lista dotărilor sau nu există dotări disponibile.</p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {/* IMAGES CARD */}
+        <Card className="border-card-border bg-card my-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-foreground">Fotografii Anunț</CardTitle>
             {isEditing && existingImages.length > 0 && (
@@ -815,6 +1473,7 @@ const AddEditListing = () => {
           />
         )}
 
+        {/* VIDEO CARD */}
         {hasVideoFeature && (
             <Card className="border-card-border bg-card mb-6">
                 <CardHeader>
@@ -889,6 +1548,7 @@ const AddEditListing = () => {
             </Card>
         )}
 
+        {/* ACTION BUTTONS */}
         <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mt-6">
           <Button
             type="submit"

@@ -43,9 +43,9 @@ const PublicFeedPreview = () => {
 
       try {
         setIsLoading(true);
-        // Hit the public search endpoint
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const response = await axios.get(
-          `https://saas-platform-backend.onrender.com/api/public/listings/search`,
+          `${apiBaseUrl}/public/listings/search`,
           {
             params: {
               businessId,
@@ -141,7 +141,8 @@ const PublicFeedPreview = () => {
         </div>
         <Button
           onClick={() => {
-            window.location.href = `https://saas-platform-backend.onrender.com/api/public/listings/csv-feed?businessId=${businessId}`;
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+            window.location.href = `${apiBaseUrl}/public/listings/csv-feed?businessId=${businessId}`;
           }}
           className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 shadow-md"
         >
