@@ -6,8 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
-import Categories from "./pages/Categories";
-import CategoryAttributes from "./pages/CategoryAttributes";
 import Listings from "./pages/Listings";
 import AddEditListing from "./pages/AddEditListing";
 import { Toaster as HotToaster } from "react-hot-toast";
@@ -18,7 +16,6 @@ import AdminPrivacyPolicy from "./pages/AdminPrivacyPolicy";
 import AdminTerms from "./pages/AdminTerms";
 import CookieBanner from "./components/CookieBanner";
 import NotFound from "./pages/NotFound";
-import AttributeGroups from "./pages/AttributeGroups";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
 import SoldListings from "./pages/SoldListings";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
@@ -64,8 +61,6 @@ const App = () => (
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/categories/:categoryId/attributes" element={<CategoryAttributes />} />
               <Route path="/listings" element={<Listings />} />
               <Route path="/listings/sold" element={<SoldListings />} />
               <Route path="/listings/new" element={<AddEditListing />} />
@@ -73,7 +68,6 @@ const App = () => (
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/reviews" element={<AdminReviewsPage />} />
               <Route path="/settings" element={<BusinessSettings />} />
-              <Route path="/settings/attribute-groups" element={<AttributeGroups />} />
               <Route path="/reports" element={<ProfitabilityReport />} />
               
               <Route path="/blog" element={<BlogList />} />

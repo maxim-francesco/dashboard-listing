@@ -88,7 +88,7 @@ const Dashboard = () => {
       bgColor: "bg-primary-light",
     },
     {
-      title: "Total Categorii",
+      title: "Mărci în stoc",
       value: stats.totalCategories.toLocaleString(),
       icon: Users,
       color: "text-success",

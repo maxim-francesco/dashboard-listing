@@ -21,7 +21,6 @@ interface SidebarProps {
 
 const navigation = [
   { name: "Panou de Bord", href: "/", icon: Home },
-  { name: "Categorii", href: "/categories", icon: List },
   { name: "Anunțuri", href: "/listings", icon: Car },
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Mesaje", href: "/messages", icon: Mail },
