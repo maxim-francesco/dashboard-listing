@@ -198,11 +198,124 @@ export const publishToAutovitAndOLX = (listingId: string) =>
 
 
 // Messages
+export interface CreateManualLeadData {
+  name?: string;
+  phone: string;
+  email?: string;
+  message?: string;
+  type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK';
+  listingId?: string | null;
+}
+
+export const createManualLead = async (payload: CreateManualLeadData): Promise<any> => {
+  const response = await api.post("/messages", payload);
+  return response.data;
+};
+
 export const toggleMessageRead = (messageId: string, isRead: boolean) =>
   api.patch(`/messages/${messageId}/read`, { isRead });
 
+
 export const deleteMessage = (messageId: string) =>
   api.delete(`/messages/${messageId}`);
+
+export interface MessageActivity {
+  id: string;
+  messageId: string;
+  kind: 'CREATED' | 'STATUS_CHANGED' | 'TYPE_CHANGED' | 'NOTE' | 'REMINDER_SET' | 'REMINDER_CLEARED' | 'LINKED_LISTING';
+  fromValue: string | null;
+  toValue: string | null;
+  body: string | null;
+  authorId: string | null;
+  createdAt: string;
+}
+
+export interface ListingImage {
+  id: string;
+  url: string;
+  order: number;
+}
+
+export interface LinkedListing {
+  id: string;
+  title: string;
+  price: number | null;
+  images: ListingImage[];
+  slug: string | null;
+  publicUrl?: string | null;
+}
+
+export interface MessageDetail {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  type: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK';
+  status: 'NEW' | 'CONTACTED' | 'VIEWING' | 'OFFER' | 'WON' | 'LOST';
+  lostReason: 'PRICE' | 'BOUGHT_ELSEWHERE' | 'UNREACHABLE' | 'NOT_SERIOUS' | 'OTHER' | null;
+  reminderAt: string | null;
+  listingId: string | null;
+  listing: LinkedListing | null;
+  activities: MessageActivity[];
+}
+
+export const getMessageDetail = async (id: string): Promise<MessageDetail> => {
+  const response = await api.get(`/messages/${id}`);
+  return response.data;
+};
+
+export const updateMessageStatus = async (
+  id: string,
+  payload: { status: 'NEW' | 'CONTACTED' | 'VIEWING' | 'OFFER' | 'WON' | 'LOST'; lostReason?: 'PRICE' | 'BOUGHT_ELSEWHERE' | 'UNREACHABLE' | 'NOT_SERIOUS' | 'OTHER' | null }
+): Promise<any> => {
+  const response = await api.patch(`/messages/${id}/status`, payload);
+  return response.data;
+};
+
+export const updateMessage = async (
+  id: string,
+  payload: { type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK'; listingId?: string | null }
+): Promise<any> => {
+  const response = await api.patch(`/messages/${id}`, payload);
+  return response.data;
+};
+
+export const createMessageNote = async (
+  id: string,
+  payload: { body: string }
+): Promise<any> => {
+  const response = await api.post(`/messages/${id}/notes`, payload);
+  return response.data;
+};
+
+export const updateMessageReminder = async (
+  id: string,
+  payload: { reminderAt: string | null }
+): Promise<any> => {
+  const response = await api.patch(`/messages/${id}/reminder`, payload);
+  return response.data;
+};
+
+export const getActiveListings = async (): Promise<any[]> => {
+  const response = await api.get('/listings');
+  return response.data;
+};
+
+export interface MessageCounts {
+  actionNeeded: number;
+  unread: number;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+}
+
+export const getMessageCounts = async (): Promise<MessageCounts> => {
+  const response = await api.get('/messages/counts');
+  return response.data;
+};
+
 
 export const resetViewsForListing = (listingId: string) =>
   api.delete(`/views/listing/${listingId}`);

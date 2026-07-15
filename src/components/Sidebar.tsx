@@ -13,6 +13,7 @@ import {
   PenTool,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { useActionNeededCount } from "@/hooks/useActionNeededCount";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ const navigation = [
 ];
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
+  const { actionNeeded } = useActionNeededCount();
+
   return (
     <>
       {/* Overlay for mobile view, appears when sidebar is open */}
@@ -73,15 +76,31 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
               onClick={onToggle} // Close sidebar on link click
               className={({ isActive }) =>
                 cn(
-                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors w-full",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )
               }
             >
-              <item.icon className="w-5 h-5 flex-shrink-0 mr-3" />
-              <span>{item.name}</span>
+              {({ isActive }) => (
+                <>
+                  <item.icon className="w-5 h-5 flex-shrink-0 mr-3" />
+                  <span>{item.name}</span>
+                  {item.href === "/messages" && actionNeeded > 0 && (
+                    <span
+                      className={cn(
+                        "ml-auto text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center transition-colors",
+                        isActive
+                          ? "bg-primary-foreground text-primary"
+                          : "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {actionNeeded}
+                    </span>
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -89,5 +108,6 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     </>
   );
 };
+
 
 export default Sidebar;

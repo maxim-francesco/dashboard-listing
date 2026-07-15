@@ -10,6 +10,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Menu, LogOut, User, Building2, Settings, Star, ClipboardCheck, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useActionNeededCount } from "@/hooks/useActionNeededCount";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -27,6 +28,7 @@ const navigation = [
 
 const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate();
+  const { actionNeeded } = useActionNeededCount();
 
   const handleLogout = () => {
     // Remove the token from storage
@@ -72,11 +74,28 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 )
                 }
             >
-                {item.icon && <item.icon className="w-4 h-4" />}
-                {item.name}
+                {({ isActive }) => (
+                  <>
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <span>{item.name}</span>
+                    {item.href === "/messages" && actionNeeded > 0 && (
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center transition-colors",
+                          isActive
+                            ? "bg-primary-foreground text-primary"
+                            : "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        {actionNeeded}
+                      </span>
+                    )}
+                  </>
+                )}
             </NavLink>
         ))}
       </nav>
+
 
       <div className="flex items-center gap-4">
         {/* User Menu */}
