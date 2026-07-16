@@ -1,6 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import Link from '@tiptap/extension-link'
+import CharacterCount from '@tiptap/extension-character-count'
 import { useEffect } from 'react'
 
 interface RichTextEditorProps {
@@ -12,10 +14,12 @@ interface RichTextEditorProps {
 export default function RichTextEditor({ content, onChange, placeholder }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
+      Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer', target: null } }),
       Placeholder.configure({
         placeholder: placeholder || 'Scrie conținutul articolului...',
       }),
+      CharacterCount,
     ],
     content,
     onUpdate: ({ editor }) => {

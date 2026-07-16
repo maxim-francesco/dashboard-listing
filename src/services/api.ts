@@ -378,4 +378,15 @@ export async function generateDescription(payload: any) {
   return res.data;
 }
 
+export interface GenerateArticleData { template: string; topic?: string }
+export const generateArticle = async (payload: GenerateArticleData) => {
+  const { data } = await api.post('/ai/generate-article', payload)
+  return data as { title: string; excerpt: string; content: string; category: string; categoryKey: string; readTime: string }
+}
+
+export const suggestTopics = async () => {
+  const { data } = await api.post('/ai/suggest-topics', {})
+  return data as { suggestions: string[] }
+}
+
 export default api;
