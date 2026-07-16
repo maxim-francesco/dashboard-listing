@@ -299,6 +299,11 @@ export const updateMessageReminder = async (
   return response.data;
 };
 
+export const suggestReply = async (messageId: string) => {
+  const { data } = await api.post(`/messages/${messageId}/suggest-reply`)
+  return data as { reply: string }
+}
+
 export const getActiveListings = async (): Promise<any[]> => {
   const response = await api.get('/listings');
   return response.data;

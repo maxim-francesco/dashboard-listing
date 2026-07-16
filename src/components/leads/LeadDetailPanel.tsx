@@ -30,7 +30,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  MailOpen
+  MailOpen,
+  Sparkles,
+  Send
 } from "lucide-react";
 import {
   getMessageDetail,
@@ -42,10 +44,12 @@ import {
   toggleMessageRead,
   deleteMessage,
   MessageDetail,
-  MessageActivity
+  MessageActivity,
+  suggestReply
 } from "@/services/api";
 import { format, formatDistanceToNow } from "date-fns";
 import { ro } from "date-fns/locale";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { normalizeRoPhone, waLink, telLink } from "@/utils/phone";
@@ -120,7 +124,18 @@ export const LeadDetailPanel = ({
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [tempLostReason, setTempLostReason] = useState<string>("");
 
+  // AI Reply state & mutation
+  const [aiReply, setAiReply] = useState<string>("");
+  const replyMutation = useMutation({
+    mutationFn: () => suggestReply(lead!.id),
+    onSuccess: (data) => setAiReply(data.reply),
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || "Nu s-a putut genera răspunsul.");
+    },
+  });
+
   useEffect(() => {
+    setAiReply("");
     if (messageId) {
       loadLeadDetail();
       loadActiveListings();
@@ -354,7 +369,8 @@ export const LeadDetailPanel = ({
   const waMessage = carTitle 
     ? `Bună ziua, ați întrebat de ${carTitle} de la noi...`
     : "Bună ziua...";
-  const waUrl = lead?.phone ? waLink(lead.phone, waMessage) : "";
+  const waText = aiReply.trim() ? aiReply : waMessage;
+  const waUrlFinal = lead?.phone ? waLink(lead.phone, waText) : "";
 
 
   // Date utilities
@@ -416,6 +432,87 @@ export const LeadDetailPanel = ({
   const notes = lead?.activities
     ? [...lead.activities].filter((act) => act.kind === "NOTE").reverse()
     : [];
+
+  const renderAiReplySection = () => {
+    if (!lead) return null;
+    const replyText = aiReply.trim();
+    const replyWaUrl = lead.phone && replyText ? waLink(lead.phone, aiReply) : "";
+    return (
+      <div className="space-y-3 mt-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Răspuns rapid AI</h3>
+        </div>
+
+        {!aiReply && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary/5"
+            onClick={() => replyMutation.mutate()}
+            disabled={replyMutation.isPending}
+          >
+            {replyMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>Se generează...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span>Propune răspuns</span>
+              </>
+            )}
+          </Button>
+        )}
+
+        {aiReply && (
+          <div className="space-y-2 rounded-xl border border-border bg-background p-3">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+              Răspuns propus (editează dacă vrei)
+            </label>
+            <Textarea
+              value={aiReply}
+              onChange={(e) => setAiReply(e.target.value)}
+              className="text-sm min-h-[110px] border-border bg-background"
+              rows={5}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-[2] h-11 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-semibold rounded-lg border-none disabled:opacity-50"
+                disabled={!lead.phone || !replyText}
+                onClick={() => replyWaUrl && window.open(replyWaUrl, "_blank")}
+              >
+                <Send className="w-4 h-4" />
+                <span>Trimite pe WhatsApp</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-11 flex items-center justify-center gap-2 border-border text-muted-foreground hover:bg-secondary"
+                onClick={() => replyMutation.mutate()}
+                disabled={replyMutation.isPending}
+                title="Regenerează"
+              >
+                {replyMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span className="text-xs">Regenerează</span>
+              </Button>
+            </div>
+            {!lead.phone && (
+              <p className="text-[10px] text-muted-foreground">Acest lead nu are număr de telefon salvat.</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Local renderers for layout sections
   const renderCarSection = () => {
@@ -861,12 +958,13 @@ export const LeadDetailPanel = ({
                   <div className="p-4 bg-muted rounded-xl border border-border">
                     <p className="text-sm text-foreground whitespace-pre-wrap break-words">{lead.message}</p>
                     <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3.5 h-3.5" />
                       <span>
                         Trimis {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true, locale: ro })}
                       </span>
                     </p>
                   </div>
+                  {renderAiReplySection()}
                 </div>
 
                 {/* Interes section (Mobile) */}
@@ -926,7 +1024,7 @@ export const LeadDetailPanel = ({
                         variant="outline"
                         className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
                         disabled={!lead.phone}
-                        onClick={() => window.open(waUrl, "_blank")}
+                        onClick={() => window.open(waUrlFinal, "_blank")}
                       >
                         <MessageSquare className="w-4 h-4" />
                         <span className="text-xs">WhatsApp</span>
@@ -961,6 +1059,7 @@ export const LeadDetailPanel = ({
                         </span>
                       </p>
                     </div>
+                    {renderAiReplySection()}
                   </div>
 
                   {/* Reminder */}
@@ -1014,7 +1113,7 @@ export const LeadDetailPanel = ({
             <Button
               className="flex-[2] h-12 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white text-sm font-semibold rounded-lg border-none"
               disabled={!lead.phone}
-              onClick={() => window.open(waUrl, "_blank")}
+              onClick={() => window.open(waUrlFinal, "_blank")}
             >
               <MessageSquare className="w-4 h-4" />
               <span>WhatsApp</span>
