@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive, Check, Plus } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, RotateCcw, RotateCw, X, UploadCloud, Trash2, Archive, Check, Plus, Sparkles } from "lucide-react";
 import { toast } from "react-hot-toast";
-import api, { rotateImage, getMakes, getModelsByMake, getFeatures } from "@/services/api";
+import api, { rotateImage, getMakes, getModelsByMake, getFeatures, generateDescription } from "@/services/api";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
@@ -103,8 +104,36 @@ const AddEditListing = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const { mutate: genDescription, isPending: isGenerating } = useMutation({
+    mutationFn: generateDescription,
+    onSuccess: (data) => {
+      handleFieldChange("description", data.description);
+      toast.success("Descriere generată.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || "Nu s-a putut genera descrierea.");
+    },
+  });
+
+  const runGenerateDescription = () => {
+    genDescription({ ...fields, featureIds: selectedFeatures });
+  };
+  const handleGenerateDescription = () => {
+    if (!fields.makeId || !fields.modelId) {
+      toast.error("Selectează marca și modelul înainte de generare.");
+      return;
+    }
+    if (fields.description && fields.description.trim().length > 0) {
+      setOverwriteDialogOpen(true);
+      return;
+    }
+    runGenerateDescription();
+  };
+
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
+  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
 
   // Makes, Models, Features catalogs
   const [makes, setMakes] = useState<any[]>([]);
@@ -796,7 +825,29 @@ const AddEditListing = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={isGenerating}
+                    className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Se generează...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span>Generează descriere</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   id="description"
                   placeholder="Introdu o descriere detaliată a mașinii"
@@ -1568,6 +1619,21 @@ const AddEditListing = () => {
             Anulează
           </Button>
         </div>
+
+        <AlertDialog open={overwriteDialogOpen} onOpenChange={setOverwriteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Suprascrii descrierea existentă?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Câmpul de descriere conține deja text. Generarea unei descrieri noi va înlocui complet textul actual.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Anulează</AlertDialogCancel>
+              <AlertDialogAction onClick={runGenerateDescription}>Suprascrie și generează</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </form>
     </div>
   );

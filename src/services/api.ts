@@ -373,4 +373,9 @@ export const deleteBlogPost = async (postId: string): Promise<void> => {
   await api.delete(`/blog/${postId}`)
 }
 
+export async function generateDescription(payload: any) {
+  const res = await api.post('/ai/generate-description', payload);
+  return res.data;
+}
+
 export default api;
