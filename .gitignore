@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Ephemeral test artifacts
+_ai_shots/
+*_screenshots/
