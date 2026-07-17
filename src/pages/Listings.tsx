@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,7 @@ import api, {
   resetViewsForListing
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
+import DiagnoseListingModal from "@/components/modals/DiagnoseListingModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
 import CatalogPreviewModal from "@/components/modals/CatalogPreviewModal";
@@ -72,7 +73,8 @@ const ListingActionDropdown = ({
   onSold, 
   onGeneratePdf, 
   onShowQr,
-  isPdfLoading 
+  isPdfLoading,
+  onDiagnose
 }: { 
   listing: Listing; 
   onDelete: (id: string, title: string) => void;
@@ -81,6 +83,7 @@ const ListingActionDropdown = ({
   onGeneratePdf: (listing: Listing) => void;
   onShowQr: (listing: Listing) => void;
   isPdfLoading: boolean;
+  onDiagnose: (listing: Listing) => void;
 }) => {
   const navigate = useNavigate();
   const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
@@ -205,6 +208,14 @@ const ListingActionDropdown = ({
           <ClipboardCheck className="mr-2 h-4 w-4" />
           <span>Marchează ca Vândut</span>
         </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => onDiagnose(listing)}
+          className="cursor-pointer"
+        >
+          <Sparkles className="mr-2 h-4 w-4" />
+          <span>Analizează anunțul</span>
+        </DropdownMenuItem>
         
         <DropdownMenuItem
           onClick={() => onClone(listing.id)}
@@ -304,6 +315,7 @@ const ListingActionDropdown = ({
 const Listings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
+  const [isDiagnoseModalOpen, setIsDiagnoseModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
   const [pdfListing, setPdfListing] = useState<Listing | null>(null);
@@ -431,6 +443,11 @@ const Listings = () => {
   const handleOpenSoldModal = (listing: Listing) => {
     setSelectedListing(listing);
     setIsSoldModalOpen(true);
+  };
+
+  const handleOpenDiagnose = (listing: Listing) => {
+    setSelectedListing(listing);
+    setIsDiagnoseModalOpen(true);
   };
 
   const handleExportExcel = () => {
@@ -744,6 +761,7 @@ const Listings = () => {
                                 onGeneratePdf={handleGeneratePdf}
                                 onShowQr={handleShowQrCode}
                                 isPdfLoading={isGeneratingPdf && pdfListing?.id === listing.id}
+                                onDiagnose={handleOpenDiagnose}
                              />
                         </TableCell>
                     </TableRow>
@@ -766,6 +784,16 @@ const Listings = () => {
           listingTitle={selectedListing.title}
         />
       )}
+
+      <DiagnoseListingModal
+        isOpen={isDiagnoseModalOpen}
+        onClose={() => {
+          setIsDiagnoseModalOpen(false);
+          setSelectedListing(null);
+        }}
+        listingId={selectedListing?.id || null}
+        listingTitle={selectedListing?.title || ""}
+      />
 
       <QrCodeModal 
         isOpen={qrModalOpen}
