@@ -7,6 +7,7 @@ import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import ListingAnalyticsWidget from "@/components/ListingAnalyticsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
+import WeeklySummaryCard from "@/components/WeeklySummaryCard";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -193,6 +194,8 @@ const Dashboard = () => {
           Bun venit pe panoul de administrare. Iată ce se întâmplă cu platforma ta.
         </p>
       </div>
+
+      <WeeklySummaryCard />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
