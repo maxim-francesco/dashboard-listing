@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -109,6 +110,7 @@ export const LeadDetailPanel = ({
   orderedIds = [],
   onNavigate,
 }: LeadDetailPanelProps) => {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [lead, setLead] = useState<MessageDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -561,17 +563,27 @@ export const LeadDetailPanel = ({
                   }).format(lead.listing.price)
                 : "Preț nespecificat"}
             </p>
-            {lead.listing.publicUrl && (
-              <a
-                href={lead.listing.publicUrl}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2 font-medium"
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/listings/${lead.listing.id}/edit`)}
+                className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
-                <span>Vezi anunțul</span>
+                <span>Editează anunțul</span>
                 <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+              </button>
+              {lead.listing.publicUrl && !lead.listing.publicUrl.includes("example.com") && (
+                <a
+                  href={lead.listing.publicUrl}
+                  target="_blank"
+                  rel="noopener"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline font-medium"
+                >
+                  <span>Vezi public</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
         <Button
