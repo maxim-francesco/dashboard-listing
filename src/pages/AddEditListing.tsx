@@ -31,6 +31,7 @@ import { DndContext, closestCenter, DragEndEvent, useSensors, useSensor, Pointer
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableImage } from '@/components/SortableImage';
 import AutovitPublishPanel from "@/components/listings/AutovitPublishPanel";
+import MarketingModal from "@/components/modals/MarketingModal";
 import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
 import { cn } from "@/lib/utils";
 import {
@@ -131,6 +132,14 @@ const AddEditListing = () => {
     runGenerateDescription();
   };
 
+  const handleOpenMarketing = () => {
+    if (!fields.makeId || !fields.modelId) {
+      toast.error("Selectează marca și modelul înainte de generare.");
+      return;
+    }
+    setIsMarketingModalOpen(true);
+  };
+
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
   const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
@@ -186,6 +195,7 @@ const AddEditListing = () => {
   });
 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
   
   // Image & Video State
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
@@ -827,26 +837,38 @@ const AddEditListing = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateDescription}
-                    disabled={isGenerating}
-                    className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Se generează...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        <span>Generează descriere</span>
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenMarketing}
+                      className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
+                    >
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span>Generează marketing</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateDescription}
+                      disabled={isGenerating}
+                      className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Se generează...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          <span>Generează descriere</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="description"
@@ -1634,6 +1656,12 @@ const AddEditListing = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <MarketingModal
+          isOpen={isMarketingModalOpen}
+          onClose={() => setIsMarketingModalOpen(false)}
+          listingPayload={{ ...fields, featureIds: selectedFeatures }}
+        />
       </form>
     </div>
   );
