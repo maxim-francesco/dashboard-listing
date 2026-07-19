@@ -32,7 +32,8 @@ import api, {
   getAutovitStatus, 
   publishToAutovitAndOLX, 
   unpublishFromAutovit,
-  resetViewsForListing
+  resetViewsForListing,
+  createOffer
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import DiagnoseListingModal from "@/components/modals/DiagnoseListingModal";
@@ -480,12 +481,50 @@ const Listings = () => {
             waPhone = digitsOnly;
           }
 
-          const messageText = `Bună ziua! Vă trimit oferta pentru ${offerRenderData.listing.title} la prețul de ${offerRenderData.offer.offerPrice} €, valabilă ${offerRenderData.offer.validityDays} zile. (Atașez documentul PDF.) — ${businessSettings?.name ?? ''}`;
+          let publicUrl: string | null = null;
+          try {
+            const created = await createOffer({
+              listingId: offerRenderData.listing.id,
+              clientName: offerRenderData.offer.clientName,
+              clientPhone: offerRenderData.clientPhone,
+              offerPrice: offerRenderData.offer.offerPrice,
+              listPrice: offerRenderData.offer.listPrice,
+              validityDays: offerRenderData.offer.validityDays,
+            });
+            publicUrl = created.publicUrl;
+          } catch (err) {
+            console.error("Nu s-a putut crea linkul public al ofertei:", err);
+            // graceful fallback: continue without a public link
+          }
+
+          const firmName = businessSettings?.name ?? '';
+          const messageText = publicUrl
+            ? `Bună ziua! Oferta pentru ${offerRenderData.listing.title}: ${publicUrl} — valabilă ${offerRenderData.offer.validityDays} zile. ${firmName}`
+            : `Bună ziua! Vă trimit oferta pentru ${offerRenderData.listing.title} la prețul de ${offerRenderData.offer.offerPrice} €, valabilă ${offerRenderData.offer.validityDays} zile. (Atașez documentul PDF.) — ${firmName}`;
           const encodedMsg = encodeURIComponent(messageText);
           const whatsappUrl = `https://wa.me/${waPhone}?text=${encodedMsg}`;
           
           window.open(whatsappUrl, '_blank');
-          toast.success('Oferta a fost generată. Atașează PDF-ul descărcat în conversația WhatsApp.');
+
+          if (publicUrl) {
+            const linkForToast = publicUrl;
+            toast.success(
+              (t) => (
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span>Ofertă generată. Link public creat.</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(linkForToast); toast.dismiss(t.id); toast.success('Link copiat!'); }}
+                    style={{ alignSelf: 'flex-start', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Copiază link
+                  </button>
+                </span>
+              ),
+              { duration: 8000 }
+            );
+          } else {
+            toast.success('Oferta a fost generată. Atașează PDF-ul descărcat în conversația WhatsApp.');
+          }
         } catch (error) {
           console.error("Eroare la generarea ofertei PDF:", error);
           toast.error("A apărut o eroare la generarea ofertei.");

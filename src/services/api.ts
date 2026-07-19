@@ -212,6 +212,24 @@ export const createManualLead = async (payload: CreateManualLeadData): Promise<a
   return response.data;
 };
 
+export interface CreateOfferPayload {
+  listingId: string;
+  clientName: string;
+  clientPhone: string;
+  offerPrice: number;
+  listPrice?: number | null;
+  validityDays: number;
+}
+export interface CreateOfferResponse {
+  token: string;
+  publicUrl: string;
+  expiresAt: string;
+}
+export const createOffer = async (payload: CreateOfferPayload): Promise<CreateOfferResponse> => {
+  const { data } = await api.post('/offers', payload);
+  return data as CreateOfferResponse;
+};
+
 export const toggleMessageRead = (messageId: string, isRead: boolean) =>
   api.patch(`/messages/${messageId}/read`, { isRead });
 
