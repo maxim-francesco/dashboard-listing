@@ -230,6 +230,66 @@ export const createOffer = async (payload: CreateOfferPayload): Promise<CreateOf
   return data as CreateOfferResponse;
 };
 
+export interface CreateContractPayload {
+  listingId: string;
+  buyerType: "INDIVIDUAL" | "COMPANY";
+  buyerName: string;
+  buyerAddress?: string;
+  buyerPhone?: string;
+  buyerEmail?: string;
+  buyerCnp?: string;
+  buyerCiSeries?: string;
+  buyerCiNumber?: string;
+  buyerCui?: string;
+  buyerRegCom?: string;
+  buyerLegalRep?: string;
+  salePrice: number;
+  saleDate: string;
+  plateNumber?: string;
+  mileageAtSale?: number;
+  clauses?: string;
+}
+export interface CreateContractResponse {
+  id: string;
+  contractNumber: number;
+  code: string;
+}
+export const createContract = async (payload: CreateContractPayload): Promise<CreateContractResponse> => {
+  const { data } = await api.post('/contracts', payload);
+  return data as CreateContractResponse;
+};
+
+export interface ContractListItem {
+  id: string;
+  contractNumber: number;
+  salePrice: number;
+  saleDate: string;
+  plateNumber: string | null;
+  handoverDate: string | null;
+  code: string | null;
+  createdAt: string;
+  buyer: { name: string; type: "INDIVIDUAL" | "COMPANY" } | null;
+  vehicleSnapshot: any;
+}
+export const getContracts = async (): Promise<ContractListItem[]> => {
+  const { data } = await api.get('/contracts');
+  return data as ContractListItem[];
+};
+export const getContract = async (id: string): Promise<any> => {
+  const { data } = await api.get(`/contracts/${id}`);
+  return data;
+};
+export interface HandoverPayload {
+  handoverDate?: string | null;
+  handoverMileage?: number | null;
+  handoverNotes?: string | null;
+  handoverItems?: any;
+}
+export const updateHandover = async (id: string, payload: HandoverPayload): Promise<any> => {
+  const { data } = await api.patch(`/contracts/${id}/handover`, payload);
+  return data;
+};
+
 export const toggleMessageRead = (messageId: string, isRead: boolean) =>
   api.patch(`/messages/${messageId}/read`, { isRead });
 

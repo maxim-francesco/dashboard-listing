@@ -20,6 +20,7 @@ const navigation = [
   { name: "Panou de Bord", href: "/" },
   { name: "Anunțuri", href: "/listings" },
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
+  { name: "Contracte", href: "/contracts" },
   { name: "Mesaje", href: "/messages" },
   { name: "Recenzii", href: "/reviews" },
   { name: "Blog", href: "/blog" },

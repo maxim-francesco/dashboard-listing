@@ -33,7 +33,8 @@ import api, {
   publishToAutovitAndOLX, 
   unpublishFromAutovit,
   resetViewsForListing,
-  createOffer
+  createOffer,
+  createContract
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import DiagnoseListingModal from "@/components/modals/DiagnoseListingModal";
@@ -43,6 +44,8 @@ import CatalogPreviewModal from "@/components/modals/CatalogPreviewModal";
 import AutovitStatusBadge from "@/components/listings/AutovitStatusBadge";
 import { PrintableOffer } from "@/components/listings/PrintableOffer";
 import GenerateOfferModal from "@/components/modals/GenerateOfferModal";
+import GenerateContractModal, { ContractFormData } from "@/components/modals/GenerateContractModal";
+import { PrintableContract } from "@/components/contracts/PrintableContract";
 
 interface Listing {
   id: string;
@@ -75,7 +78,6 @@ interface Business {
   companyLegalRep?: string | null;
 }
 
-// Componentă separată pentru meniul de acțiuni pentru a gestiona starea per rând
 const ListingActionDropdown = ({ 
   listing, 
   onDelete, 
@@ -85,7 +87,8 @@ const ListingActionDropdown = ({
   onShowQr,
   isPdfLoading,
   onDiagnose,
-  onGenerateOffer
+  onGenerateOffer,
+  onGenerateContract
 }: { 
   listing: Listing; 
   onDelete: (id: string, title: string) => void;
@@ -96,6 +99,7 @@ const ListingActionDropdown = ({
   isPdfLoading: boolean;
   onDiagnose: (listing: Listing) => void;
   onGenerateOffer: (listing: Listing) => void;
+  onGenerateContract: (listing: Listing) => void;
 }) => {
   const navigate = useNavigate();
   const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
@@ -211,6 +215,14 @@ const ListingActionDropdown = ({
         >
           <FileSpreadsheet className="mr-2 h-4 w-4" />
           <span>Generează ofertă</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => onGenerateContract(listing)}
+          className="cursor-pointer"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          <span>Generează contract</span>
         </DropdownMenuItem>
         
         <DropdownMenuItem
@@ -348,6 +360,14 @@ const Listings = () => {
     offer: { clientName: string; offerPrice: number; listPrice: number | null; validityDays: number };
     clientPhone: string;
   }>(null); // set when generation should fire
+  
+  const [contractModalListing, setContractModalListing] = useState<Listing | null>(null);
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [contractRenderData, setContractRenderData] = useState<null | {
+    listing: Listing;
+    form: ContractFormData;
+    contractNumber: number | null;
+  }>(null);
   
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrListing, setQrListing] = useState<{id: string, slug: string} | null>(null);
@@ -537,6 +557,50 @@ const Listings = () => {
     }
   }, [offerRenderData, businessSettings]);
 
+  useEffect(() => {
+    if (contractRenderData) {
+      const generateContractPdf = async () => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const contractElement = document.getElementById('offscreen-contract');
+        if (!contractElement) {
+          toast.error("A apărut o eroare la generarea contractului.");
+          setContractRenderData(null);
+          return;
+        }
+
+        try {
+          const canvas = await html2canvas(contractElement, { scale: 2, useCORS: true });
+          const imgData = canvas.toDataURL('image/png');
+          
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+          const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+          
+          const imgX = (pdfWidth - imgWidth * ratio) / 2;
+          const imgY = 0;
+
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          
+          const buyerNameClean = (contractRenderData.form.buyerName || 'client').replace(/[\/\\\s]+/g, '-');
+          pdf.save(`Contract-${contractRenderData.contractNumber ?? 'nou'}-${buyerNameClean}.pdf`);
+          toast.success("Contractul PDF a fost generat și descărcat.");
+        } catch (error) {
+          console.error("Eroare la generarea contractului PDF:", error);
+          toast.error("A apărut o eroare la generarea contractului.");
+        } finally {
+          setContractRenderData(null);
+        }
+      };
+
+      generateContractPdf();
+    }
+  }, [contractRenderData]);
+
   const handleGeneratePdf = (listing: Listing) => {
     setPdfListing(listing);
   };
@@ -544,6 +608,41 @@ const Listings = () => {
   const handleOpenOfferModal = (listing: Listing) => {
     setOfferModalListing(listing);
     setOfferModalOpen(true);
+  };
+
+  const handleOpenContractModal = (listing: Listing) => {
+    setContractModalListing(listing);
+    setContractModalOpen(true);
+  };
+
+  const handleContractSubmit = async (form: ContractFormData) => {
+    if (!contractModalListing) return;
+    try {
+      const created = await createContract({
+        listingId: contractModalListing.id,
+        buyerType: form.buyerType,
+        buyerName: form.buyerName,
+        buyerAddress: form.buyerAddress || undefined,
+        buyerPhone: form.buyerPhone || undefined,
+        buyerEmail: form.buyerEmail || undefined,
+        buyerCnp: form.buyerCnp || undefined,
+        buyerCiSeries: form.buyerCiSeries || undefined,
+        buyerCiNumber: form.buyerCiNumber || undefined,
+        buyerCui: form.buyerCui || undefined,
+        buyerRegCom: form.buyerRegCom || undefined,
+        buyerLegalRep: form.buyerLegalRep || undefined,
+        salePrice: form.salePrice,
+        saleDate: form.saleDate,
+        plateNumber: form.plateNumber || undefined,
+        mileageAtSale: form.mileageAtSale,
+        clauses: form.clauses || undefined,
+      });
+      setContractRenderData({ listing: contractModalListing, form, contractNumber: created.contractNumber });
+      toast.success(`Contract #${created.contractNumber} salvat. Se generează PDF-ul...`);
+    } catch (err) {
+      console.error("Eroare la salvarea contractului:", err);
+      toast.error("Nu s-a putut salva contractul.");
+    }
   };
 
   const handleOfferSubmit = (data: { clientName: string; clientPhone: string; offerPrice: number; validityDays: number }) => {
@@ -921,6 +1020,7 @@ const Listings = () => {
                                 isPdfLoading={isGeneratingPdf && pdfListing?.id === listing.id}
                                 onDiagnose={handleOpenDiagnose}
                                 onGenerateOffer={handleOpenOfferModal}
+                                onGenerateContract={handleOpenContractModal}
                              />
                         </TableCell>
                     </TableRow>
@@ -979,6 +1079,16 @@ const Listings = () => {
         onGenerate={handleOfferSubmit}
       />
 
+      <GenerateContractModal
+        isOpen={contractModalOpen}
+        onClose={() => {
+          setContractModalOpen(false);
+          setContractModalListing(null);
+        }}
+        listing={contractModalListing}
+        onGenerate={handleContractSubmit}
+      />
+
       {/* Hidden container for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
         <div id="offscreen-spec-sheet">
@@ -990,6 +1100,33 @@ const Listings = () => {
               listing={offerRenderData.listing}
               business={businessSettings}
               offer={offerRenderData.offer}
+            />
+          )}
+        </div>
+        <div id="offscreen-contract">
+          {contractRenderData && (
+            <PrintableContract
+              listing={contractRenderData.listing}
+              business={businessSettings}
+              contract={{
+                buyerType: contractRenderData.form.buyerType,
+                buyerName: contractRenderData.form.buyerName,
+                buyerAddress: contractRenderData.form.buyerAddress,
+                buyerPhone: contractRenderData.form.buyerPhone,
+                buyerEmail: contractRenderData.form.buyerEmail,
+                buyerCnp: contractRenderData.form.buyerCnp,
+                buyerCiSeries: contractRenderData.form.buyerCiSeries,
+                buyerCiNumber: contractRenderData.form.buyerCiNumber,
+                buyerCui: contractRenderData.form.buyerCui,
+                buyerRegCom: contractRenderData.form.buyerRegCom,
+                buyerLegalRep: contractRenderData.form.buyerLegalRep,
+                salePrice: contractRenderData.form.salePrice,
+                saleDate: contractRenderData.form.saleDate,
+                plateNumber: contractRenderData.form.plateNumber,
+                mileageAtSale: contractRenderData.form.mileageAtSale,
+                clauses: contractRenderData.form.clauses,
+                contractNumber: contractRenderData.contractNumber,
+              }}
             />
           )}
         </div>

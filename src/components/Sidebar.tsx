@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   BarChart3,
   PenTool,
+  FileText,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useActionNeededCount } from "@/hooks/useActionNeededCount";
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Panou de Bord", href: "/", icon: Home },
   { name: "Anunțuri", href: "/listings", icon: Car },
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
+  { name: "Contracte", href: "/contracts", icon: FileText },
   { name: "Mesaje", href: "/messages", icon: Mail },
   { name: "Recenzii", href: "/reviews", icon: Star },
   { name: "Blog", href: "/blog", icon: PenTool },

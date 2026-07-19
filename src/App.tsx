@@ -18,6 +18,7 @@ import CookieBanner from "./components/CookieBanner";
 import NotFound from "./pages/NotFound";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
 import SoldListings from "./pages/SoldListings";
+import ContractsPage from "./pages/ContractsPage";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicFeedPreview from "./pages/PublicFeedPreview";
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/listings" element={<Listings />} />
               <Route path="/listings/sold" element={<SoldListings />} />
+              <Route path="/contracts" element={<ContractsPage />} />
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
               <Route path="/messages" element={<MessagesPage />} />
