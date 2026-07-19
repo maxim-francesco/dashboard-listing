@@ -40,6 +40,8 @@ import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
 import CatalogPreviewModal from "@/components/modals/CatalogPreviewModal";
 import AutovitStatusBadge from "@/components/listings/AutovitStatusBadge";
+import { PrintableOffer } from "@/components/listings/PrintableOffer";
+import GenerateOfferModal from "@/components/modals/GenerateOfferModal";
 
 interface Listing {
   id: string;
@@ -63,6 +65,13 @@ interface Listing {
 interface Business {
   id: string;
   listingUrlPattern: string | null;
+  name?: string;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyAddress?: string | null;
+  companyCui?: string | null;
+  companyRegCom?: string | null;
+  companyLegalRep?: string | null;
 }
 
 // Componentă separată pentru meniul de acțiuni pentru a gestiona starea per rând
@@ -74,7 +83,8 @@ const ListingActionDropdown = ({
   onGeneratePdf, 
   onShowQr,
   isPdfLoading,
-  onDiagnose
+  onDiagnose,
+  onGenerateOffer
 }: { 
   listing: Listing; 
   onDelete: (id: string, title: string) => void;
@@ -84,6 +94,7 @@ const ListingActionDropdown = ({
   onShowQr: (listing: Listing) => void;
   isPdfLoading: boolean;
   onDiagnose: (listing: Listing) => void;
+  onGenerateOffer: (listing: Listing) => void;
 }) => {
   const navigate = useNavigate();
   const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
@@ -191,6 +202,14 @@ const ListingActionDropdown = ({
               <FileText className="mr-2 h-4 w-4" />
           )}
           <span>{isPdfLoading ? 'Se generează...' : 'Generează PDF'}</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={() => onGenerateOffer(listing)}
+          className="cursor-pointer"
+        >
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          <span>Generează ofertă</span>
         </DropdownMenuItem>
         
         <DropdownMenuItem
@@ -321,6 +340,14 @@ const Listings = () => {
   const [pdfListing, setPdfListing] = useState<Listing | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
+  const [offerModalListing, setOfferModalListing] = useState<Listing | null>(null); // which listing's modal is open
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
+  const [offerRenderData, setOfferRenderData] = useState<null | {
+    listing: Listing;
+    offer: { clientName: string; offerPrice: number; listPrice: number | null; validityDays: number };
+    clientPhone: string;
+  }>(null); // set when generation should fire
+  
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrListing, setQrListing] = useState<{id: string, slug: string} | null>(null);
   const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
@@ -398,8 +425,100 @@ const Listings = () => {
     }
   }, [pdfListing]);
 
+  useEffect(() => {
+    if (offerRenderData) {
+      const generateOfferPdf = async () => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const offerElement = document.getElementById('offscreen-offer');
+        if (!offerElement) {
+          toast.error("A apărut o eroare la generarea ofertei.");
+          setOfferRenderData(null);
+          return;
+        }
+
+        const photoUrl = (offerRenderData.listing as any)?.images?.[0]?.url || null;
+        if (photoUrl) {
+          await new Promise<void>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            let settled = false;
+            const done = () => { if (!settled) { settled = true; resolve(); } };
+            img.onload = done;
+            img.onerror = done;
+            img.src = photoUrl;
+            setTimeout(done, 4000);
+          });
+        }
+
+        try {
+          const canvas = await html2canvas(offerElement, { scale: 2, useCORS: true });
+          const imgData = canvas.toDataURL('image/png');
+          
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+          const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+          
+          const imgX = (pdfWidth - imgWidth * ratio) / 2;
+          const imgY = 0;
+
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          
+          const safeTitle = (offerRenderData.listing.title || 'Oferta').replace(/[\/\\\s]+/g, '-');
+          pdf.save(`Oferta-${offerRenderData.offer.clientName}-${safeTitle}.pdf`);
+
+          // WhatsApp phone normalization
+          const digitsOnly = offerRenderData.clientPhone.replace(/\D/g, '');
+          let waPhone = digitsOnly;
+          if (digitsOnly.startsWith('0')) {
+            waPhone = '40' + digitsOnly.slice(1);
+          } else if (!digitsOnly.startsWith('40') && digitsOnly.length > 0) {
+            waPhone = digitsOnly;
+          }
+
+          const messageText = `Bună ziua! Vă trimit oferta pentru ${offerRenderData.listing.title} la prețul de ${offerRenderData.offer.offerPrice} €, valabilă ${offerRenderData.offer.validityDays} zile. (Atașez documentul PDF.) — ${businessSettings?.name ?? ''}`;
+          const encodedMsg = encodeURIComponent(messageText);
+          const whatsappUrl = `https://wa.me/${waPhone}?text=${encodedMsg}`;
+          
+          window.open(whatsappUrl, '_blank');
+          toast.success('Oferta a fost generată. Atașează PDF-ul descărcat în conversația WhatsApp.');
+        } catch (error) {
+          console.error("Eroare la generarea ofertei PDF:", error);
+          toast.error("A apărut o eroare la generarea ofertei.");
+        } finally {
+          setOfferRenderData(null);
+        }
+      };
+
+      generateOfferPdf();
+    }
+  }, [offerRenderData, businessSettings]);
+
   const handleGeneratePdf = (listing: Listing) => {
     setPdfListing(listing);
+  };
+
+  const handleOpenOfferModal = (listing: Listing) => {
+    setOfferModalListing(listing);
+    setOfferModalOpen(true);
+  };
+
+  const handleOfferSubmit = (data: { clientName: string; clientPhone: string; offerPrice: number; validityDays: number }) => {
+    const listPrice = (offerModalListing as any)?.price ?? null;
+    setOfferRenderData({
+      listing: offerModalListing!,
+      offer: {
+        clientName: data.clientName,
+        offerPrice: data.offerPrice,
+        listPrice,
+        validityDays: data.validityDays
+      },
+      clientPhone: data.clientPhone
+    });
   };
 
   const handleShowQrCode = (listing: Listing) => {
@@ -762,6 +881,7 @@ const Listings = () => {
                                 onShowQr={handleShowQrCode}
                                 isPdfLoading={isGeneratingPdf && pdfListing?.id === listing.id}
                                 onDiagnose={handleOpenDiagnose}
+                                onGenerateOffer={handleOpenOfferModal}
                              />
                         </TableCell>
                     </TableRow>
@@ -810,10 +930,29 @@ const Listings = () => {
         businessSettings={businessSettings}
       />
 
+      <GenerateOfferModal
+        isOpen={offerModalOpen}
+        onClose={() => {
+          setOfferModalOpen(false);
+          setOfferModalListing(null);
+        }}
+        listing={offerModalListing}
+        onGenerate={handleOfferSubmit}
+      />
+
       {/* Hidden container for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
         <div id="offscreen-spec-sheet">
           {pdfListing && <PrintableSpecSheet listing={pdfListing} />}
+        </div>
+        <div id="offscreen-offer">
+          {offerRenderData && (
+            <PrintableOffer
+              listing={offerRenderData.listing}
+              business={businessSettings}
+              offer={offerRenderData.offer}
+            />
+          )}
         </div>
       </div>
     </div>

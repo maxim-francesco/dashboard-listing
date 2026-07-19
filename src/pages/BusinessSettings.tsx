@@ -13,6 +13,12 @@ interface Business {
   name: string;
   bannerUrl: string | null;
   listingUrlPattern: string | null;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyAddress?: string | null;
+  companyCui?: string | null;
+  companyRegCom?: string | null;
+  companyLegalRep?: string | null;
 }
 
 const BusinessSettings = () => {
@@ -24,12 +30,30 @@ const BusinessSettings = () => {
 
   const [listingUrlPattern, setListingUrlPattern] = useState("");
 
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+  const [identity, setIdentity] = useState({
+    companyPhone: "",
+    companyEmail: "",
+    companyAddress: "",
+    companyCui: "",
+    companyRegCom: "",
+    companyLegalRep: "",
+  });
+
 
   const fetchBusinessDetails = async () => {
     try {
       const response = await api.get("/business/me");
       setBusiness(response.data);
       setListingUrlPattern(response.data.listingUrlPattern || "");
+      setIdentity({
+        companyPhone: response.data.companyPhone || "",
+        companyEmail: response.data.companyEmail || "",
+        companyAddress: response.data.companyAddress || "",
+        companyCui: response.data.companyCui || "",
+        companyRegCom: response.data.companyRegCom || "",
+        companyLegalRep: response.data.companyLegalRep || "",
+      });
     } catch (error) {
       toast.error("Nu s-au putut încărca detaliile afacerii.");
     } finally {
@@ -111,6 +135,23 @@ const BusinessSettings = () => {
       error: () => {
         setIsSavingSettings(false);
         return 'A apărut o eroare la salvarea setărilor.';
+      }
+    });
+  };
+
+  const handleSaveIdentity = async () => {
+    setIsSavingIdentity(true);
+    const promise = api.put('/business/identity', identity);
+    toast.promise(promise, {
+      loading: 'Se salvează datele firmei...',
+      success: (response) => {
+        setBusiness(response.data);
+        setIsSavingIdentity(false);
+        return 'Datele firmei au fost salvate cu succes!';
+      },
+      error: () => {
+        setIsSavingIdentity(false);
+        return 'A apărut o eroare la salvarea datelor firmei.';
       }
     });
   };
@@ -232,6 +273,84 @@ const BusinessSettings = () => {
                     {isSavingSettings ? 'Se salvează...' : 'Salvează Setările'}
                 </Button>
              </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Date firmă</CardTitle>
+          <CardDescription>Aceste date apar pe ofertele și documentele generate pentru clienți.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="company-phone" className="font-medium">Telefon</Label>
+              <Input
+                id="company-phone"
+                value={identity.companyPhone}
+                onChange={(e) => setIdentity({ ...identity, companyPhone: e.target.value })}
+                placeholder="0740 123 456"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="company-email" className="font-medium">Email</Label>
+              <Input
+                id="company-email"
+                type="email"
+                value={identity.companyEmail}
+                onChange={(e) => setIdentity({ ...identity, companyEmail: e.target.value })}
+                placeholder="contact@firma.ro"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="company-address" className="font-medium">Adresă</Label>
+              <Input
+                id="company-address"
+                value={identity.companyAddress}
+                onChange={(e) => setIdentity({ ...identity, companyAddress: e.target.value })}
+                placeholder="Str. Exemplu 10, Oraș, Județ"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company-cui" className="font-medium">CUI / CIF</Label>
+              <Input
+                id="company-cui"
+                value={identity.companyCui}
+                onChange={(e) => setIdentity({ ...identity, companyCui: e.target.value })}
+                placeholder="RO12345678"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company-regcom" className="font-medium">Nr. Reg. Comerțului</Label>
+              <Input
+                id="company-regcom"
+                value={identity.companyRegCom}
+                onChange={(e) => setIdentity({ ...identity, companyRegCom: e.target.value })}
+                placeholder="J12/345/2020"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company-legalrep" className="font-medium">Reprezentant legal</Label>
+              <Input
+                id="company-legalrep"
+                value={identity.companyLegalRep}
+                onChange={(e) => setIdentity({ ...identity, companyLegalRep: e.target.value })}
+                placeholder="Nume Prenume"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSaveIdentity} disabled={isSavingIdentity}>
+              {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {isSavingIdentity ? 'Se salvează...' : 'Salvează datele firmei'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
