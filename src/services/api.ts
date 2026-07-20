@@ -508,4 +508,45 @@ export const suggestTopics = async () => {
   return data as { suggestions: string[] }
 }
 
+export type AppointmentType = "TEST_DRIVE" | "VIEWING" | "HANDOVER" | "MEETING" | "OTHER";
+export interface Appointment {
+  id: string;
+  title: string;
+  type: AppointmentType;
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED";
+  startAt: string;
+  endAt: string;
+  clientName: string | null;
+  clientPhone: string | null;
+  listingId: string | null;
+  notes: string | null;
+  listing?: { id: string; title: string } | null;
+}
+export const getAppointments = async (params?: { start?: string; end?: string }): Promise<Appointment[]> => {
+  const { data } = await api.get('/appointments', { params });
+  return data as Appointment[];
+};
+export interface AppointmentPayload {
+  title: string;
+  type: AppointmentType;
+  startAt: string;
+  endAt: string;
+  clientName?: string | null;
+  clientPhone?: string | null;
+  listingId?: string | null;
+  notes?: string | null;
+}
+export const createAppointment = async (payload: AppointmentPayload): Promise<Appointment> => {
+  const { data } = await api.post('/appointments', payload);
+  return data as Appointment;
+};
+export const updateAppointment = async (id: string, payload: Partial<AppointmentPayload> & { status?: string }): Promise<Appointment> => {
+  const { data } = await api.patch(`/appointments/${id}`, payload);
+  return data as Appointment;
+};
+export const deleteAppointment = async (id: string): Promise<any> => {
+  const { data } = await api.delete(`/appointments/${id}`);
+  return data;
+};
+
 export default api;

@@ -22,6 +22,7 @@ const navigation = [
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Contracte", href: "/contracts" },
   { name: "Rezervări", href: "/reservations" },
+  { name: "Calendar", href: "/calendar" },
   { name: "Mesaje", href: "/messages" },
   { name: "Recenzii", href: "/reviews" },
   { name: "Blog", href: "/blog" },
