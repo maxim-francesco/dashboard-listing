@@ -259,6 +259,18 @@ export const createContract = async (payload: CreateContractPayload): Promise<Cr
   return data as CreateContractResponse;
 };
 
+export interface CreateReservationPayload {
+  listingId: string;
+  clientName: string;
+  clientPhone: string;
+  depositAmount: number;
+  reservationDays: number;
+}
+export const createReservation = async (payload: CreateReservationPayload): Promise<{ id: string; expiresAt: string }> => {
+  const { data } = await api.post('/reservations', payload);
+  return data;
+};
+
 export interface ContractListItem {
   id: string;
   contractNumber: number;
@@ -277,6 +289,30 @@ export const getContracts = async (): Promise<ContractListItem[]> => {
 };
 export const getContract = async (id: string): Promise<any> => {
   const { data } = await api.get(`/contracts/${id}`);
+  return data;
+};
+
+export interface ReservationItem {
+  id: string;
+  clientName: string;
+  clientPhone: string;
+  depositAmount: number;
+  startDate: string;
+  expiresAt: string;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+  createdAt: string;
+  listing: { id: string; title: string; status: string } | null;
+}
+export const getReservations = async (): Promise<ReservationItem[]> => {
+  const { data } = await api.get('/reservations');
+  return data as ReservationItem[];
+};
+export const completeReservation = async (id: string): Promise<any> => {
+  const { data } = await api.patch(`/reservations/${id}/complete`);
+  return data;
+};
+export const cancelReservation = async (id: string): Promise<any> => {
+  const { data } = await api.patch(`/reservations/${id}/cancel`);
   return data;
 };
 export interface HandoverPayload {

@@ -12,6 +12,7 @@ import {
   BarChart3,
   PenTool,
   FileText,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useActionNeededCount } from "@/hooks/useActionNeededCount";
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Anunțuri", href: "/listings", icon: Car },
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Contracte", href: "/contracts", icon: FileText },
+  { name: "Rezervări", href: "/reservations", icon: CalendarClock },
   { name: "Mesaje", href: "/messages", icon: Mail },
   { name: "Recenzii", href: "/reviews", icon: Star },
   { name: "Blog", href: "/blog", icon: PenTool },

@@ -34,7 +34,8 @@ import api, {
   unpublishFromAutovit,
   resetViewsForListing,
   createOffer,
-  createContract
+  createContract,
+  createReservation
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import DiagnoseListingModal from "@/components/modals/DiagnoseListingModal";
@@ -46,6 +47,7 @@ import { PrintableOffer } from "@/components/listings/PrintableOffer";
 import GenerateOfferModal from "@/components/modals/GenerateOfferModal";
 import GenerateContractModal, { ContractFormData } from "@/components/modals/GenerateContractModal";
 import { PrintableContract } from "@/components/contracts/PrintableContract";
+import ReserveModal from "@/components/modals/ReserveModal";
 
 interface Listing {
   id: string;
@@ -56,7 +58,7 @@ interface Listing {
     name: string;
   };
   createdAt: string;
-  status: 'Activ' | 'Inactiv';
+  status: string;
   images?: { url: string }[];
   attributeValues: any[];
   _count?: {
@@ -88,7 +90,8 @@ const ListingActionDropdown = ({
   isPdfLoading,
   onDiagnose,
   onGenerateOffer,
-  onGenerateContract
+  onGenerateContract,
+  onReserve
 }: { 
   listing: Listing; 
   onDelete: (id: string, title: string) => void;
@@ -100,6 +103,7 @@ const ListingActionDropdown = ({
   onDiagnose: (listing: Listing) => void;
   onGenerateOffer: (listing: Listing) => void;
   onGenerateContract: (listing: Listing) => void;
+  onReserve: (listing: Listing) => void;
 }) => {
   const navigate = useNavigate();
   const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
@@ -223,6 +227,14 @@ const ListingActionDropdown = ({
         >
           <FileText className="mr-2 h-4 w-4" />
           <span>Generează contract</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => onReserve(listing)}
+          className="cursor-pointer"
+        >
+          <ClipboardCheck className="mr-2 h-4 w-4" />
+          <span>Rezervă mașina</span>
         </DropdownMenuItem>
         
         <DropdownMenuItem
@@ -363,6 +375,8 @@ const Listings = () => {
   
   const [contractModalListing, setContractModalListing] = useState<Listing | null>(null);
   const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [reserveModalListing, setReserveModalListing] = useState<Listing | null>(null);
+  const [reserveModalOpen, setReserveModalOpen] = useState(false);
   const [contractRenderData, setContractRenderData] = useState<null | {
     listing: Listing;
     form: ContractFormData;
@@ -382,7 +396,7 @@ const Listings = () => {
         const response = await api.get('/listings');
         const listingsWithStatus = response.data.map((listing: any) => ({
             ...listing,
-            status: 'Activ' as const,
+            status: listing.status ?? 'AVAILABLE',
         }));
         return listingsWithStatus;
     },
@@ -659,6 +673,23 @@ const Listings = () => {
     });
   };
 
+  const handleOpenReserve = (listing: Listing) => {
+    setReserveModalListing(listing);
+    setReserveModalOpen(true);
+  };
+
+  const handleReserveSubmit = async (data: { clientName: string; clientPhone: string; depositAmount: number; reservationDays: number }) => {
+    if (!reserveModalListing) return;
+    try {
+      await createReservation({ listingId: reserveModalListing.id, ...data });
+      toast.success("Mașina a fost rezervată.");
+      refetch();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.response?.data?.message || "Nu s-a putut crea rezervarea.");
+    }
+  };
+
   const handleShowQrCode = (listing: Listing) => {
     setQrListing({ id: listing.id, slug: listing.slug });
     setQrModalOpen(true);
@@ -870,10 +901,17 @@ const Listings = () => {
   };
 
 
-  const getStatusColor = (status: string) => {
-    return status === "Activ" 
-      ? "bg-success-light text-success border-success/20"
-      : "bg-muted text-muted-foreground border-border";
+  const statusDisplay = (status: string) => {
+    switch (status) {
+      case 'RESERVED':
+        return { label: 'Rezervat', className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/20' };
+      case 'SOLD':
+        return { label: 'Vândut', className: 'bg-muted text-muted-foreground border-border' };
+      case 'INCOMING':
+        return { label: 'În curând', className: 'bg-primary/10 text-primary border-primary/20' };
+      default:
+        return { label: 'Disponibil', className: 'bg-success-light text-success border-success/20' };
+    }
   };
 
   const filteredListings = listings.filter(listing =>
@@ -997,8 +1035,8 @@ const Listings = () => {
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
                             <span className="font-semibold text-foreground md:hidden">Status</span>
-                            <Badge className={getStatusColor(listing.status)}>
-                                {listing.status}
+                            <Badge className={statusDisplay(listing.status).className}>
+                                {statusDisplay(listing.status).label}
                             </Badge>
                         </TableCell>
                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
@@ -1021,6 +1059,7 @@ const Listings = () => {
                                 onDiagnose={handleOpenDiagnose}
                                 onGenerateOffer={handleOpenOfferModal}
                                 onGenerateContract={handleOpenContractModal}
+                                onReserve={handleOpenReserve}
                              />
                         </TableCell>
                     </TableRow>
@@ -1087,6 +1126,16 @@ const Listings = () => {
         }}
         listing={contractModalListing}
         onGenerate={handleContractSubmit}
+      />
+
+      <ReserveModal
+        isOpen={reserveModalOpen}
+        onClose={() => {
+          setReserveModalOpen(false);
+          setReserveModalListing(null);
+        }}
+        listing={reserveModalListing}
+        onSubmit={handleReserveSubmit}
       />
 
       {/* Hidden container for PDF generation */}
