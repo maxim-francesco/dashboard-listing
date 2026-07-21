@@ -24,6 +24,9 @@ import CalendarPage from "./pages/CalendarPage";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicFeedPreview from "./pages/PublicFeedPreview";
+import CustomersPage from "./pages/CustomersPage";
+import CustomerDetailPage from "./pages/CustomerDetailPage";
+import NetworkPage from "./pages/NetworkPage";
 
 // Blog Pages
 import BlogList from "./pages/Blog/BlogList";
@@ -67,11 +70,14 @@ const App = () => (
               <Route path="/listings" element={<Listings />} />
               <Route path="/listings/sold" element={<SoldListings />} />
               <Route path="/contracts" element={<ContractsPage />} />
+              <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/customers/:phone" element={<CustomerDetailPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
               <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/network" element={<NetworkPage />} />
               <Route path="/reviews" element={<AdminReviewsPage />} />
               <Route path="/settings" element={<BusinessSettings />} />
               <Route path="/reports" element={<ProfitabilityReport />} />

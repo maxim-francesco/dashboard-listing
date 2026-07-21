@@ -14,6 +14,8 @@ import {
   FileText,
   CalendarClock,
   Calendar,
+  Users,
+  Network,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useActionNeededCount } from "@/hooks/useActionNeededCount";
@@ -28,9 +30,11 @@ const navigation = [
   { name: "Anunțuri", href: "/listings", icon: Car },
   { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
   { name: "Contracte", href: "/contracts", icon: FileText },
+  { name: "Clienți", href: "/customers", icon: Users },
   { name: "Rezervări", href: "/reservations", icon: CalendarClock },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Mesaje", href: "/messages", icon: Mail },
+  { name: "Rețea", href: "/network", icon: Network },
   { name: "Recenzii", href: "/reviews", icon: Star },
   { name: "Blog", href: "/blog", icon: PenTool },
   { name: "Rapoarte", href: "/reports", icon: BarChart3 },

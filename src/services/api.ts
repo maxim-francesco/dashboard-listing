@@ -292,6 +292,26 @@ export const getContract = async (id: string): Promise<any> => {
   return data;
 };
 
+export interface CustomerListItem {
+  phone: string;
+  name: string;
+  contractsCount: number;
+  reservationsCount: number;
+  appointmentsCount: number;
+  messagesCount: number;
+  purchasedCars: string[];
+  lastInteraction: string;
+  sources: string[];
+}
+export const getCustomers = async (): Promise<CustomerListItem[]> => {
+  const { data } = await api.get('/customers');
+  return data as CustomerListItem[];
+};
+export const getCustomer = async (phone: string): Promise<any> => {
+  const { data } = await api.get(`/customers/${phone}`);
+  return data;
+};
+
 export interface ReservationItem {
   id: string;
   clientName: string;
@@ -547,6 +567,301 @@ export const updateAppointment = async (id: string, payload: Partial<Appointment
 export const deleteAppointment = async (id: string): Promise<any> => {
   const { data } = await api.delete(`/appointments/${id}`);
   return data;
+};
+
+export interface NetworkSettings {
+  networkEnabled: boolean;
+  city: string | null;
+  networkDisplayName: string | null;
+  networkContactPhone: string | null;
+  networkContactEmail: string | null;
+  name: string;
+}
+
+export interface NetworkDealer {
+  id: string;
+  name: string;
+  city: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}
+
+export const getNetworkSettings = async (): Promise<NetworkSettings> => (await api.get('/network/settings')).data;
+
+export const updateNetworkSettings = async (payload: Partial<Pick<NetworkSettings,
+  'networkEnabled'|'city'|'networkDisplayName'|'networkContactPhone'|'networkContactEmail'>>):
+  Promise<NetworkSettings> => (await api.patch('/network/settings', payload)).data;
+
+export const getNetworkDealers = async (): Promise<NetworkDealer[]> => (await api.get('/network/dealers')).data;
+
+// ── TRANSPORT BOARD ────────────────────────────────
+export interface TransportOwner {
+  id: string;
+  name: string;
+  city: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}
+
+export interface TransportRun {
+  id: string;
+  kind: 'OFFER' | 'REQUEST';
+  transportType: 'PLATFORM_OPEN' | 'ENCLOSED' | 'TARP' | null;
+  acceptsNonRunning: boolean;
+  fromCountry: string | null;
+  departureDateEnd: string | null;
+  fromCity: string;
+  toCity: string;
+  departureDate: string;
+  seatsTotal: number;
+  seatsAvailable: number;
+  pricePerCar: number | null;
+  notes: string | null;
+  status: "OPEN" | "CLOSED";
+  createdAt: string;
+  owner: TransportOwner | null;
+  interestCount?: number;
+}
+
+export interface TransportInterest {
+  id: string;
+  seatsRequested: number;
+  note: string | null;
+  isSeen: boolean;
+  createdAt: string;
+  dealer: TransportOwner | null;
+}
+
+export const getTransportRuns = async (params?: {
+  fromCity?: string;
+  toCity?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  kind?: 'OFFER' | 'REQUEST';
+  fromCountry?: string;
+}): Promise<TransportRun[]> => {
+  const cleanedParams = { ...params };
+  if (!cleanedParams.kind || (cleanedParams.kind as any) === 'all' || (cleanedParams.kind as any) === '') {
+    delete cleanedParams.kind;
+  }
+  if (!cleanedParams.fromCountry || cleanedParams.fromCountry === 'all' || cleanedParams.fromCountry === '') {
+    delete cleanedParams.fromCountry;
+  }
+  const { data } = await api.get('/network/transport', { params: cleanedParams });
+  return data as TransportRun[];
+};
+
+export const getMyTransportRuns = async (): Promise<TransportRun[]> => {
+  const { data } = await api.get('/network/transport/mine');
+  return data as TransportRun[];
+};
+
+export const createTransportRun = async (payload: {
+  kind: 'OFFER' | 'REQUEST';
+  transportType?: string | null;
+  acceptsNonRunning?: boolean;
+  fromCountry?: string | null;
+  departureDateEnd?: string | null;
+  fromCity: string;
+  toCity: string;
+  departureDate: string;
+  seatsTotal: number;
+  pricePerCar?: number | null;
+  notes?: string | null;
+}): Promise<TransportRun> => {
+  const { data } = await api.post('/network/transport', payload);
+  return data as TransportRun;
+};
+
+export const expressTransportInterest = async (
+  runId: string,
+  payload: { seatsRequested: number; note?: string | null }
+): Promise<any> => {
+  const { data } = await api.post(`/network/transport/${runId}/interest`, payload);
+  return data;
+};
+
+export const getTransportRunInterests = async (runId: string): Promise<TransportInterest[]> => {
+  const { data } = await api.get(`/network/transport/${runId}/interests`);
+  return data as TransportInterest[];
+};
+
+export const updateTransportRun = async (
+  id: string,
+  payload: {
+    status?: "OPEN" | "CLOSED";
+    seatsAvailable?: number;
+    notes?: string | null;
+    pricePerCar?: number | null;
+  }
+): Promise<TransportRun> => {
+  const { data } = await api.patch(`/network/transport/${id}`, payload);
+  return data as TransportRun;
+};
+
+export const deleteTransportRun = async (id: string): Promise<void> => {
+  await api.delete(`/network/transport/${id}`);
+};
+
+export const getTransportInterestsCount = async (): Promise<{ count: number }> => {
+  const { data } = await api.get('/network/transport/interests/count');
+  return data as { count: number };
+};
+
+export const getConversations = async (): Promise<ConversationSummary[]> => {
+  const { data } = await api.get('/network/conversations');
+  return data as ConversationSummary[];
+};
+
+export const getOrCreateConversation = async (payload: {
+  otherBusinessId: string;
+  contextType?: "GENERAL" | "TRANSPORT" | "TRADE";
+  contextId?: string | null;
+}): Promise<ConversationSummary> => {
+  const { data } = await api.post('/network/conversations', payload);
+  return data as ConversationSummary;
+};
+
+export const getConversationMessages = async (id: string): Promise<DealerMessage[]> => {
+  const { data } = await api.get(`/network/conversations/${id}/messages`);
+  return data as DealerMessage[];
+};
+
+export const sendConversationMessage = async (
+  id: string,
+  payload: { body: string }
+): Promise<DealerMessage> => {
+  const { data } = await api.post(`/network/conversations/${id}/messages`, payload);
+  return data as DealerMessage;
+};
+
+export const getConversationsUnreadCount = async (): Promise<{ count: number }> => {
+  const { data } = await api.get('/network/conversations/unread/count');
+  return data as { count: number };
+};
+
+export interface ConversationDealer {
+  id: string;
+  name: string;
+  city: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}
+
+export interface ConversationSummary {
+  id: string;
+  contextType: "GENERAL" | "TRANSPORT" | "TRADE";
+  contextId: string | null;
+  lastMessageAt: string;
+  createdAt: string;
+  otherDealer: ConversationDealer;
+  unreadCount: number;
+  lastMessage: {
+    body: string;
+    createdAt: string;
+    fromMe: boolean;
+  } | null;
+}
+
+export interface DealerMessage {
+  id: string;
+  body: string;
+  createdAt: string;
+  isRead: boolean;
+  fromMe: boolean;
+}
+
+// ── B2B TRADE API TYPES ──
+export interface TradeCar {
+  title: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  mileage: number | null;
+  fuelType: string | null;
+  gearbox: string | null;
+  bodyType: string | null;
+  price: number | null;
+  image: string | null;
+}
+
+export interface TradeListing {
+  id: string;
+  listingId: string;
+  b2bPrice: number | null;
+  acceptsTrade: boolean;
+  note: string | null;
+  status: "ACTIVE" | "CLOSED";
+  createdAt: string;
+  car: TradeCar;
+  owner: {
+    id: string;
+    name: string;
+    city: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
+  } | null;
+}
+
+export interface SlowStockItem {
+  listingId: string;
+  title: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  mileage: number | null;
+  price: number | null;
+  image: string | null;
+  daysInStock: number;
+  isExposed: boolean;
+  tradeStatus: "ACTIVE" | "CLOSED" | null;
+}
+
+// ── B2B TRADE API FUNCTIONS ──
+export const getSlowStock = async (days?: number): Promise<SlowStockItem[]> => {
+  const { data } = await api.get('/network/trade/slow-stock', { params: { days } });
+  return data as SlowStockItem[];
+};
+
+export const exposeTradeListing = async (payload: {
+  listingId: string;
+  b2bPrice?: number | null;
+  acceptsTrade?: boolean;
+  note?: string | null;
+}): Promise<TradeListing> => {
+  const { data } = await api.post('/network/trade/expose', payload);
+  return data as TradeListing;
+};
+
+export const getMyTradeListings = async (): Promise<TradeListing[]> => {
+  const { data } = await api.get('/network/trade/mine');
+  return data as TradeListing[];
+};
+
+export const browseTradeListings = async (params?: {
+  acceptsTrade?: boolean;
+  priceMax?: number;
+  make?: string;
+}): Promise<TradeListing[]> => {
+  const { data } = await api.get('/network/trade', { params });
+  return data as TradeListing[];
+};
+
+export const updateTradeListing = async (
+  id: string,
+  payload: {
+    b2bPrice?: number | null;
+    acceptsTrade?: boolean;
+    note?: string | null;
+    status?: "ACTIVE" | "CLOSED";
+  }
+): Promise<TradeListing> => {
+  const { data } = await api.patch(`/network/trade/${id}`, payload);
+  return data as TradeListing;
+};
+
+export const unexposeTradeListing = async (id: string): Promise<void> => {
+  await api.delete(`/network/trade/${id}`);
 };
 
 export default api;
