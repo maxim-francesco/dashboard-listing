@@ -55,17 +55,21 @@ import {
   updateTradeListing,
   unexposeTradeListing,
   SlowStockItem,
-  TradeListing
+  TradeListing,
+  getNegotiations
 } from "@/services/api";
 
 import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
 import { useConversationsUnreadCount } from "@/hooks/useConversationsUnreadCount";
+import { usePendingProposalsCount } from "@/hooks/usePendingProposalsCount";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransportInterestModal from "@/components/modals/TransportInterestModal";
 import PostTransportRunModal from "@/components/modals/PostTransportRunModal";
 import ViewInterestsModal from "@/components/modals/ViewInterestsModal";
 import ExposeTradeModal from "@/components/modals/ExposeTradeModal";
 import SelectCarToExposeModal from "@/components/modals/SelectCarToExposeModal";
+import MakeOfferModal from "@/components/modals/MakeOfferModal";
+import NegotiationDetailModal from "@/components/modals/NegotiationDetailModal";
 import { useNavigate } from "react-router-dom";
 
 const profileFormSchema = z.object({
@@ -117,6 +121,13 @@ const NetworkPage = () => {
   const [exposeModalListing, setExposeModalListing] = useState<SlowStockItem | TradeListing | null>(null);
   const [exposeModalMode, setExposeModalMode] = useState<"create" | "edit">("create");
   const [selectCarModalOpen, setSelectCarModalOpen] = useState(false);
+
+  // Negotiation state
+  const { count: pendingProposalsCount } = usePendingProposalsCount();
+  const [makeOfferModalOpen, setMakeOfferModalOpen] = useState(false);
+  const [makeOfferListing, setMakeOfferListing] = useState<TradeListing | null>(null);
+  const [negotiationDetailOpen, setNegotiationDetailOpen] = useState(false);
+  const [selectedNegotiationId, setSelectedNegotiationId] = useState<string | null>(null);
 
   // Conversations Queries
   const { data: conversations, isLoading: isLoadingConversations } = useQuery({
@@ -183,6 +194,11 @@ const NetworkPage = () => {
   }, [selectedConversationId, queryClient]);
 
   // Queries
+  const { data: negotiations, isLoading: isLoadingNegotiations } = useQuery({
+    queryKey: ["negotiations"],
+    queryFn: getNegotiations,
+  });
+
   const { data: dealers, isLoading: isLoadingDealers, error: dealersError } = useQuery<NetworkDealer[]>({
     queryKey: ["network-dealers"],
     queryFn: getNetworkDealers,
@@ -487,6 +503,11 @@ const NetworkPage = () => {
           </TabsTrigger>
           <TabsTrigger value="trade" className="flex items-center gap-1.5 justify-center">
             La schimb
+            {pendingProposalsCount > 0 && (
+              <span className="text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-primary text-primary-foreground">
+                {pendingProposalsCount}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="settings">Setările mele</TabsTrigger>
         </TabsList>
@@ -1181,6 +1202,122 @@ const NetworkPage = () => {
             )}
           </div>
 
+          {/* Section: Negocierile mele */}
+          <div className="space-y-4 border-t border-border pt-8">
+            <div>
+              <h3 className="text-xl font-bold text-foreground">Negocierile mele</h3>
+              <p className="text-muted-foreground text-sm">
+                Administrează propunerile de schimb și tranzacțiile B2B în desfășurare.
+              </p>
+            </div>
+
+            {isLoadingNegotiations ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : !negotiations || negotiations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground border-2 border-dashed border-border rounded-xl bg-card">
+                <Car className="w-10 h-10 mb-2 opacity-50 text-muted-foreground" />
+                <p className="text-sm">Nicio negociere activă.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...negotiations]
+                  .sort((a, b) => {
+                    if (a.awaitingMyResponse && !b.awaitingMyResponse) return -1;
+                    if (!a.awaitingMyResponse && b.awaitingMyResponse) return 1;
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                  })
+                  .map((neg) => {
+                    // Helper to format proposal summary
+                    const getLatestProposalSummary = (n: typeof neg) => {
+                      const prop = n.latestProposal;
+                      if (!prop) return "Fără propuneri";
+                      const author = prop.fromMe ? "Tu" : (n.counterparty?.name || "Dealer");
+                      if (prop.kind === "BUY") {
+                        const price = prop.offeredPrice 
+                          ? `${prop.offeredPrice.toLocaleString()} €`
+                          : "—";
+                        return `${author}: Ofertă de cumpărare la ${price}`;
+                      } else {
+                        const carTitle = prop.offeredCar?.title || "auto";
+                        const price = prop.offeredPrice && prop.offeredPrice > 0
+                          ? ` + ${prop.offeredPrice.toLocaleString()} €`
+                          : "";
+                        return `${author}: Schimb cu ${carTitle}${price}`;
+                      }
+                    };
+
+                    const getRoleClass = (role: string) => {
+                      return role === "SELLER" 
+                        ? "bg-purple-500/10 text-purple-600 border-purple-500/20 hover:bg-purple-500/10" 
+                        : "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/10";
+                    };
+
+                    const getStatusLabel = (status: string) => {
+                      switch (status) {
+                        case "OPEN": return "În negociere";
+                        case "ACCEPTED": return "Acceptată";
+                        case "DECLINED": return "Refuzată";
+                        case "CANCELLED": return "Anulată";
+                        default: return status;
+                      }
+                    };
+
+                    const getStatusClass = (status: string) => {
+                      switch (status) {
+                        case "OPEN": return "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/10";
+                        case "ACCEPTED": return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10";
+                        case "DECLINED": return "bg-rose-500/10 text-rose-600 border-rose-500/20 hover:bg-rose-50/10";
+                        case "CANCELLED": return "bg-slate-500/10 text-slate-600 border-slate-500/20 hover:bg-slate-500/10";
+                        default: return "bg-slate-500/10 text-slate-600 border-slate-500/20 hover:bg-slate-500/10";
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={neg.id}
+                        onClick={() => {
+                          setSelectedNegotiationId(neg.id);
+                          setNegotiationDetailOpen(true);
+                        }}
+                        className={cn(
+                          "flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-card border rounded-lg hover:shadow-sm transition-all cursor-pointer gap-4 text-left",
+                          neg.awaitingMyResponse ? "border-primary bg-primary/5 hover:bg-primary/10" : "border-border hover:bg-muted/10"
+                        )}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {neg.awaitingMyResponse && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-foreground text-sm truncate">
+                              {neg.car?.title || "Vehicul"}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+                              <span>cu {neg.counterparty?.name || "Dealer rețea"}</span>
+                              {neg.counterparty?.city && <span>({neg.counterparty.city})</span>}
+                            </p>
+                            <p className="text-xs text-foreground/80 mt-1 truncate font-medium">
+                              {getLatestProposalSummary(neg)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                          <Badge className={cn("text-[10px] font-bold px-2 py-0.5 border", getRoleClass(neg.role))}>
+                            {neg.role === "SELLER" ? "Vânzător" : "Cumpărător"}
+                          </Badge>
+                          <Badge className={cn("text-[10px] font-bold px-2 py-0.5 border", getStatusClass(neg.status))}>
+                            {getStatusLabel(neg.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+
           {/* Section 3 — Bursa la schimb */}
           <div className="space-y-4 border-t border-border pt-8">
             <div>
@@ -1302,9 +1439,20 @@ const NetworkPage = () => {
                     </div>
 
                     <div className="px-6 pb-6 pt-0 flex gap-2">
+                      <Button
+                        className="flex-1 text-xs font-semibold text-primary-foreground"
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setMakeOfferListing(item);
+                          setMakeOfferModalOpen(true);
+                        }}
+                      >
+                        Fă o ofertă
+                      </Button>
                       {item.owner?.id && (
                         <Button
-                          className="flex-1 text-xs font-semibold"
+                          className="flex-1 text-xs font-semibold text-foreground"
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenConversation({
@@ -1686,6 +1834,41 @@ const NetworkPage = () => {
         onClose={() => setSelectCarModalOpen(false)}
         onPick={handleSelectCarPick}
         onAddNew={handleSelectCarAddNew}
+      />
+
+      {/* Make offer modal */}
+      <MakeOfferModal
+        isOpen={makeOfferModalOpen}
+        onClose={() => {
+          setMakeOfferModalOpen(false);
+          setMakeOfferListing(null);
+        }}
+        listing={makeOfferListing}
+        onCreated={(neg) => {
+          setSelectedNegotiationId(neg.id || neg.negotiationId);
+          setNegotiationDetailOpen(true);
+        }}
+        onExisting={(negotiationId) => {
+          setSelectedNegotiationId(negotiationId);
+          setNegotiationDetailOpen(true);
+        }}
+      />
+
+      {/* Negotiation Detail Modal */}
+      <NegotiationDetailModal
+        isOpen={negotiationDetailOpen}
+        onClose={() => {
+          setNegotiationDetailOpen(false);
+          setSelectedNegotiationId(null);
+        }}
+        negotiationId={selectedNegotiationId}
+        onConverse={(tradeListingId, counterpartyId) => {
+          handleOpenConversation({
+            otherBusinessId: counterpartyId,
+            contextType: "TRADE",
+            contextId: tradeListingId,
+          });
+        }}
       />
     </div>
   );

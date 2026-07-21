@@ -864,4 +864,116 @@ export const unexposeTradeListing = async (id: string): Promise<void> => {
   await api.delete(`/network/trade/${id}`);
 };
 
+// ── B2B TRADE NEGOTIATIONS TYPES ──
+export interface TradeProposalItem {
+  id: string;
+  kind: "BUY" | "EXCHANGE";
+  offeredPrice: number | null;
+  note: string | null;
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "SUPERSEDED";
+  createdAt: string;
+  fromMe: boolean;
+  proposer: {
+    id: string;
+    name: string;
+    city: string | null;
+  } | null;
+  offeredCar: {
+    title: string;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    mileage: number | null;
+    price: number | null;
+    image: string | null;
+  } | null;
+}
+
+export interface NegotiationSummary {
+  id: string;
+  status: "OPEN" | "ACCEPTED" | "DECLINED" | "CANCELLED";
+  createdAt: string;
+  updatedAt: string;
+  role: "SELLER" | "BUYER";
+  car: {
+    title: string;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    mileage: number | null;
+    price: number | null;
+    image: string | null;
+  } | null;
+  tradeListingId: string;
+  tradeListingStatus: "ACTIVE" | "CLOSED" | null;
+  counterparty: {
+    id: string;
+    name: string;
+    city: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
+  } | null;
+  latestProposal: TradeProposalItem | null;
+  awaitingMyResponse: boolean;
+}
+
+export interface NegotiationDetail extends NegotiationSummary {
+  proposals: TradeProposalItem[];
+}
+
+// ── B2B TRADE NEGOTIATIONS FUNCTIONS ──
+export const createProposal = async (payload: {
+  tradeListingId: string;
+  kind: "BUY" | "EXCHANGE";
+  offeredPrice?: number | null;
+  offeredListingId?: string | null;
+  note?: string | null;
+}): Promise<any> => {
+  const { data } = await api.post('/network/trade/negotiations', payload);
+  return data;
+};
+
+export const getNegotiations = async (): Promise<NegotiationSummary[]> => {
+  const { data } = await api.get('/network/trade/negotiations');
+  return data as NegotiationSummary[];
+};
+
+export const getNegotiation = async (id: string): Promise<NegotiationDetail> => {
+  const { data } = await api.get(`/network/trade/negotiations/${id}`);
+  return data as NegotiationDetail;
+};
+
+export const acceptNegotiation = async (id: string): Promise<any> => {
+  const { data } = await api.post(`/network/trade/negotiations/${id}/accept`);
+  return data;
+};
+
+export const declineNegotiation = async (id: string): Promise<any> => {
+  const { data } = await api.post(`/network/trade/negotiations/${id}/decline`);
+  return data;
+};
+
+export const counterNegotiation = async (
+  id: string,
+  payload: {
+    kind: "BUY" | "EXCHANGE";
+    offeredPrice?: number | null;
+    offeredListingId?: string | null;
+    note?: string | null;
+  }
+): Promise<any> => {
+  const { data } = await api.post(`/network/trade/negotiations/${id}/counter`, payload);
+  return data;
+};
+
+export const cancelNegotiation = async (id: string): Promise<any> => {
+  const { data } = await api.post(`/network/trade/negotiations/${id}/cancel`);
+  return data;
+};
+
+export const getPendingProposalsCount = async (): Promise<{ count: number }> => {
+  const { data } = await api.get('/network/trade/negotiations/pending/count');
+  return data as { count: number };
+};
+
 export default api;
