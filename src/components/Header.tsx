@@ -1,144 +1,128 @@
-import { useNavigate, NavLink } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, LogOut, User, Building2, Settings, Star, ClipboardCheck, BarChart3 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useActionNeededCount } from "@/hooks/useActionNeededCount";
-
-interface HeaderProps {
-  onMenuClick: () => void;
-}
+import api from "@/services/api";
+import { useInLucruCount } from "@/hooks/useInLucruCount";
+import { useConversationsUnreadCount } from "@/hooks/useConversationsUnreadCount";
+import { usePendingProposalsCount } from "@/hooks/usePendingProposalsCount";
+import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
 
 const navigation = [
-  { name: "Panou de Bord", href: "/" },
-  { name: "Anunțuri", href: "/listings" },
-  { name: "Mașini Vândute", href: "/listings/sold", icon: ClipboardCheck },
-  { name: "Contracte", href: "/contracts" },
+  { name: "Azi", href: "/" },
+  { name: "Mașini", href: "/listings" },
   { name: "Clienți", href: "/customers" },
-  { name: "Rezervări", href: "/reservations" },
-  { name: "Calendar", href: "/calendar" },
-  { name: "Mesaje", href: "/messages" },
   { name: "Rețea", href: "/network" },
-  { name: "Recenzii", href: "/reviews" },
-  { name: "Blog", href: "/blog" },
-  { name: "Rapoarte", href: "/reports", icon: BarChart3 },
 ];
 
-const Header = ({ onMenuClick }: HeaderProps) => {
-  const navigate = useNavigate();
-  const { actionNeeded } = useActionNeededCount();
+const Header = () => {
+  const { pathname } = useLocation();
 
-  const handleLogout = () => {
-    // Remove the token from storage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userEmail');
-    // Navigate to the login page using the router
-    navigate('/login');
+  // Fetch business info
+  const { data: business } = useQuery({
+    queryKey: ['businessMe'],
+    queryFn: async () => {
+      const { data } = await api.get('/business/me');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Active state checking
+  const isActiveItem = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === "/listings") return pathname === "/listings" || pathname.startsWith("/listings/");
+    if (href === "/customers") {
+      return pathname.startsWith("/customers") ||
+             pathname.startsWith("/messages") ||
+             pathname.startsWith("/contracts") ||
+             pathname.startsWith("/reservations");
+    }
+    if (href === "/network") return pathname.startsWith("/network");
+    return false;
   };
+
+  // Badge counts
+  const { inLucru } = useInLucruCount();
+  const { count: conversationsCount } = useConversationsUnreadCount();
+  const { count: pendingProposalsCount } = usePendingProposalsCount();
+  const { count: transportInterestsCount } = useTransportInterestsCount();
+
+  const reteaCount = (conversationsCount ?? 0) + (pendingProposalsCount ?? 0) + (transportInterestsCount ?? 0);
+
+  const isFirmaActive = pathname.startsWith("/firma");
 
   return (
     <header className="h-16 bg-card text-foreground border-b border-border flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-4">
-        {/* Mobile Hamburger Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onMenuClick}
-          className="lg:hidden hover:bg-accent"
-        >
-          <Menu className="w-5 h-5" />
-        </Button>
-
         {/* Logo */}
-        <div className="flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" />
-            <span className="font-semibold text-sm hidden sm:inline">Admin Dashboard</span>
-        </div>
+        {business?.name ? (
+          <Link to="/" className="text-[15px] font-medium truncate max-w-[200px] sm:max-w-[220px]">
+            {business.name}
+          </Link>
+        ) : (
+          <Building2 className="w-6 h-6 text-primary" />
+        )}
       </div>
 
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex items-center gap-2">
-        {navigation.map((item) => (
-            <NavLink
-                key={item.name}
-                to={item.href}
-                end={item.href === "/" || item.href === "/listings"}
-                className={({ isActive }) =>
-                cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",
-                    isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-                }
+        {navigation.map((item) => {
+          const isActive = isActiveItem(item.href);
+          let badgeValue = 0;
+          if (item.href === "/customers") {
+            badgeValue = inLucru;
+          } else if (item.href === "/network") {
+            badgeValue = reteaCount;
+          }
+
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={cn(
+                "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 cursor-pointer",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              )}
             >
-                {({ isActive }) => (
-                  <>
-                    {item.icon && <item.icon className="w-4 h-4" />}
-                    <span>{item.name}</span>
-                    {item.href === "/messages" && actionNeeded > 0 && (
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center transition-colors",
-                          isActive
-                            ? "bg-primary-foreground text-primary"
-                            : "bg-primary text-primary-foreground"
-                        )}
-                      >
-                        {actionNeeded}
-                      </span>
-                    )}
-                  </>
-                )}
-            </NavLink>
-        ))}
+              <span>{item.name}</span>
+              {badgeValue > 0 && (
+                <span
+                  className={cn(
+                    "text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center transition-colors",
+                    isActive
+                      ? "bg-primary-foreground text-primary"
+                      : "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {badgeValue}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-
       <div className="flex items-center gap-4">
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  <User className="w-4 h-4" />
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            className="w-56 bg-popover border-border" 
-            align="end" 
-            forceMount
-          >
-            <DropdownMenuItem
-                onClick={() => navigate('/settings')}
-                className="cursor-pointer"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Setări Șablon</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Firma Link */}
+        <Link
+          to="/firma"
+          className={cn(
+            "px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 cursor-pointer min-h-[44px]",
+            isFirmaActive
+              ? "bg-primary text-primary-foreground"
+              : "border border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Firma</span>
+        </Link>
       </div>
     </header>
   );
 };
 
 export default Header;
+

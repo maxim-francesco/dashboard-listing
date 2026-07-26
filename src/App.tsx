@@ -8,6 +8,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Listings from "./pages/Listings";
 import AddEditListing from "./pages/AddEditListing";
+import ListingDetail from "./pages/ListingDetail";
 import { Toaster as HotToaster } from "react-hot-toast";
 import MessagesPage from "./pages/MessagesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -17,7 +18,6 @@ import AdminTerms from "./pages/AdminTerms";
 import CookieBanner from "./components/CookieBanner";
 import NotFound from "./pages/NotFound";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
-import SoldListings from "./pages/SoldListings";
 import ContractsPage from "./pages/ContractsPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -26,7 +26,15 @@ import SuperAdmin from "./pages/SuperAdmin";
 import PublicFeedPreview from "./pages/PublicFeedPreview";
 import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
-import NetworkPage from "./pages/NetworkPage";
+import FirmaPage from "./pages/FirmaPage";
+import NetworkHome from "./pages/network/NetworkHome";
+import NetworkMessages from "./pages/network/NetworkMessages";
+import NetworkThread from "./pages/network/NetworkThread";
+import NetworkDealers from "./pages/network/NetworkDealers";
+import NetworkTransport from "./pages/network/NetworkTransport";
+import NetworkCars from "./pages/network/NetworkCars";
+import NetworkSettings from "./pages/network/NetworkSettings";
+
 
 // Blog Pages
 import BlogList from "./pages/Blog/BlogList";
@@ -68,7 +76,6 @@ const App = () => (
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/listings" element={<Listings />} />
-              <Route path="/listings/sold" element={<SoldListings />} />
               <Route path="/contracts" element={<ContractsPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/customers/:phone" element={<CustomerDetailPage />} />
@@ -76,8 +83,16 @@ const App = () => (
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
+              <Route path="/listings/:listingId" element={<ListingDetail />} />
               <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/network" element={<NetworkPage />} />
+              <Route path="/network/setari" element={<NetworkSettings />} />
+              <Route path="/network" element={<NetworkHome />} />
+              <Route path="/network/messages" element={<NetworkMessages />} />
+              <Route path="/network/messages/:conversationId" element={<NetworkThread />} />
+              <Route path="/network/dealers" element={<NetworkDealers />} />
+              <Route path="/network/transport" element={<NetworkTransport />} />
+              <Route path="/network/cars" element={<NetworkCars />} />
+              <Route path="/firma" element={<FirmaPage />} />
               <Route path="/reviews" element={<AdminReviewsPage />} />
               <Route path="/settings" element={<BusinessSettings />} />
               <Route path="/reports" element={<ProfitabilityReport />} />

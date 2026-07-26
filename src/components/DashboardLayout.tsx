@@ -1,30 +1,27 @@
-
-import { Outlet } from "react-router-dom";
-import { useState } from "react";
-import Sidebar from "./Sidebar";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
-import Footer from "./Footer";
+import BottomNav from "./BottomNav";
+import ErrorBoundary from "./ErrorBoundary";
 
 const DashboardLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const location = useLocation();
   return (
     <div className="min-h-screen bg-admin-bg flex w-full">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
-      
-      <div className="flex-1 flex flex-col">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header />
         
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-4 lg:p-6 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
           <div className="max-w-7xl mx-auto">
-            <Outlet />
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
-
-        <Footer />
       </div>
+      <BottomNav />
     </div>
   );
 };
 
 export default DashboardLayout;
+
