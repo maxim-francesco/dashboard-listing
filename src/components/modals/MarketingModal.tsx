@@ -25,10 +25,11 @@ interface MarketingModalProps {
   isOpen: boolean;
   onClose: () => void;
   // câmpurile curente ale formularului + featureIds, exact ca la generate-description
-  listingPayload: Record<string, any>;
+  listingPayload?: Record<string, any>;
+  listingId?: string;
 }
 
-const MarketingModal = ({ isOpen, onClose, listingPayload }: MarketingModalProps) => {
+const MarketingModal = ({ isOpen, onClose, listingPayload, listingId }: MarketingModalProps) => {
   const [activeTab, setActiveTab] = useState<Format>("facebook");
   const [results, setResults] = useState<Partial<Record<Format, string>>>({});
   const [loadingFormat, setLoadingFormat] = useState<Format | null>(null);
@@ -38,7 +39,8 @@ const MarketingModal = ({ isOpen, onClose, listingPayload }: MarketingModalProps
     setLoadingFormat(format);
     setErrorFormat(null);
     try {
-      const response = await api.post("/ai/generate-marketing", { ...listingPayload, format });
+      const payload = listingId ? { listingId, format } : { ...listingPayload, format };
+      const response = await api.post("/ai/generate-marketing", payload);
       setResults((prev) => ({ ...prev, [format]: response.data.text }));
     } catch (e: any) {
       setErrorFormat(format);

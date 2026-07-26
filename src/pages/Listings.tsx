@@ -1,53 +1,43 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
-
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { MoreVertical, Search, Plus, Car, Loader2, FileText, ChevronRight } from "lucide-react";
+import { roCount } from "@/lib/plural";
+import { formatEur } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Loader2, ImageIcon, Eye, MoreHorizontal, ClipboardCheck, Copy, FileText, QrCode, Upload, EyeOff, Archive, RefreshCw, FileSpreadsheet, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "react-hot-toast";
-import { format } from 'date-fns';
-import api, { 
-  getAutovitStatus, 
-  publishToAutovitAndOLX, 
+import { format } from "date-fns";
+import api, {
+  getAutovitStatus,
+  publishToAutovitAndOLX,
   unpublishFromAutovit,
   resetViewsForListing,
   createOffer,
   createContract,
-  createReservation
+  createReservation,
+  getSoldListings,
+  reactivateListing
 } from "@/services/api";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import DiagnoseListingModal from "@/components/modals/DiagnoseListingModal";
 import { PrintableSpecSheet } from "@/components/listings/PrintableSpecSheet";
 import QrCodeModal from "@/components/modals/QrCodeModal";
 import CatalogPreviewModal from "@/components/modals/CatalogPreviewModal";
-import AutovitStatusBadge from "@/components/listings/AutovitStatusBadge";
 import { PrintableOffer } from "@/components/listings/PrintableOffer";
 import GenerateOfferModal from "@/components/modals/GenerateOfferModal";
 import GenerateContractModal, { ContractFormData } from "@/components/modals/GenerateContractModal";
 import { PrintableContract } from "@/components/contracts/PrintableContract";
 import ReserveModal from "@/components/modals/ReserveModal";
+import ListingCard from "@/components/listings/ListingCard";
 
 interface Listing {
   id: string;
@@ -63,9 +53,13 @@ interface Listing {
   attributeValues: any[];
   _count?: {
     views: number;
+    messages?: number;
   };
   autovitId?: string | null;
   autovitStatus?: string | null;
+  price?: number;
+  sellingPrice?: number;
+  soldAt?: string | null;
 }
 
 interface Business {
@@ -80,283 +74,24 @@ interface Business {
   companyLegalRep?: string | null;
 }
 
-const ListingActionDropdown = ({ 
-  listing, 
-  onDelete, 
-  onClone, 
-  onSold, 
-  onGeneratePdf, 
-  onShowQr,
-  isPdfLoading,
-  onDiagnose,
-  onGenerateOffer,
-  onGenerateContract,
-  onReserve
-}: { 
-  listing: Listing; 
-  onDelete: (id: string, title: string) => void;
-  onClone: (id: string) => void;
-  onSold: (listing: Listing) => void;
-  onGeneratePdf: (listing: Listing) => void;
-  onShowQr: (listing: Listing) => void;
-  isPdfLoading: boolean;
-  onDiagnose: (listing: Listing) => void;
-  onGenerateOffer: (listing: Listing) => void;
-  onGenerateContract: (listing: Listing) => void;
-  onReserve: (listing: Listing) => void;
-}) => {
-  const navigate = useNavigate();
-  const [autovitStatus, setAutovitStatus] = useState<string | null>(null);
-  const [autovitId, setAutovitId] = useState<string | null>(null);
-  const [isAutovitLoading, setIsAutovitLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isZipping, setIsZipping] = useState(false);
-  const [isResettingViews, setIsResettingViews] = useState(false);
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (isOpen && listing.id) {
-      console.log(`[DEBUG] Listing for ${listing.id}:`, listing);
-      getAutovitStatus(listing.id)
-        .then(res => {
-          console.log(`[DEBUG] Autovit Status for ${listing.id}:`, res.data);
-          setAutovitStatus(res.data.autovitStatus);
-          setAutovitId(res.data.autovitId);
-        })
-        .catch((err) => {
-          console.error(`[DEBUG] Failed to fetch Autovit status for ${listing.id}:`, err);
-        });
-    }
-  }, [isOpen, listing.id]);
-
-  const handlePublishAutovit = async () => {
-    setIsAutovitLoading(true);
-    try {
-      const res = await publishToAutovitAndOLX(listing.id);
-      toast.success(res.data.message || "Publicat pe Autovit & OLX!");
-      setAutovitStatus("active");
-      setIsOpen(false);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Eroare la publicare.");
-    } finally {
-      setIsAutovitLoading(false);
-    }
-  };
-
-  const handleDeactivateAutovit = async () => {
-    setIsAutovitLoading(true);
-    try {
-      await unpublishFromAutovit(listing.id);
-      toast.success("Anunț dezactivat de pe Autovit & OLX.");
-      setAutovitStatus("inactive");
-      setIsOpen(false);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Eroare la dezactivare.");
-    } finally {
-      setIsAutovitLoading(false);
-    }
-  };
-
-  const handleDownloadZip = async () => {
-    if (!listing.images || listing.images.length === 0) {
-      toast.error('Acest anunț nu are imagini de descărcat.');
-      return;
-    }
-    setIsZipping(true);
-    toast.loading('Se pregătește arhiva...', { id: 'zip-toast' });
-    try {
-      await downloadImagesAsZip(listing.images, listing.title);
-      toast.success('Arhiva a fost descărcată cu succes!', { id: 'zip-toast' });
-    } catch (error) {
-      toast.error('A apărut o eroare la crearea arhivei.', { id: 'zip-toast' });
-    } finally {
-      setIsZipping(false);
-    }
-  };
-
-  const handleResetViews = async () => {
-    if (!window.confirm(`Sigur vrei să resetezi vizualizările pentru "${listing.title}"? Numărul va începe de la 0.`)) {
-      return;
-    }
-    setIsResettingViews(true);
-    try {
-      await resetViewsForListing(listing.id);
-      toast.success('Vizualizările au fost resetate.');
-      queryClient.invalidateQueries({ queryKey: ['listings'] });
-      setIsOpen(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Eroare la resetarea vizualizărilor.');
-    } finally {
-      setIsResettingViews(false);
-    }
-  };
-
-  return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Deschide meniu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-popover border-border min-w-[200px]">
-        <DropdownMenuItem
-          onClick={() => onGeneratePdf(listing)}
-          disabled={isPdfLoading}
-          className="cursor-pointer"
-        >
-          {isPdfLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-              <FileText className="mr-2 h-4 w-4" />
-          )}
-          <span>{isPdfLoading ? 'Se generează...' : 'Generează PDF'}</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => onGenerateOffer(listing)}
-          className="cursor-pointer"
-        >
-          <FileSpreadsheet className="mr-2 h-4 w-4" />
-          <span>Generează ofertă</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => onGenerateContract(listing)}
-          className="cursor-pointer"
-        >
-          <FileText className="mr-2 h-4 w-4" />
-          <span>Generează contract</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => onReserve(listing)}
-          className="cursor-pointer"
-        >
-          <ClipboardCheck className="mr-2 h-4 w-4" />
-          <span>Rezervă mașina</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => onShowQr(listing)}
-          className="cursor-pointer"
-        >
-          <QrCode className="mr-2 h-4 w-4" />
-          <span>Arată cod QR</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => onSold(listing)}
-          className="cursor-pointer"
-        >
-          <ClipboardCheck className="mr-2 h-4 w-4" />
-          <span>Marchează ca Vândut</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => onDiagnose(listing)}
-          className="cursor-pointer"
-        >
-          <Sparkles className="mr-2 h-4 w-4" />
-          <span>Analizează anunțul</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => onClone(listing.id)}
-          className="cursor-pointer"
-        >
-          <Copy className="mr-2 h-4 w-4" />
-          <span>Clonează</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={handleDownloadZip}
-          disabled={isZipping}
-          className="cursor-pointer"
-        >
-          {isZipping ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Archive className="mr-2 h-4 w-4" />
-          )}
-          <span>{isZipping ? 'Se descarcă...' : 'Descarcă poze (ZIP)'}</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.preventDefault();
-            handleResetViews();
-          }}
-          disabled={isResettingViews}
-          className="cursor-pointer"
-        >
-          {isResettingViews ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          <span>{isResettingViews ? 'Se resetează...' : 'Resetează vizualizări'}</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        {autovitStatus !== "active" ? (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              handlePublishAutovit();
-            }}
-            disabled={isAutovitLoading}
-            className="cursor-pointer text-success hover:!text-success-foreground hover:!bg-success"
-          >
-            {isAutovitLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="mr-2 h-4 w-4" />
-            )}
-            <span>{isAutovitLoading ? "Se publică..." : "Publică pe Autovit & OLX"}</span>
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              handleDeactivateAutovit();
-            }}
-            disabled={isAutovitLoading}
-            className="cursor-pointer text-destructive hover:!text-destructive-foreground hover:!bg-destructive"
-          >
-            {isAutovitLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <EyeOff className="mr-2 h-4 w-4" />
-            )}
-            <span>{isAutovitLoading ? "Se dezactivează..." : "Dezactivează Autovit & OLX"}</span>
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          onClick={() => navigate(`/listings/${listing.id}/edit`)}
-          className="cursor-pointer"
-        >
-          <Edit className="mr-2 h-4 w-4" />
-          <span>Editează</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem
-          onClick={() => onDelete(listing.id, listing.title)}
-          className="text-destructive hover:!bg-destructive hover:!text-destructive-foreground cursor-pointer"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          <span>Șterge</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
+const ListingCardSkeleton = () => (
+  <div className="bg-card border border-border rounded-xl p-2.5 flex gap-3 animate-pulse">
+    <div className="w-[96px] h-[72px] bg-muted rounded-lg shrink-0" />
+    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+      <div className="space-y-2">
+        <div className="h-4 bg-muted rounded w-3/4" />
+        <div className="h-5 bg-muted rounded w-1/4" />
+      </div>
+      <div className="flex items-center gap-1.5 mt-1">
+        <div className="h-4 bg-muted rounded w-12" />
+        <div className="h-4 bg-muted rounded w-20" />
+      </div>
+    </div>
+  </div>
+);
 
 const Listings = () => {
+  const [activeSegment, setActiveSegment] = useState<"instoc" | "vandute">("instoc");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
   const [isDiagnoseModalOpen, setIsDiagnoseModalOpen] = useState(false);
@@ -364,15 +99,15 @@ const Listings = () => {
 
   const [pdfListing, setPdfListing] = useState<Listing | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  
-  const [offerModalListing, setOfferModalListing] = useState<Listing | null>(null); // which listing's modal is open
+
+  const [offerModalListing, setOfferModalListing] = useState<Listing | null>(null);
   const [offerModalOpen, setOfferModalOpen] = useState(false);
   const [offerRenderData, setOfferRenderData] = useState<null | {
     listing: Listing;
     offer: { clientName: string; offerPrice: number; listPrice: number | null; validityDays: number };
     clientPhone: string;
-  }>(null); // set when generation should fire
-  
+  }>(null);
+
   const [contractModalListing, setContractModalListing] = useState<Listing | null>(null);
   const [contractModalOpen, setContractModalOpen] = useState(false);
   const [reserveModalListing, setReserveModalListing] = useState<Listing | null>(null);
@@ -382,31 +117,105 @@ const Listings = () => {
     form: ContractFormData;
     contractNumber: number | null;
   }>(null);
-  
+
   const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [qrListing, setQrListing] = useState<{id: string, slug: string} | null>(null);
+  const [qrListing, setQrListing] = useState<{ id: string; slug: string } | null>(null);
   const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  
-  const navigate = useNavigate();
 
-  const { data: listings = [], isLoading, refetch } = useQuery<Listing[]>({
-    queryKey: ['listings'],
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // "În stoc" segment query (AVAILABLE + RESERVED + INCOMING)
+  const { data: inStockListings = [], isLoading: isInStockLoading, refetch: refetchInStock } = useQuery<Listing[]>({
+    queryKey: ["listings"],
     queryFn: async () => {
-        const response = await api.get('/listings');
-        const listingsWithStatus = response.data.map((listing: any) => ({
-            ...listing,
-            status: listing.status ?? 'AVAILABLE',
-        }));
-        return listingsWithStatus;
+      const response = await api.get("/listings");
+      const listingsWithStatus = response.data.map((listing: any) => ({
+        ...listing,
+        status: listing.status ?? "AVAILABLE",
+      }));
+      return listingsWithStatus;
     },
     refetchOnWindowFocus: false,
   });
 
+  // "Vândute" segment query (SOLD)
+  const { data: soldListings = [], isLoading: isSoldLoading, refetch: refetchSold } = useQuery<Listing[]>({
+    queryKey: ["soldListings"],
+    queryFn: async () => {
+      const response = await getSoldListings();
+      return response.map((listing: any) => ({
+        ...listing,
+        status: listing.status ?? "SOLD",
+      }));
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const listings = inStockListings; // For compatibility with Excel exporter and Preview Modal
+  const isLoading = activeSegment === "instoc" ? isInStockLoading : isSoldLoading;
+
+  // G3.a money panel calculations
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  const currentMonthSoldListings = soldListings.filter((listing) => {
+    if (!listing.soldAt) return false;
+    const soldDate = new Date(listing.soldAt);
+    return soldDate.getFullYear() === currentYear && soldDate.getMonth() === currentMonth;
+  });
+
+  const totalCurrentMonthCount = currentMonthSoldListings.length;
+
+  const listingsWithProfit = currentMonthSoldListings.filter(
+    (l) => l.sellingPrice !== null && l.sellingPrice !== undefined && l.purchasePrice !== null && l.purchasePrice !== undefined
+  );
+
+  const profitCount = listingsWithProfit.length;
+
+  const profitSum = listingsWithProfit.reduce((sum, l) => {
+    const sell = l.sellingPrice || 0;
+    const buy = l.purchasePrice || 0;
+    const extra = l.otherCosts || 0;
+    return sum + (sell - buy - extra);
+  }, 0);
+
+  let panelBgClass = "bg-muted";
+  let panelTextClass = "text-foreground";
+
+  if (profitCount > 0) {
+    if (profitSum > 0) {
+      panelBgClass = "bg-success-light";
+      panelTextClass = "text-success";
+    } else if (profitSum < 0) {
+      panelBgClass = "bg-destructive/10";
+      panelTextClass = "text-destructive";
+    }
+  }
+
+  const renderLine2 = () => {
+    const carsText = roCount(totalCurrentMonthCount, "mașină", "mașini");
+    if (profitCount === 0) {
+      return carsText;
+    }
+    return `${formatEur(profitSum)} · ${carsText}`;
+  };
+
+  const showLine3 = profitCount > 0 && profitCount < totalCurrentMonthCount;
+
+  const unrecordedSalesCount = soldListings.filter((l) => !l.soldAt).length;
+
+  const refetch = () => {
+    refetchInStock();
+    refetchSold();
+  };
+
   useEffect(() => {
     const fetchBusinessSettings = async () => {
       try {
-        const response = await api.get<Business>('/business/me');
+        const response = await api.get<Business>("/business/me");
         setBusinessSettings(response.data);
       } catch (error) {
         console.error("Failed to fetch business settings for QR code.");
@@ -419,10 +228,8 @@ const Listings = () => {
     if (pdfListing) {
       const generatePdf = async () => {
         setIsGeneratingPdf(true);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const specSheetElement = document.getElementById('offscreen-spec-sheet');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const specSheetElement = document.getElementById("offscreen-spec-sheet");
         if (!specSheetElement) {
           toast.error("A apărut o eroare la generarea PDF-ului.");
           setIsGeneratingPdf(false);
@@ -432,21 +239,17 @@ const Listings = () => {
 
         try {
           const canvas = await html2canvas(specSheetElement, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
-          
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = pdf.internal.pageSize.getHeight();
-          
           const imgWidth = canvas.width;
           const imgHeight = canvas.height;
           const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-          
           const imgX = (pdfWidth - imgWidth * ratio) / 2;
           const imgY = 0;
-
-          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-          pdf.save(`${pdfListing.title || 'spec-sheet'}.pdf`);
+          pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          pdf.save(`${pdfListing.title || "spec-sheet"}.pdf`);
         } catch (error) {
           console.error("Eroare la generarea PDF-ului:", error);
           toast.error("A apărut o eroare la generarea PDF-ului.");
@@ -455,7 +258,6 @@ const Listings = () => {
           setPdfListing(null);
         }
       };
-
       generatePdf();
     }
   }, [pdfListing]);
@@ -463,9 +265,8 @@ const Listings = () => {
   useEffect(() => {
     if (offerRenderData) {
       const generateOfferPdf = async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const offerElement = document.getElementById('offscreen-offer');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const offerElement = document.getElementById("offscreen-offer");
         if (!offerElement) {
           toast.error("A apărut o eroare la generarea ofertei.");
           setOfferRenderData(null);
@@ -476,9 +277,14 @@ const Listings = () => {
         if (photoUrl) {
           await new Promise<void>((resolve) => {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            img.crossOrigin = "anonymous";
             let settled = false;
-            const done = () => { if (!settled) { settled = true; resolve(); } };
+            const done = () => {
+              if (!settled) {
+                settled = true;
+                resolve();
+              }
+            };
             img.onload = done;
             img.onerror = done;
             img.src = photoUrl;
@@ -488,30 +294,24 @@ const Listings = () => {
 
         try {
           const canvas = await html2canvas(offerElement, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
-          
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = pdf.internal.pageSize.getHeight();
-          
           const imgWidth = canvas.width;
           const imgHeight = canvas.height;
           const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-          
           const imgX = (pdfWidth - imgWidth * ratio) / 2;
           const imgY = 0;
-
-          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-          
-          const safeTitle = (offerRenderData.listing.title || 'Oferta').replace(/[\/\\\s]+/g, '-');
+          pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          const safeTitle = (offerRenderData.listing.title || "Oferta").replace(/[\/\\\s]+/g, "-");
           pdf.save(`Oferta-${offerRenderData.offer.clientName}-${safeTitle}.pdf`);
 
-          // WhatsApp phone normalization
-          const digitsOnly = offerRenderData.clientPhone.replace(/\D/g, '');
+          const digitsOnly = offerRenderData.clientPhone.replace(/\D/g, "");
           let waPhone = digitsOnly;
-          if (digitsOnly.startsWith('0')) {
-            waPhone = '40' + digitsOnly.slice(1);
-          } else if (!digitsOnly.startsWith('40') && digitsOnly.length > 0) {
+          if (digitsOnly.startsWith("0")) {
+            waPhone = "40" + digitsOnly.slice(1);
+          } else if (!digitsOnly.startsWith("40") && digitsOnly.length > 0) {
             waPhone = digitsOnly;
           }
 
@@ -528,27 +328,38 @@ const Listings = () => {
             publicUrl = created.publicUrl;
           } catch (err) {
             console.error("Nu s-a putut crea linkul public al ofertei:", err);
-            // graceful fallback: continue without a public link
           }
 
-          const firmName = businessSettings?.name ?? '';
+          const firmName = businessSettings?.name ?? "";
           const messageText = publicUrl
             ? `Bună ziua! Oferta pentru ${offerRenderData.listing.title}: ${publicUrl} — valabilă ${offerRenderData.offer.validityDays} zile. ${firmName}`
             : `Bună ziua! Vă trimit oferta pentru ${offerRenderData.listing.title} la prețul de ${offerRenderData.offer.offerPrice} €, valabilă ${offerRenderData.offer.validityDays} zile. (Atașez documentul PDF.) — ${firmName}`;
           const encodedMsg = encodeURIComponent(messageText);
           const whatsappUrl = `https://wa.me/${waPhone}?text=${encodedMsg}`;
-          
-          window.open(whatsappUrl, '_blank');
+          window.open(whatsappUrl, "_blank");
 
           if (publicUrl) {
             const linkForToast = publicUrl;
             toast.success(
               (t) => (
-                <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <span>Ofertă generată. Link public creat.</span>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(linkForToast); toast.dismiss(t.id); toast.success('Link copiat!'); }}
-                    style={{ alignSelf: 'flex-start', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkForToast);
+                      toast.dismiss(t.id);
+                      toast.success("Link copiat!");
+                    }}
+                    style={{
+                      alignSelf: "flex-start",
+                      background: "#2563eb",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
                   >
                     Copiază link
                   </button>
@@ -557,7 +368,7 @@ const Listings = () => {
               { duration: 8000 }
             );
           } else {
-            toast.success('Oferta a fost generată. Atașează PDF-ul descărcat în conversația WhatsApp.');
+            toast.success("Oferta a fost generată. Atașează PDF-ul descărcat în conversația WhatsApp.");
           }
         } catch (error) {
           console.error("Eroare la generarea ofertei PDF:", error);
@@ -566,7 +377,6 @@ const Listings = () => {
           setOfferRenderData(null);
         }
       };
-
       generateOfferPdf();
     }
   }, [offerRenderData, businessSettings]);
@@ -574,9 +384,8 @@ const Listings = () => {
   useEffect(() => {
     if (contractRenderData) {
       const generateContractPdf = async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const contractElement = document.getElementById('offscreen-contract');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const contractElement = document.getElementById("offscreen-contract");
         if (!contractElement) {
           toast.error("A apărut o eroare la generarea contractului.");
           setContractRenderData(null);
@@ -585,23 +394,18 @@ const Listings = () => {
 
         try {
           const canvas = await html2canvas(contractElement, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
-          
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = pdf.internal.pageSize.getHeight();
-          
           const imgWidth = canvas.width;
           const imgHeight = canvas.height;
           const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-          
           const imgX = (pdfWidth - imgWidth * ratio) / 2;
           const imgY = 0;
-
-          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-          
-          const buyerNameClean = (contractRenderData.form.buyerName || 'client').replace(/[\/\\\s]+/g, '-');
-          pdf.save(`Contract-${contractRenderData.contractNumber ?? 'nou'}-${buyerNameClean}.pdf`);
+          pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+          const buyerNameClean = (contractRenderData.form.buyerName || "client").replace(/[\/\\\s]+/g, "-");
+          pdf.save(`Contract-${contractRenderData.contractNumber ?? "nou"}-${buyerNameClean}.pdf`);
           toast.success("Contractul PDF a fost generat și descărcat.");
         } catch (error) {
           console.error("Eroare la generarea contractului PDF:", error);
@@ -610,7 +414,6 @@ const Listings = () => {
           setContractRenderData(null);
         }
       };
-
       generateContractPdf();
     }
   }, [contractRenderData]);
@@ -667,9 +470,9 @@ const Listings = () => {
         clientName: data.clientName,
         offerPrice: data.offerPrice,
         listPrice,
-        validityDays: data.validityDays
+        validityDays: data.validityDays,
       },
-      clientPhone: data.clientPhone
+      clientPhone: data.clientPhone,
     });
   };
 
@@ -697,18 +500,18 @@ const Listings = () => {
 
   const handleDeleteListing = async (listingId: string, listingTitle: string) => {
     if (window.confirm(`Ești sigur că vrei să ștergi definitiv "${listingTitle}"?`)) {
-        const promise = api.delete(`/listings/${listingId}`);
+      const promise = api.delete(`/listings/${listingId}`);
 
-        toast.promise(promise, {
-            loading: `Se șterge "${listingTitle}"...`,
-            success: () => {
-                refetch();
-                return `"${listingTitle}" a fost șters cu succes.`;
-            },
-            error: (err) => {
-                return "Nu s-a putut șterge anunțul. Te rugăm să încercați din nou.";
-            }
-        });
+      toast.promise(promise, {
+        loading: `Se șterge "${listingTitle}"...`,
+        success: () => {
+          refetch();
+          return `"${listingTitle}" a fost șters cu succes.`;
+        },
+        error: (err) => {
+          return "Nu s-a putut șterge anunțul. Te rugăm să încercați din nou.";
+        },
+      });
     }
   };
 
@@ -717,11 +520,11 @@ const Listings = () => {
       const promise = api.post(`/listings/${listingId}/clone`);
 
       toast.promise(promise, {
-        loading: 'Se clonează anunțul...',
+        loading: "Se clonează anunțul...",
         success: (response) => {
           const newListingId = response.data.id;
           navigate(`/listings/${newListingId}/edit`);
-          return 'Anunțul a fost clonat cu succes! Ești redirecționat...';
+          return "Anunțul a fost clonat cu succes! Ești redirecționat...";
         },
         error: "Eroare la clonarea anunțului.",
       });
@@ -738,6 +541,18 @@ const Listings = () => {
     setIsDiagnoseModalOpen(true);
   };
 
+  const handleReactivate = async (listing: Listing) => {
+    if (window.confirm(`Vrei să reactivezi anunțul "${listing.title}"?`)) {
+      try {
+        await reactivateListing(listing.id);
+        toast.success(`Anunțul "${listing.title}" a fost reactivat!`);
+        refetch();
+      } catch (error) {
+        toast.error("Nu s-a putut reactiva anunțul.");
+      }
+    }
+  };
+
   const handleExportExcel = () => {
     if (listings.length === 0) {
       toast.error("Nu există anunțuri de exportat.");
@@ -745,7 +560,6 @@ const Listings = () => {
     }
 
     try {
-      // Helper to strip HTML tags
       const stripHtml = (html: string) => {
         if (!html) return "";
         let text = html
@@ -760,12 +574,10 @@ const Listings = () => {
           .replace(/&gt;/g, ">")
           .replace(/&quot;/g, '"')
           .replace(/&#039;/g, "'");
-        // Collapse all whitespaces, including newlines, into a single space
         text = text.replace(/\s+/g, " ");
         return text.trim();
       };
 
-      // Helper to get attribute value
       const getAttrValue = (listing: any, name: string) => {
         const av = listing.attributeValues?.find(
           (item: any) => item.attribute?.name?.toLowerCase() === name.toLowerCase()
@@ -777,7 +589,6 @@ const Listings = () => {
         return "";
       };
 
-      // Helper to escape CSV fields
       const escapeCsv = (str: any) => {
         if (str === null || str === undefined) return '""';
         const clean = str.toString().replace(/"/g, '""');
@@ -802,15 +613,13 @@ const Listings = () => {
         "Condition",
         "Title",
         "Description",
-        "quantity_to_sell_on_facebook"
+        "quantity_to_sell_on_facebook",
       ];
 
       const csvLines = [headers.join(";")];
 
       listings.forEach((listing) => {
         const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
-        
-        // Extragere marca si model din titlu
         const titleWords = listing.title.trim().split(/\s+/);
         const marca = titleWords[0] || "";
         const model = titleWords[1] || "";
@@ -821,8 +630,7 @@ const Listings = () => {
         const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
         const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
         const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
-        
-        // Build URL
+
         let link = businessSettings?.listingUrlPattern || "https://example.com/anunt/{id}";
         if (businessSettings?.id === "cmhomcpoi02x1ut2cpips3mo3") {
           link = "https://www.carsleasing.ro/stoc/{id}";
@@ -834,7 +642,6 @@ const Listings = () => {
           link = link.replace("{id}", listing.id);
         }
 
-        // Build image links
         const imageLink = listing.images?.[0]?.url || "";
         const additionalImageLinks = listing.images
           ? listing.images.slice(1).map((img: any) => img.url).join(",")
@@ -842,8 +649,7 @@ const Listings = () => {
 
         const availability = "In Stock";
         const condition = "Used";
-        
-        // Format price
+
         let finalPrice = "";
         if (listing.price) {
           finalPrice = `${listing.price} EUR`;
@@ -875,7 +681,7 @@ const Listings = () => {
           escapeCsv(condition),
           escapeCsv(title),
           escapeCsv(description),
-          escapeCsv("1")
+          escapeCsv("1"),
         ];
 
         csvLines.push(row.join(";"));
@@ -883,8 +689,7 @@ const Listings = () => {
 
       const csvContent = csvLines.join("\n");
       const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      
-      // Trigger download
+
       const linkEl = document.createElement("a");
       const url = URL.createObjectURL(blob);
       linkEl.setAttribute("href", url);
@@ -892,7 +697,7 @@ const Listings = () => {
       document.body.appendChild(linkEl);
       linkEl.click();
       document.body.removeChild(linkEl);
-      
+
       toast.success("Fișierul Excel (CSV) a fost descărcat cu succes!");
     } catch (error) {
       console.error("Eroare la exportul Excel:", error);
@@ -900,177 +705,159 @@ const Listings = () => {
     }
   };
 
-
-  const statusDisplay = (status: string) => {
-    switch (status) {
-      case 'RESERVED':
-        return { label: 'Rezervat', className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/20' };
-      case 'SOLD':
-        return { label: 'Vândut', className: 'bg-muted text-muted-foreground border-border' };
-      case 'INCOMING':
-        return { label: 'În curând', className: 'bg-primary/10 text-primary border-primary/20' };
-      default:
-        return { label: 'Disponibil', className: 'bg-success-light text-success border-success/20' };
-    }
-  };
-
-  const filteredListings = listings.filter(listing =>
+  const currentListings = activeSegment === "instoc" ? inStockListings : soldListings;
+  const filteredListings = currentListings.filter((listing) =>
     listing.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestionează Anunțurile</h1>
-          <p className="text-muted-foreground mt-2">
-            Vizualizează, editează și gestionează toate anunțurile de pe platforma ta.
-          </p>
+  const renderEmptyState = () => {
+    if (activeSegment === "instoc") {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <Car className="w-12 h-12 text-muted-foreground mb-3" />
+          <h3 className="text-[15px] font-medium text-foreground">Nicio mașină în stoc.</h3>
+          <p className="text-xs text-muted-foreground mt-1">Adaugă prima mașină din butonul +</p>
         </div>
+      );
+    } else {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <Car className="w-12 h-12 text-muted-foreground mb-3" />
+          <h3 className="text-[15px] font-medium text-foreground">Nicio mașină vândută încă.</h3>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full">
+      {/* (a) Header row */}
+      <div className="flex justify-between items-center py-2 px-1">
+        <h1 className="text-[20px] font-semibold text-foreground">Mașini</h1>
         
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button
-            onClick={handleExportExcel}
-            variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0"
+            >
+              <MoreVertical className="h-5 w-5 text-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border min-w-[160px]">
+            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer">
+              Exportă Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer">
+              Previzualizează feed
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* (b) Search input */}
+      <div className="relative w-full px-1">
+        <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Caută marcă, model, an"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 bg-card border-border rounded-[var(--radius)] w-full py-6 focus:ring-0 focus:border-border text-[15px]"
+        />
+      </div>
+
+      {/* (c) Two-segment control */}
+      <div className="px-1">
+        <div className="bg-muted rounded-[var(--radius)] p-[3px] flex w-full">
+          <button
+            onClick={() => setActiveSegment("instoc")}
+            className={`flex-1 text-center py-2 text-sm rounded-md transition-all cursor-pointer font-medium ${
+              activeSegment === "instoc"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Exportă Excel
-          </Button>
-          <Button
-            onClick={() => setIsPreviewModalOpen(true)}
-            variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+            În stoc {inStockListings.length > 0 ? `· ${inStockListings.length}` : ""}
+          </button>
+          <button
+            onClick={() => setActiveSegment("vandute")}
+            className={`flex-1 text-center py-2 text-sm rounded-md transition-all cursor-pointer font-medium ${
+              activeSegment === "vandute"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Eye className="w-4 h-4 mr-2" />
-            Previzualizează Feed
-          </Button>
-          <Button 
-            onClick={() => navigate("/listings/new")}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adaugă Anunț Nou
-          </Button>
+            Vândute {soldListings.length > 0 ? `· ${soldListings.length}` : ""}
+          </button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <Card className="border-card-border bg-card">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Caută după titlu..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background border-border focus:border-primary"
-            />
+      {activeSegment === "vandute" && (
+        <div className="px-1 space-y-2.5">
+          {/* Money Panel */}
+          <div
+            onClick={() => navigate("/reports")}
+            className={`w-full border border-border rounded-xl p-3 flex flex-col justify-center cursor-pointer min-h-[52px] select-none ${panelBgClass} ${panelTextClass}`}
+          >
+            <div className="text-[13px] opacity-70">Luna asta</div>
+            <div className="text-[22px] font-semibold leading-tight">
+              {renderLine2()}
+            </div>
+            {showLine3 && (
+              <div className="text-[12px] opacity-70 mt-0.5">
+                profit calculat pe {profitCount} din {roCount(totalCurrentMonthCount, "mașină", "mașini")}
+              </div>
+            )}
+            {unrecordedSalesCount > 0 && (
+              <div className="text-[12px] opacity-70 mt-0.5">
+                {roCount(unrecordedSalesCount, "mașină vândută", "mașini vândute")} {unrecordedSalesCount === 1 ? "nu are" : "nu au"} data salvată
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Listings Table */}
-      <Card className="border-card-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Toate Anunțurile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="ml-4 text-muted-foreground">Se încarcă anunțurile...</p>
+          {/* Documents Row */}
+          <Link
+            to="/contracts"
+            className="flex items-center gap-3 px-3.5 py-4 hover:bg-accent/40 transition-colors w-full cursor-pointer min-h-[52px] bg-card border border-border rounded-xl select-none"
+          >
+            <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-grow min-w-0 flex flex-col text-left">
+              <span className="text-[15px] font-medium text-foreground leading-snug">
+                Toate actele
+              </span>
+              <span className="text-[12px] text-muted-foreground truncate leading-normal">
+                Contracte și procese-verbale
+              </span>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-                <Table>
-                <TableHeader className="hidden md:table-header-group">
-                    <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Imagine</TableHead>
-                    <TableHead className="text-foreground font-medium">Titlu</TableHead>
-                    <TableHead className="text-foreground font-medium">Categorie</TableHead>
-                    <TableHead className="text-foreground font-medium">Vizualizări</TableHead>
-                    <TableHead className="text-foreground font-medium">Dată Creare</TableHead>
-                    <TableHead className="text-foreground font-medium">Status</TableHead>
-                    <TableHead className="text-foreground font-medium">Autovit</TableHead>
-                    <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody className="block md:table-row-group">
-                    {filteredListings.map((listing) => (
-                    <TableRow key={listing.id} className="block md:table-row mb-4 md:mb-0 border md:border-b rounded-lg md:rounded-none shadow-md md:shadow-none">
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
-                            <span className="font-semibold text-foreground md:hidden">Imagine</span>
-                            {listing.images && listing.images.length > 0 ? (
-                                <img 
-                                src={listing.images[0].url} 
-                                alt={listing.title} 
-                                className="w-16 h-16 object-cover rounded-md"
-                                />
-                            ) : (
-                                <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                                <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                                </div>
-                            )}
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none font-medium text-foreground">
-                            <span className="font-semibold text-foreground md:hidden">Titlu</span>
-                            <span>{listing.title}</span>
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
-                            <span className="font-semibold text-foreground md:hidden">Categorie</span>
-                            <span>{listing.category.name}</span>
-                        </TableCell>
-                         <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
-                            <span className="font-semibold text-foreground md:hidden">Vizualizări</span>
-                            <div className="flex items-center gap-2">
-                                <Eye className="w-4 h-4" />
-                                <span>{listing._count?.views ?? 0}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none text-muted-foreground">
-                            <span className="font-semibold text-foreground md:hidden">Dată Creare</span>
-                            <span>{format(new Date(listing.createdAt), "dd MMM yyyy")}</span>
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
-                            <span className="font-semibold text-foreground md:hidden">Status</span>
-                            <Badge className={statusDisplay(listing.status).className}>
-                                {statusDisplay(listing.status).label}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 border-b md:border-none">
-                            <span className="font-semibold text-foreground md:hidden">Autovit</span>
-                            <AutovitStatusBadge 
-                              autovitId={listing.autovitId ?? null} 
-                              autovitStatus={listing.autovitStatus ?? null} 
-                            />
-                        </TableCell>
-                        <TableCell className="flex md:table-cell items-center justify-between p-4 md:text-right">
-                             <span className="font-semibold text-foreground md:hidden">Acțiuni</span>
-                             <ListingActionDropdown 
-                                listing={listing}
-                                onDelete={handleDeleteListing}
-                                onClone={handleCloneListing}
-                                onSold={handleOpenSoldModal}
-                                onGeneratePdf={handleGeneratePdf}
-                                onShowQr={handleShowQrCode}
-                                isPdfLoading={isGeneratingPdf && pdfListing?.id === listing.id}
-                                onDiagnose={handleOpenDiagnose}
-                                onGenerateOffer={handleOpenOfferModal}
-                                onGenerateContract={handleOpenContractModal}
-                                onReserve={handleOpenReserve}
-                             />
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          </Link>
+        </div>
+      )}
+
+      {/* (d) List Body */}
+      <div className="px-1">
+        {isLoading ? (
+          <div className="flex flex-col gap-2.5">
+            <ListingCardSkeleton />
+            <ListingCardSkeleton />
+            <ListingCardSkeleton />
+          </div>
+        ) : filteredListings.length === 0 ? (
+          renderEmptyState()
+        ) : (
+          <div className="flex flex-col gap-2.5 pb-20">
+            {filteredListings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                segment={activeSegment}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modals and PDFs */}
       {selectedListing && (
         <MarkAsSoldModal
           isOpen={isSoldModalOpen}
@@ -1093,7 +880,7 @@ const Listings = () => {
         listingTitle={selectedListing?.title || ""}
       />
 
-      <QrCodeModal 
+      <QrCodeModal
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         listingId={qrListing?.id || null}
@@ -1139,7 +926,7 @@ const Listings = () => {
       />
 
       {/* Hidden container for PDF generation */}
-      <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
+      <div style={{ position: "absolute", left: "-9999px", top: 0, zIndex: -1 }}>
         <div id="offscreen-spec-sheet">
           {pdfListing && <PrintableSpecSheet listing={pdfListing} />}
         </div>

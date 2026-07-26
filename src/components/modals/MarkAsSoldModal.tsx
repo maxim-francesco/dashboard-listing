@@ -60,6 +60,9 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
       toast.success(`Anunțul "${listingTitle}" a fost marcat ca vândut!`);
       queryClient.invalidateQueries({ queryKey: ['listings'] });
       queryClient.invalidateQueries({ queryKey: ['soldListings'] });
+      queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservationsForDashboard'] });
       onClose();
       form.reset();
     },
