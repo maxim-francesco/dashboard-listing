@@ -196,6 +196,7 @@ const AddEditListing = () => {
 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
+  const [initialStatus, setInitialStatus] = useState<string>("AVAILABLE");
   
   // Image & Video State
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
@@ -411,7 +412,9 @@ const AddEditListing = () => {
             }
           }
 
+          updatedFields.status = fetched.status || "AVAILABLE";
           setFields(updatedFields);
+          setInitialStatus(updatedFields.status);
           setSelectedFeatures(matchedFeatureIds);
         }
       } catch (err) {
@@ -783,18 +786,29 @@ const AddEditListing = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status" className="text-foreground font-medium">Status</Label>
-                  <Select value={fields.status} onValueChange={(val) => handleFieldChange("status", val)}>
-                    <SelectTrigger className="bg-background border-border focus:border-primary">
-                      <SelectValue placeholder="Alege status" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {getOptions(STATUS_LABELS, LISTING_STATUSES).map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {initialStatus === "AVAILABLE" || initialStatus === "INCOMING" ? (
+                    <Select value={fields.status} onValueChange={(val) => handleFieldChange("status", val)}>
+                      <SelectTrigger className="bg-background border-border focus:border-primary">
+                        <SelectValue placeholder="Alege status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {getOptions(STATUS_LABELS, ["AVAILABLE", "INCOMING"] as const).map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">
+                        {STATUS_LABELS[fields.status as ListingStatusType] || fields.status}
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">
+                        Statusul se schimbă din acțiunile de pe fișa mașinii.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -141,15 +141,57 @@ export const reverseMapEnum = <T extends string>(
   const normVal = normalizeString(rawValue);
   
   for (const [key, patterns] of Object.entries<string[]>(mapping)) {
-    for (const pattern of patterns) {
+    const positivePatterns = patterns.filter(p => !p.startsWith("not:"));
+    const negativePatterns = patterns.filter(p => p.startsWith("not:"));
+    
+    let positiveMatched = false;
+    for (const pattern of positivePatterns) {
       if (pattern.startsWith("contains:")) {
         const sub = pattern.slice(9);
-        if (normVal.includes(sub)) return key as T;
+        if (normVal.includes(sub)) {
+          positiveMatched = true;
+          break;
+        }
       } else if (pattern.startsWith("prefix:")) {
         const pre = pattern.slice(7);
-        if (normVal.startsWith(pre)) return key as T;
+        if (normVal.startsWith(pre)) {
+          positiveMatched = true;
+          break;
+        }
       } else {
-        if (normVal === pattern) return key as T;
+        if (normVal === pattern) {
+          positiveMatched = true;
+          break;
+        }
+      }
+    }
+    
+    if (positiveMatched) {
+      let negativeMatched = false;
+      for (const pattern of negativePatterns) {
+        const excludeTerm = pattern.slice(4);
+        if (excludeTerm.startsWith("contains:")) {
+          const sub = excludeTerm.slice(9);
+          if (normVal.includes(sub)) {
+            negativeMatched = true;
+            break;
+          }
+        } else if (excludeTerm.startsWith("prefix:")) {
+          const pre = excludeTerm.slice(7);
+          if (normVal.startsWith(pre)) {
+            negativeMatched = true;
+            break;
+          }
+        } else {
+          if (normVal.startsWith(excludeTerm) || normVal === excludeTerm) {
+            negativeMatched = true;
+            break;
+          }
+        }
+      }
+      
+      if (!negativeMatched) {
+        return key as T;
       }
     }
   }
