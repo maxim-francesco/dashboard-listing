@@ -1,13 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +11,17 @@ import {
   CalendarClock, 
   MessageSquare, 
   BookmarkCheck,
-  User
+  User,
+  Phone,
+  Calendar
 } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 import { getCustomer } from "@/services/api";
+import { formatEur } from "@/lib/format";
+import { roCount } from "@/lib/plural";
+import { relativeTime } from "@/lib/relativeTime";
+import AppointmentModal from "@/components/modals/AppointmentModal";
 
 const TYPE_LABELS: Record<string, string> = {
   TEST_DRIVE: 'Test-drive',
@@ -48,6 +47,8 @@ const RESERVATION_STATUS_LABELS: Record<string, string> = {
 const CustomerDetailPage = () => {
   const { phone } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { data: customer, isLoading, isError } = useQuery({
     queryKey: ['customer', phone],
@@ -63,11 +64,6 @@ const CustomerDetailPage = () => {
     } catch (e) {
       return "N/A";
     }
-  };
-
-  const formatPrice = (price?: number) => {
-    if (price === undefined || price === null) return "N/A";
-    return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(price);
   };
 
   if (isLoading) {
@@ -101,45 +97,60 @@ const CustomerDetailPage = () => {
 
   const contracts = customer.contracts ?? [];
   const reservations = customer.reservations ?? [];
+  const offers = customer.offers ?? [];
   const appointments = customer.appointments ?? [];
   const messages = customer.messages ?? [];
 
+  const tomorrowStart = new Date();
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  tomorrowStart.setHours(10, 0, 0, 0);
+
+  const tomorrowEnd = new Date(tomorrowStart.getTime() + 60 * 60 * 1000);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Back navigation */}
       <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
         <ArrowLeft className="w-4 h-4" /> Înapoi la clienți
       </Button>
 
-      {/* Header Profile Card */}
-      <Card className="border-card-border bg-card">
-        <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground">{customer.name || "Nume necunoscut"}</h1>
-            <p className="text-lg text-muted-foreground font-medium">+{customer.phone}</p>
-          </div>
+      {/* Header Profile */}
+      <div>
+        <h1 className="text-[20px] font-semibold text-foreground leading-tight">
+          {customer.name || "Nume necunoscut"}
+        </h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">
+          {(() => {
+            const subtitleParts: string[] = [];
+            if (contracts.length > 0) subtitleParts.push(roCount(contracts.length, "contract", "contracte"));
+            if (reservations.length > 0) subtitleParts.push(roCount(reservations.length, "rezervare", "rezervări"));
+            if (offers.length > 0) subtitleParts.push(roCount(offers.length, "ofertă", "oferte"));
+            if (appointments.length > 0) subtitleParts.push(roCount(appointments.length, "programare", "programări"));
+            if (messages.length > 0) subtitleParts.push(roCount(messages.length, "mesaj", "mesaje"));
 
-          <div className="flex flex-wrap gap-1.5 sm:self-center">
-            {contracts.length > 0 && (
-              <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/10 border-blue-500/20">
-                Cumpărător
-              </Badge>
-            )}
-            {reservations.length > 0 && (
-              <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/10 border-amber-500/20">
-                Rezervare
-              </Badge>
-            )}
-            {appointments.length > 0 && (
-              <Badge className="bg-teal-500/10 text-teal-500 hover:bg-teal-500/10 border-teal-500/20">
-                Programare
-              </Badge>
-            )}
-            {messages.length > 0 && (
-              <Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/10 border-purple-500/20">
-                Mesaj
-              </Badge>
-            )}
+            return [customer.phone, ...subtitleParts].filter(Boolean).join(" · ");
+          })()}
+        </p>
+      </div>
+
+      {/* Action Buttons Card */}
+      <Card className="border-card-border bg-card">
+        <CardContent className="pt-6">
+          <div className="flex gap-2 w-full">
+            <a
+              href={`tel:+${customer.phone}`}
+              className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-medium min-h-[52px]"
+            >
+              <Phone className="w-5 h-5 shrink-0" />
+              <span>Sună</span>
+            </a>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+            >
+              <Calendar className="w-5 h-5 shrink-0" />
+              <span>Programare</span>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -151,36 +162,18 @@ const CustomerDetailPage = () => {
             <FileText className="w-5 h-5 text-blue-500" />
             <CardTitle className="text-foreground">Contracte de Vânzare ({contracts.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Nr. Contract</TableHead>
-                    <TableHead className="text-foreground font-medium">Mașină</TableHead>
-                    <TableHead className="text-foreground font-medium">Preț Vânzare</TableHead>
-                    <TableHead className="text-foreground font-medium">Dată Vânzare</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contracts.map((c: any) => (
-                    <TableRow key={c.id || c.contractNumber} className="border-border">
-                      <TableCell className="font-semibold text-foreground">
-                        #{c.contractNumber}
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {c.car || "Vehicul fără titlu"}
-                      </TableCell>
-                      <TableCell className="font-semibold text-foreground">
-                        {formatPrice(c.salePrice)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(c.saleDate)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {contracts.map((c: any) => (
+                <div key={c.id || c.contractNumber} className="py-3 px-4 min-h-[52px]">
+                  <div className="text-[15px] font-medium text-foreground truncate">
+                    #{c.contractNumber} · {c.car || "Vehicul fără titlu"}
+                  </div>
+                  <div className="text-[13px] text-muted-foreground mt-0.5">
+                    {formatEur(c.salePrice)} · {formatDate(c.saleDate)}
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -193,38 +186,58 @@ const CustomerDetailPage = () => {
             <BookmarkCheck className="w-5 h-5 text-amber-500" />
             <CardTitle className="text-foreground">Rezervări înregistrate ({reservations.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Mașină</TableHead>
-                    <TableHead className="text-foreground font-medium">Avans Plătit</TableHead>
-                    <TableHead className="text-foreground font-medium">Dată Rezervare</TableHead>
-                    <TableHead className="text-foreground font-medium">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reservations.map((r: any) => (
-                    <TableRow key={r.id} className="border-border">
-                      <TableCell className="text-foreground">
-                        {r.car || "Vehicul fără titlu"}
-                      </TableCell>
-                      <TableCell className="font-semibold text-foreground">
-                        {formatPrice(r.depositAmount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(r.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {RESERVATION_STATUS_LABELS[r.status] || r.status || "N/A"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {reservations.map((r: any) => (
+                <div key={r.id} className="py-3 px-4 min-h-[52px]">
+                  <div className="text-[15px] font-medium text-foreground truncate">
+                    {r.car || "Vehicul fără titlu"}
+                  </div>
+                  <div className="text-[13px] text-muted-foreground mt-0.5">
+                    {formatEur(r.depositAmount)} avans · {formatDate(r.createdAt)} · {RESERVATION_STATUS_LABELS[r.status] || r.status || "N/A"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 2.5. OFFERS SECTION */}
+      {offers.length > 0 && (
+        <Card className="border-card-border bg-card">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <FileText className="w-5 h-5 text-indigo-500" />
+            <CardTitle className="text-foreground">Oferte trimise ({offers.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {offers.map((o: any) => {
+                const getOfferStateText = (offer: any) => {
+                  if (offer.viewedAt) {
+                    return `văzută ${relativeTime(offer.viewedAt)}`;
+                  }
+                  if (offer.expiresAt && new Date(offer.expiresAt) < new Date()) {
+                    return "expirată";
+                  }
+                  return "trimisă, nedeschisă";
+                };
+                return (
+                  <div key={o.id} className="flex justify-between items-start py-3 px-4 min-h-[52px]">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[15px] font-medium text-foreground truncate">
+                        {o.car || "Vehicul fără titlu"}
+                      </div>
+                      <div className="text-[13px] text-muted-foreground mt-0.5">
+                        {formatDate(o.createdAt, "dd MMM yyyy")} · <span className={o.viewedAt ? "text-success" : (o.expiresAt && new Date(o.expiresAt) < new Date()) ? "text-destructive" : "text-muted-foreground"}>{getOfferStateText(o)}</span>
+                      </div>
+                    </div>
+                    <div className="text-[15px] font-semibold text-foreground shrink-0 pl-3">
+                      {formatEur(o.offerPrice)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -237,43 +250,23 @@ const CustomerDetailPage = () => {
             <CalendarClock className="w-5 h-5 text-teal-500" />
             <CardTitle className="text-foreground">Programări în Calendar ({appointments.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Titlu / Tip</TableHead>
-                    <TableHead className="text-foreground font-medium">Dată și Oră</TableHead>
-                    <TableHead className="text-foreground font-medium">Status</TableHead>
-                    <TableHead className="text-foreground font-medium">Observații</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appointments.map((a: any) => (
-                    <TableRow key={a.id} className="border-border">
-                      <TableCell className="text-foreground">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-semibold">{a.title || "Programare"}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {TYPE_LABELS[a.type] || a.type || "Altele"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-foreground font-medium">
-                        {formatDate(a.startAt, "dd MMM yyyy, HH:mm")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {STATUS_LABELS[a.status] || a.status || "Programată"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-xs truncate">
-                        {a.notes || "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {appointments.map((a: any) => (
+                <div key={a.id} className="py-3 px-4 min-h-[52px]">
+                  <div className="text-[15px] font-medium text-foreground truncate">
+                    {a.title || "Programare"}
+                  </div>
+                  <div className="text-[13px] text-muted-foreground mt-0.5">
+                    {TYPE_LABELS[a.type] || a.type || "Altele"} · {formatDate(a.startAt, "dd MMM yyyy, HH:mm")} · {STATUS_LABELS[a.status] || a.status || "Programată"}
+                  </div>
+                  {a.notes && (
+                    <div className="text-[12px] text-muted-foreground/80 mt-1">
+                      {a.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -305,13 +298,27 @@ const CustomerDetailPage = () => {
                   )}
                 </div>
                 <p className="text-sm text-foreground italic">
-                  "{m.message || m.content || m.text || "Fără conținut textual."}"
+                  {m.message || m.content || m.text || "Fără conținut textual."}
                 </p>
               </div>
             ))}
           </CardContent>
         </Card>
       )}
+
+      <AppointmentModal
+        isOpen={modalOpen}
+        mode="create"
+        initial={{
+          clientName: customer.name || "",
+          clientPhone: customer.phone || "",
+          type: 'OTHER',
+          startAt: tomorrowStart.toISOString(),
+          endAt: tomorrowEnd.toISOString(),
+        }}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ['customer', phone] })}
+      />
     </div>
   );
 };
