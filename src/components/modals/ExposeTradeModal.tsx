@@ -8,8 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,23 +98,23 @@ const ExposeTradeModal = ({ isOpen, onClose, listing, mode, onSubmit }: ExposeTr
           <DialogDescription>{desc}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-2">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 pt-2">
             <FormField
               control={form.control}
               name="b2bPrice"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preț B2B (€)</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-[15px] font-medium text-foreground">Preț B2B (€)</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
                       placeholder="ex: 15000" 
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value)}
-                      className="bg-background" 
+                      className="bg-background min-h-[48px] text-[16px]" 
                     />
                   </FormControl>
-                  <span className="text-[11px] text-muted-foreground block mt-1">
+                  <span className="text-[13px] text-muted-foreground block mt-1">
                     Lasă gol ca să folosești prețul public
                   </span>
                   <FormMessage />
@@ -127,18 +126,22 @@ const ExposeTradeModal = ({ isOpen, onClose, listing, mode, onSubmit }: ExposeTr
               control={form.control}
               name="acceptsTrade"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-3 shadow-sm">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4 shadow-sm">
                   <div className="space-y-0.5">
-                    <FormLabel>Acceptă schimburi</FormLabel>
-                    <span className="text-[11px] text-muted-foreground block">
+                    <FormLabel className="text-[15px] font-medium text-foreground cursor-pointer">
+                      Accept schimb cu altă mașină
+                    </FormLabel>
+                    <span className="text-[13px] text-muted-foreground block">
                       Accept și schimb, nu doar bani
                     </span>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <div className="relative">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </div>
                   </FormControl>
                 </FormItem>
               )}
@@ -148,12 +151,12 @@ const ExposeTradeModal = ({ isOpen, onClose, listing, mode, onSubmit }: ExposeTr
               control={form.control}
               name="note"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notă / Detalii schimb</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-[15px] font-medium text-foreground">Notă / Detalii schimb</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="Adaugă mențiuni despre mașină, starea ei, sau ce fel de schimburi te interesează..." 
-                      className="bg-background min-h-[100px] resize-none"
+                      className="bg-background min-h-[100px] text-[16px] resize-none"
                       {...field}
                       value={field.value ?? ""}
                     />
@@ -163,18 +166,22 @@ const ExposeTradeModal = ({ isOpen, onClose, listing, mode, onSubmit }: ExposeTr
               )}
             />
 
-            <DialogFooter className="pt-4">
+            <div className="pt-4 border-t border-border mt-6 flex flex-row gap-3">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onClose}
+                className="flex-1 min-h-[52px] bg-card border border-border text-foreground font-semibold text-[16px]"
               >
                 Anulează
               </Button>
-              <Button type="submit">
+              <Button 
+                type="submit"
+                className="flex-1 min-h-[52px] bg-primary text-primary-foreground font-semibold text-[16px]"
+              >
                 {mode === "edit" ? "Salvează" : "Expune"}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>

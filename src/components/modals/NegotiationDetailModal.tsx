@@ -6,7 +6,8 @@ import { z } from "zod";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
-import { Loader2, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, Car } from "lucide-react";
+import { formatEur } from "@/lib/format";
 
 import {
   Dialog,
@@ -85,20 +86,26 @@ interface NegotiationDetailModalProps {
 const MiniCarCard = ({ car }: { car: any }) => {
   if (!car) return null;
   return (
-    <div className="flex gap-3 bg-muted/40 border border-border p-2 rounded-md mt-1.5 max-w-sm">
-      <div className="w-16 h-12 shrink-0 bg-muted rounded overflow-hidden">
+    <div className="flex gap-3 bg-muted/40 border border-border p-2 rounded-md mt-1.5 max-w-sm text-left">
+      <div className="w-16 h-12 shrink-0 bg-muted rounded-md overflow-hidden flex items-center justify-center">
         {car.image ? (
           <img src={car.image} alt={car.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <span className="text-[8px] italic">Fără foto</span>
-          </div>
+          <Car className="w-6 h-6 text-muted-foreground" />
         )}
       </div>
-      <div className="min-w-0 flex-1 text-xs">
-        <div className="font-bold truncate text-foreground">{car.title}</div>
-        <div className="text-muted-foreground mt-0.5">
-          {car.year ? `${car.year} · ` : ""}{car.mileage ? `${car.mileage.toLocaleString()} km` : ""}
+      <div className="min-w-0 flex-1">
+        <div className="text-[14px] font-semibold text-foreground leading-snug">
+          {formatEur(car.price)}
+        </div>
+        <div className="text-[13px] text-foreground truncate">{car.title}</div>
+        <div className="text-[12px] text-muted-foreground mt-0.5">
+          {[
+            car.year,
+            car.mileage !== null && car.mileage !== undefined
+              ? `${Intl.NumberFormat("ro-RO").format(car.mileage)} km`
+              : null
+          ].filter(Boolean).join(" · ")}
         </div>
       </div>
     </div>
@@ -214,55 +221,7 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
     counterMutation.mutate(payload);
   };
 
-  const getRoleClass = (role: string) => {
-    return role === "SELLER" 
-      ? "bg-purple-500/10 text-purple-600 hover:bg-purple-500/10 border-purple-500/20" 
-      : "bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 border-blue-500/20";
-  };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "OPEN": return "În negociere";
-      case "ACCEPTED": return "Acceptată";
-      case "DECLINED": return "Refuzată";
-      case "CANCELLED": return "Anulată";
-      default: return status;
-    }
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case "OPEN": return "bg-amber-500/10 text-amber-600 hover:bg-amber-500/10 border-amber-500/20";
-      case "ACCEPTED": return "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 border-emerald-500/20";
-      case "DECLINED": return "bg-rose-500/10 text-rose-600 hover:bg-rose-50/10 border-rose-500/20";
-      case "CANCELLED": return "bg-slate-500/10 text-slate-600 hover:bg-slate-500/10 border-slate-500/20";
-      default: return "bg-slate-500/10 text-slate-600 border-slate-500/20";
-    }
-  };
-
-  const getProposalStatusLabel = (status: string) => {
-    switch (status) {
-      case "PENDING": return "Curentă";
-      case "SUPERSEDED": return "Depășită";
-      case "ACCEPTED": return "Acceptată";
-      case "DECLINED": return "Refuzată";
-      default: return status;
-    }
-  };
-
-  const getProposalStatusClass = (status: string) => {
-    switch (status) {
-      case "PENDING": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-      case "SUPERSEDED": return "bg-muted text-muted-foreground border-border";
-      case "ACCEPTED": return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-      case "DECLINED": return "bg-rose-500/10 text-rose-600 border-rose-500/20";
-      default: return "bg-slate-500/10 text-slate-600 border-slate-500/20";
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ro-RO", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(price);
-  };
 
   if (!isOpen) return null;
 
@@ -285,22 +244,21 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
         ) : (
           <>
             <DialogHeader>
-              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                <DialogTitle className="text-foreground flex items-center gap-2">
-                  Detaliu Negociere
-                </DialogTitle>
-                <div className="flex items-center gap-1.5">
-                  <Badge className={cn("text-[10px] font-bold px-2 py-0.5", getRoleClass(negotiation.role))}>
-                    {negotiation.role === "SELLER" ? "Vânzător" : "Cumpărător"}
-                  </Badge>
-                  <Badge className={cn("text-[10px] font-bold px-2 py-0.5", getStatusClass(negotiation.status))}>
-                    {getStatusLabel(negotiation.status)}
-                  </Badge>
-                </div>
-              </div>
-              <DialogDescription className="text-left">
-                Negociere cu {negotiation.counterparty?.name || "Dealer rețea"}{" "}
-                {negotiation.counterparty?.city ? `(${negotiation.counterparty.city})` : ""}
+              <DialogTitle className="text-[17px] font-semibold text-foreground truncate text-left">
+                {negotiation.car?.title || "Negociere"}
+              </DialogTitle>
+              <DialogDescription className="text-[13px] text-muted-foreground text-left mt-1">
+                {(() => {
+                  const roleText = negotiation.role === "SELLER" ? "Tu vinzi" : "Tu cumperi";
+                  const partnerName = negotiation.counterparty?.name || "";
+                  let stateText = "";
+                  if (negotiation.status !== "OPEN") {
+                    if (negotiation.status === "ACCEPTED") stateText = " · acceptată";
+                    else if (negotiation.status === "DECLINED") stateText = " · refuzată";
+                    else if (negotiation.status === "CANCELLED") stateText = " · anulată";
+                  }
+                  return `${roleText} · ${partnerName}${stateText}`;
+                })()}
               </DialogDescription>
             </DialogHeader>
 
@@ -308,84 +266,63 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
               {/* Target Car Context panel */}
               {negotiation.car && (
                 <div className="flex gap-4 p-3 bg-muted/40 border border-border rounded-lg">
-                  <div className="w-20 h-16 shrink-0 bg-muted rounded overflow-hidden relative">
+                  <div className="w-[80px] h-[64px] shrink-0 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
                     {negotiation.car.image ? (
                       <img src={negotiation.car.image} alt={negotiation.car.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px] italic">
-                        Fără imagine
-                      </div>
+                      <Car className="w-8 h-8 text-muted-foreground" />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1 text-xs">
-                    <div className="font-bold text-foreground text-sm truncate leading-snug">{negotiation.car.title}</div>
-                    <p className="text-muted-foreground mt-0.5">
-                      {negotiation.car.year ? `${negotiation.car.year} · ` : ""}{negotiation.car.mileage ? `${negotiation.car.mileage.toLocaleString()} km` : ""}
-                    </p>
-                    <p className="text-foreground mt-1.5 font-semibold">
-                      Preț listă: {negotiation.car.price ? `${negotiation.car.price.toLocaleString()} €` : "—"}
-                    </p>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="text-[17px] font-semibold text-foreground leading-snug">
+                      {formatEur(negotiation.car.price)}
+                    </div>
+                    <div className="text-[15px] text-foreground truncate mt-0.5">{negotiation.car.title}</div>
+                    <div className="text-[13px] text-muted-foreground mt-0.5">
+                      {[
+                        negotiation.car.year,
+                        negotiation.car.mileage !== null && negotiation.car.mileage !== undefined
+                          ? `${Intl.NumberFormat("ro-RO").format(negotiation.car.mileage)} km`
+                          : null
+                      ].filter(Boolean).join(" · ")}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Proposal History (Timeline, oldest -> newest) */}
+              {/* Proposal History */}
               <div className="space-y-3">
-                <h4 className="font-bold text-sm text-foreground">Istoric Propuneri</h4>
-                <div className="relative border-l border-border pl-4 ml-2 space-y-4">
+                <h4 className="text-[15px] font-semibold text-foreground text-left">Ce s-a oferit</h4>
+                <div className="border-t border-border divide-y divide-border">
                   {[...negotiation.proposals]
                     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                     .map((proposal) => {
-                      const dateStr = format(new Date(proposal.createdAt), "d MMM yyyy, HH:mm", { locale: ro });
+                      const dateStr = format(new Date(proposal.createdAt), "d MMM, HH:mm", { locale: ro });
+                      const isLatest = proposal.status === "PENDING";
+                      const name = proposal.proposer?.name || "Dealer";
+                      const proposalText = proposal.fromMe
+                        ? (isLatest ? "Tu oferi" : "Tu ai oferit")
+                        : (isLatest ? `${name} oferă` : `${name} a oferit`);
+                      const isExchange = proposal.kind === "EXCHANGE";
+
                       return (
-                        <div key={proposal.id} className="relative">
-                          {/* Timeline dot */}
-                          <div className={cn(
-                            "absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border bg-background",
-                            proposal.status === "PENDING" ? "border-blue-500 bg-blue-500" : "border-muted-foreground/30 bg-muted/50"
-                          )} />
-
-                          <div className="bg-card border border-border/80 p-3 rounded-lg space-y-2 shadow-sm text-xs text-left">
-                            <div className="flex justify-between items-start gap-2 flex-wrap">
-                              <span className="font-bold text-foreground">
-                                {proposal.fromMe ? "Tu" : (proposal.proposer?.name || "Dealer")}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Badge className="text-[9px] font-semibold bg-muted/60 text-muted-foreground hover:bg-muted/60 px-1.5 py-0 border-none">
-                                  {proposal.kind === "BUY" ? "Cumpărare" : "Schimb"}
-                                </Badge>
-                                <Badge className={cn("text-[9px] font-bold px-1.5 py-0", getProposalStatusClass(proposal.status))}>
-                                  {getProposalStatusLabel(proposal.status)}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="text-foreground font-medium">
-                              {proposal.kind === "BUY" ? (
-                                <span>Ofertă preț: <strong>{formatPrice(proposal.offeredPrice || 0)}</strong></span>
-                              ) : (
-                                <div className="space-y-1">
-                                  <div>
-                                    Oferă la schimb: <strong>{proposal.offeredCar?.title || "Schimb"}</strong>
-                                    {proposal.offeredPrice && proposal.offeredPrice > 0 
-                                      ? ` + ${formatPrice(proposal.offeredPrice)}` 
-                                      : ""}
-                                  </div>
-                                  <MiniCarCard car={proposal.offeredCar} />
-                                </div>
-                              )}
-                            </div>
-
-                            {proposal.note && (
-                              <div className="bg-muted/20 border border-border/40 p-2 rounded text-[11px] text-muted-foreground italic">
-                                "{proposal.note}"
-                              </div>
-                            )}
-
-                            <div className="text-[10px] text-muted-foreground text-right">
-                              {dateStr}
-                            </div>
+                        <div key={proposal.id} className="py-3 text-left">
+                          <div className="text-[15px] text-foreground">
+                            {proposalText} {formatEur(proposal.offeredPrice || 0)}
+                            {isExchange && " (schimb)"}
                           </div>
+                          {isExchange && proposal.offeredCar && (
+                            <MiniCarCard car={proposal.offeredCar} />
+                          )}
+                          <div className="text-[13px] text-muted-foreground mt-0.5">
+                            {dateStr}
+                            {proposal.status === "SUPERSEDED" && " · depășită"}
+                          </div>
+                          {proposal.note && (
+                            <div className="mt-1 text-[13px] text-foreground">
+                              «{proposal.note}»
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -398,48 +335,49 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
                   Ofertă acceptată. Continuați detaliile pe chat.
                 </div>
               )}
+            </div>
 
-              {/* Action Buttons or Inline Form (only when status is OPEN) */}
-              {negotiation.status === "OPEN" && (
-                <div className="pt-4 border-t border-border space-y-4">
-                  {showCounterForm ? (
-                    <Form {...counterForm}>
-                      <form onSubmit={counterForm.handleSubmit(handleCounterSubmit)} className="space-y-4 bg-muted/20 p-4 rounded-lg border border-border">
-                        <h5 className="font-semibold text-sm text-foreground text-left">Propune o contraofertă</h5>
-                        <OfferFields
-                          control={counterForm.control}
-                          register={counterForm.register}
-                          kind={counterForm.watch("kind")}
-                          setValue={counterForm.setValue}
-                        />
-                        <div className="flex justify-end gap-2 pt-2">
+            {/* Actions Block */}
+            <div className="pt-4 border-t border-border space-y-2">
+              {negotiation.status === "OPEN" && showCounterForm ? (
+                <Form {...counterForm}>
+                  <form onSubmit={counterForm.handleSubmit(handleCounterSubmit)} className="space-y-4">
+                    <h5 className="font-semibold text-sm text-foreground text-left">Propune o contraofertă</h5>
+                    <OfferFields
+                      control={counterForm.control}
+                      register={counterForm.register}
+                      kind={counterForm.watch("kind")}
+                      setValue={counterForm.setValue}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        className="flex-1 min-h-[44px] bg-card border border-border text-foreground hover:bg-accent"
+                        onClick={() => setShowCounterForm(false)}
+                        disabled={counterMutation.isPending}
+                      >
+                        Anulează
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="flex-1 min-h-[44px] bg-primary text-primary-foreground hover:bg-primary/95"
+                        disabled={counterMutation.isPending}
+                      >
+                        {counterMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Trimite
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              ) : (
+                <div className="space-y-2">
+                  {negotiation.status === "OPEN" && (
+                    <>
+                      {negotiation.awaitingMyResponse ? (
+                        <div className="flex gap-2">
                           <Button
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowCounterForm(false)}
-                            disabled={counterMutation.isPending}
-                          >
-                            Anulează
-                          </Button>
-                          <Button
-                            type="submit"
-                            size="sm"
-                            disabled={counterMutation.isPending}
-                          >
-                            {counterMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                            Trimite
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  ) : (
-                    <div className="space-y-3">
-                      {negotiation.awaitingMyResponse ? (
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="default"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 text-xs font-semibold"
+                            className="bg-success text-success-foreground hover:bg-success/90 min-h-[44px] flex-1 font-semibold text-[15px]"
                             onClick={() => {
                               if (window.confirm("Accepți? Mașina se blochează la schimb.")) {
                                 acceptMutation.mutate();
@@ -451,21 +389,8 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
                             Acceptă
                           </Button>
                           <Button
-                            variant="destructive"
-                            className="flex-1 text-xs font-semibold"
-                            onClick={() => {
-                              if (window.confirm("Ești sigur că vrei să refuzi această ofertă?")) {
-                                declineMutation.mutate();
-                              }
-                            }}
-                            disabled={acceptMutation.isPending || declineMutation.isPending || cancelMutation.isPending}
-                          >
-                            {declineMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                            Refuză
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="flex-1 text-xs font-semibold text-foreground"
+                            type="button"
+                            className="bg-card border border-border text-foreground hover:bg-accent min-h-[44px] flex-1 font-semibold text-[15px]"
                             onClick={() => {
                               const latest = negotiation.latestProposal;
                               counterForm.reset({
@@ -486,50 +411,59 @@ const NegotiationDetailModal = ({ negotiationId, isOpen, onClose, onConverse }: 
                           Aștepți răspunsul lui {negotiation.counterparty?.name || "dealerului"}.
                         </p>
                       )}
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs font-semibold text-muted-foreground hover:text-rose-600 hover:bg-rose-50/50"
-                          onClick={() => {
-                            if (window.confirm("Ești sigur că vrei să renunți la această negociere?")) {
-                              cancelMutation.mutate();
-                            }
-                          }}
-                          disabled={acceptMutation.isPending || declineMutation.isPending || cancelMutation.isPending}
-                        >
-                          {cancelMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                          Renunță
-                        </Button>
-                      </div>
-                    </div>
+                    </>
+                  )}
+
+                  {/* Refuză button if OPEN and awaiting my response */}
+                  {negotiation.status === "OPEN" && negotiation.awaitingMyResponse && (
+                    <Button
+                      type="button"
+                      className="w-full bg-card border border-border text-destructive hover:bg-destructive/10 min-h-[44px] font-semibold text-[15px]"
+                      onClick={() => {
+                        if (window.confirm("Ești sigur că vrei să refuzi această ofertă?")) {
+                          declineMutation.mutate();
+                        }
+                      }}
+                      disabled={acceptMutation.isPending || declineMutation.isPending || cancelMutation.isPending}
+                    >
+                      {declineMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      Refuză
+                    </Button>
+                  )}
+
+                  {/* Scrie-i (Conversează) button */}
+                  <Button
+                    type="button"
+                    className="w-full bg-card border border-border text-foreground hover:bg-accent min-h-[44px] flex items-center justify-center gap-1.5 font-semibold text-[15px]"
+                    onClick={() => {
+                      onConverse(negotiation.tradeListingId, negotiation.counterparty?.id || "");
+                      onClose();
+                    }}
+                  >
+                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                    Scrie-i
+                  </Button>
+
+                  {/* Renunță (cancel) button if OPEN */}
+                  {negotiation.status === "OPEN" && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full text-[13px] text-muted-foreground hover:text-rose-600 hover:bg-rose-50/50 min-h-[44px] font-semibold"
+                      onClick={() => {
+                        if (window.confirm("Ești sigur că vrei să renunți la această negociere?")) {
+                          cancelMutation.mutate();
+                        }
+                      }}
+                      disabled={acceptMutation.isPending || declineMutation.isPending || cancelMutation.isPending}
+                    >
+                      {cancelMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      Renunță
+                    </Button>
                   )}
                 </div>
               )}
             </div>
-
-            <DialogFooter className="pt-4 flex flex-row items-center justify-between gap-2 border-t border-border">
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex items-center gap-1.5 text-xs font-semibold text-foreground bg-secondary hover:bg-secondary/80 border border-border shadow-sm"
-                onClick={() => {
-                  onConverse(negotiation.tradeListingId, negotiation.counterparty?.id || "");
-                  onClose();
-                }}
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                Conversează
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="text-xs text-foreground"
-                onClick={onClose}
-              >
-                Închide
-              </Button>
-            </DialogFooter>
           </>
         )}
       </DialogContent>

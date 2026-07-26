@@ -4,7 +4,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Car } from "lucide-react";
+import { formatEur } from "@/lib/format";
 
 import {
   Dialog,
@@ -152,23 +153,39 @@ const MakeOfferModal = ({ isOpen, onClose, listing, onCreated, onExisting }: Mak
     }}>
       <DialogContent className="bg-popover border-border max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Fă o ofertă B2B</DialogTitle>
-          <DialogDescription>
-            Propune o tranzacție sau un schimb pentru acest vehicul din rețea.
-          </DialogDescription>
+          <DialogTitle className="text-[17px] font-semibold text-foreground text-left">Fă o ofertă</DialogTitle>
         </DialogHeader>
 
         {/* Target Car Context Panel */}
-        <div className="bg-muted/40 border border-border p-3 rounded-lg text-xs space-y-1">
-          <div className="font-bold text-foreground">{listing.car.title}</div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground mt-0.5">
-            <span>Preț public: <strong>{listing.car.price ? `${listing.car.price.toLocaleString()} €` : "—"}</strong></span>
-            {listing.b2bPrice && (
-              <span className="text-emerald-600 font-semibold">Preț B2B: {listing.b2bPrice.toLocaleString()} €</span>
-            )}
-            <span>Dealer: <strong>{listing.owner?.name || "Necunoscut"}</strong></span>
+        {listing.car && (
+          <div className="flex gap-4 p-3 bg-muted/40 border border-border rounded-lg">
+            <div className="w-[80px] h-[64px] shrink-0 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+              {listing.car.image ? (
+                <img src={listing.car.image} alt={listing.car.title} className="w-full h-full object-cover" />
+              ) : (
+                <Car className="w-8 h-8 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[17px] font-semibold text-foreground">
+                  {formatEur(listing.b2bPrice || listing.car.price)}
+                </span>
+                {listing.b2bPrice && listing.b2bPrice !== listing.car.price && (
+                  <span className="text-[13px] text-muted-foreground line-through">
+                    {formatEur(listing.car.price)}
+                  </span>
+                )}
+              </div>
+              <div className="text-[15px] text-foreground truncate mt-0.5">{listing.car.title}</div>
+              {listing.owner?.name && (
+                <div className="text-[13px] text-muted-foreground mt-0.5">
+                  {listing.owner.name}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-2">
@@ -179,20 +196,24 @@ const MakeOfferModal = ({ isOpen, onClose, listing, onCreated, onExisting }: Mak
               setValue={form.setValue}
             />
 
-            <DialogFooter className="pt-4">
+            <div className="flex gap-2 pt-4">
               <Button 
                 type="button" 
-                variant="outline" 
+                className="flex-1 min-h-[44px] bg-card border border-border text-foreground hover:bg-accent text-[15px] font-semibold"
                 onClick={onClose}
                 disabled={proposalMutation.isPending}
               >
                 Anulează
               </Button>
-              <Button type="submit" disabled={proposalMutation.isPending}>
+              <Button 
+                type="submit" 
+                className="flex-1 min-h-[44px] bg-primary text-primary-foreground hover:bg-primary/95 text-[15px] font-semibold"
+                disabled={proposalMutation.isPending}
+              >
                 {proposalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Trimite oferta
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>

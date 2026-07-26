@@ -7,7 +7,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Loader2, Phone, Mail, MapPin } from "lucide-react";
+import { Loader2, Phone, MessageSquare } from "lucide-react";
+import { roCount } from "@/lib/plural";
 import { Button } from "@/components/ui/button";
 
 interface ViewInterestsModalProps {
@@ -36,9 +37,9 @@ const ViewInterestsModal = ({ isOpen, onClose, run, onConverse }: ViewInterestsM
     }}>
       <DialogContent className="bg-popover border-border text-foreground max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Interese Cursă</DialogTitle>
-          <DialogDescription>
-            Dealers interesați de cursa: <span className="font-semibold">{run?.fromCity} → {run?.toCity}</span>
+          <DialogTitle className="text-[17px] font-semibold text-foreground text-left">Cine e interesat</DialogTitle>
+          <DialogDescription className="text-[13px] text-muted-foreground text-left mt-1">
+            {run?.fromCity} → {run?.toCity}
           </DialogDescription>
         </DialogHeader>
 
@@ -47,62 +48,47 @@ const ViewInterestsModal = ({ isOpen, onClose, run, onConverse }: ViewInterestsM
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : !interests || interests.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground italic text-sm">
-            Niciun dealer nu și-a exprimat interesul pentru această cursă încă.
+          <div className="text-[15px] text-muted-foreground text-center py-6">
+            Încă nu s-a interesat nimeni.
           </div>
         ) : (
-          <div className="space-y-4 py-2">
+          <div className="border-t border-border divide-y divide-border">
             {interests.map((interest) => {
               const dealer = interest.dealer;
+              const name = dealer?.name || "Dealer necunoscut";
               const hasPhone = !!dealer?.contactPhone;
-              const hasEmail = !!dealer?.contactEmail;
+              const cityText = dealer?.city ? ` · ${dealer.city}` : "";
 
               return (
-                <div key={interest.id} className="border border-border rounded-lg p-4 bg-background space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold text-foreground text-sm">{dealer?.name || "Dealer necunoscut"}</h4>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span>{dealer?.city || "Oraș nespecificat"}</span>
+                <div key={interest.id} className="py-3 flex items-center justify-between gap-4 text-left">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium text-foreground truncate">
+                      {name}
+                    </div>
+                    <div className="text-[13px] text-muted-foreground truncate mt-0.5">
+                      {roCount(interest.seatsRequested, "loc", "locuri")}{cityText}
+                    </div>
+                    {interest.note && (
+                      <div className="text-[13px] text-foreground mt-1">
+                        «{interest.note}»
                       </div>
-                    </div>
-                    <div className="bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded">
-                      {interest.seatsRequested} {interest.seatsRequested === 1 ? "loc" : "locuri"}
-                    </div>
+                    )}
                   </div>
 
-                  {interest.note && (
-                    <p className="text-sm text-foreground bg-muted p-2 rounded italic">
-                      "{interest.note}"
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-                      {hasPhone && (
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <a href={`tel:${dealer.contactPhone}`} className="hover:underline text-primary">
-                            {dealer.contactPhone}
-                          </a>
-                        </div>
-                      )}
-                      {hasEmail && (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <a href={`mailto:${dealer.contactEmail}`} className="hover:underline text-primary">
-                            {dealer.contactEmail}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
+                  <div className="flex items-center gap-2 shrink-0">
+                    {hasPhone && (
+                      <a
+                        href={`tel:${dealer.contactPhone}`}
+                        className="w-11 h-11 rounded-full bg-success-light text-success flex items-center justify-center hover:opacity-90"
+                        aria-label={`Sună pe ${name}`}
+                      >
+                        <Phone className="w-5 h-5" />
+                      </a>
+                    )}
                     {dealer?.id && onConverse && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs font-semibold h-8"
+                      <button
+                        type="button"
+                        className="w-11 h-11 rounded-full bg-primary-light text-primary flex items-center justify-center hover:opacity-90"
                         onClick={() => {
                           onConverse({
                             otherBusinessId: dealer.id,
@@ -111,9 +97,10 @@ const ViewInterestsModal = ({ isOpen, onClose, run, onConverse }: ViewInterestsM
                           });
                           onClose();
                         }}
+                        aria-label={`Scrie lui ${name}`}
                       >
-                        Conversează
-                      </Button>
+                        <MessageSquare className="w-5 h-5" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -123,7 +110,10 @@ const ViewInterestsModal = ({ isOpen, onClose, run, onConverse }: ViewInterestsM
         )}
 
         <div className="flex justify-end pt-2">
-          <Button onClick={onClose} variant="outline">
+          <Button 
+            onClick={onClose} 
+            className="w-full bg-card border border-border text-foreground hover:bg-accent min-h-[44px] text-[15px] font-semibold"
+          >
             Închide
           </Button>
         </div>
