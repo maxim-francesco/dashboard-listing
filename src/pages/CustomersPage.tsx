@@ -1,25 +1,35 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Loader2, Users, Search } from "lucide-react";
-import { format } from "date-fns";
-import { ro } from "date-fns/locale";
+import { Loader2, Search, Check } from "lucide-react";
 import { getCustomers, CustomerListItem } from "@/services/api";
-import { Badge } from "@/components/ui/badge";
+import CustomerRow, { getDeadline, getBucket, Bucket } from "@/components/customers/CustomerRow";
+import { Input } from "@/components/ui/input";
+import { formatEur } from "@/lib/format";
+import { isInLucru } from "@/hooks/useInLucruCount";
+
+const BUCKET_ORDER: Bucket[] = ["expirat", "azi", "maine", "saptamana", "tarziu"];
+const BUCKET_LABELS: Record<Bucket, string> = {
+  expirat: "expirate",
+  azi: "azi",
+  maine: "mâine",
+  saptamana: "săptămâna asta",
+  tarziu: "mai târziu",
+};
+
+const getHeaderClasses = (bucket: Bucket, isFirst: boolean) => {
+  const base = `px-3.5 py-1.5 text-[11px] tracking-wide font-medium uppercase ${isFirst ? "" : "border-t border-border"}`;
+  if (bucket === "expirat") {
+    return `${base} bg-destructive/10 text-destructive`;
+  }
+  if (bucket === "azi" || bucket === "maine") {
+    return `${base} bg-warning-light text-warning`;
+  }
+  return `${base} bg-muted text-muted-foreground`;
+};
 
 const CustomersPage = () => {
-  const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [activeSegment, setActiveSegment] = useState<"inlucru" | "toti">("inlucru");
 
   const { data: customers = [], isLoading } = useQuery<CustomerListItem[]>({
     queryKey: ['customers'],
@@ -27,135 +37,221 @@ const CustomersPage = () => {
     refetchOnWindowFocus: false,
   });
 
-  const filteredCustomers = useMemo(() => {
-    return customers.filter((cust) => {
-      const term = search.toLowerCase().trim();
-      if (!term) return true;
-      const cleanPhone = cust.phone.replace(/\D/g, "");
+  const inLucruCustomers = useMemo(() => {
+    return customers.filter(isInLucru);
+  }, [customers]);
+
+  const inLucruCount = inLucruCustomers.length;
+
+  const { urgente, avans } = useMemo(() => {
+    let countUrgente = 0;
+    let sumAvans = 0;
+    for (const c of customers) {
+      const deadline = getDeadline(c);
+      if (deadline) {
+        const bucket = getBucket(deadline);
+        if (bucket === "expirat" || bucket === "azi" || bucket === "maine") {
+          countUrgente++;
+        }
+      }
+      if (c.activeReservation && c.activeReservation.depositAmount != null) {
+        sumAvans += c.activeReservation.depositAmount;
+      }
+    }
+    return { urgente: countUrgente, avans: sumAvans };
+  }, [customers]);
+
+  const subtitle = useMemo(() => {
+    if (activeSegment === "inlucru") {
+      const parts: string[] = [];
+      if (urgente > 0) {
+        parts.push(`${urgente} ${urgente === 1 ? "termen" : "termene"} până mâine`);
+      }
+      if (avans > 0) {
+        parts.push(`${formatEur(avans)} avans în casă`);
+      }
+      if (parts.length === 0) {
+        parts.push(`${inLucruCount} în lucru`);
+      }
+      return parts.join(" · ");
+    } else {
+      return `${customers.length} ${customers.length === 1 ? "persoană" : "persoane"}`;
+    }
+  }, [activeSegment, urgente, avans, inLucruCount, customers.length]);
+
+  const inLucruGrouped = useMemo(() => {
+    if (activeSegment !== "inlucru") return [];
+
+    const term = search.toLowerCase().trim();
+    let list = inLucruCustomers;
+    if (term) {
       const cleanSearch = term.replace(/\D/g, "");
-      
-      const nameMatch = cust.name.toLowerCase().includes(term);
-      const phoneMatch = cleanPhone.includes(cleanSearch) || cust.phone.includes(term);
-      
+      list = list.filter((c) => {
+        const cleanPhone = c.phone.replace(/\D/g, "");
+        const nameMatch = c.name.toLowerCase().includes(term);
+        const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
+        return nameMatch || phoneMatch;
+      });
+    }
+
+    const groupsMap: Record<Bucket, CustomerListItem[]> = {
+      expirat: [],
+      azi: [],
+      maine: [],
+      saptamana: [],
+      tarziu: [],
+    };
+
+    for (const c of list) {
+      const deadline = getDeadline(c);
+      const bucket = getBucket(deadline);
+      groupsMap[bucket].push(c);
+    }
+
+    for (const bucket of BUCKET_ORDER) {
+      groupsMap[bucket].sort((a, b) => {
+        const dA = getDeadline(a);
+        const dB = getDeadline(b);
+        const tA = dA ? dA.getTime() : Infinity;
+        const tB = dB ? dB.getTime() : Infinity;
+        return tA - tB;
+      });
+    }
+
+    const groups: { bucket: Bucket; label: string; customers: CustomerListItem[] }[] = [];
+    for (const bucket of BUCKET_ORDER) {
+      if (groupsMap[bucket].length > 0) {
+        groups.push({
+          bucket,
+          label: BUCKET_LABELS[bucket],
+          customers: groupsMap[bucket],
+        });
+      }
+    }
+    return groups;
+  }, [activeSegment, inLucruCustomers, search]);
+
+  const totiFiltered = useMemo(() => {
+    if (activeSegment !== "toti") return [];
+
+    const sorted = [...customers].sort((a, b) => {
+      return a.name.localeCompare(b.name, "ro", { sensitivity: "base" });
+    });
+
+    const term = search.toLowerCase().trim();
+    if (!term) return sorted;
+
+    const cleanSearch = term.replace(/\D/g, "");
+
+    return sorted.filter((c) => {
+      const cleanPhone = c.phone.replace(/\D/g, "");
+      const nameMatch = c.name.toLowerCase().includes(term);
+      const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
       return nameMatch || phoneMatch;
     });
-  }, [customers, search]);
+  }, [activeSegment, customers, search]);
 
-  const formatLastInteraction = (dateStr?: string) => {
-    if (!dateStr) return "N/A";
-    try {
-      return format(new Date(dateStr), "dd MMM yyyy", { locale: ro });
-    } catch (e) {
-      return "N/A";
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Se încarcă clienții...</p>
+      </div>
+    );
+  }
 
-  const getPurchasedCarsText = (cars: string[]) => {
-    if (!cars || cars.length === 0) return "Fără achiziții";
-    if (cars.length === 1) return cars[0];
-    return `${cars[0]} și încă ${cars.length - 1}`;
-  };
+  if (customers.length === 0) {
+    return (
+      <div className="text-[15px] text-muted-foreground text-center py-8">
+        Clienții apar automat din mesaje, oferte, rezervări și contracte.
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pb-24">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Clienți</h1>
-        <p className="text-muted-foreground mt-2">
-          Toți clienții tăi, dintr-un singur loc.
+        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Clienți</h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">
+          {subtitle}
         </p>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Caută după nume sau telefon..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 bg-background border-input text-foreground h-10"
-        />
+      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 space-y-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveSegment("inlucru")}
+            className={`flex-1 h-11 rounded-lg text-[15px] font-medium transition-colors ${
+              activeSegment === "inlucru"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border text-foreground"
+            }`}
+          >
+            În lucru ({inLucruCount})
+          </button>
+          <button
+            onClick={() => setActiveSegment("toti")}
+            className={`flex-1 h-11 rounded-lg text-[15px] font-medium transition-colors ${
+              activeSegment === "toti"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border text-foreground"
+            }`}
+          >
+            Toți ({customers.length})
+          </button>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Caută după nume sau telefon..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-background border-input text-foreground h-11"
+          />
+        </div>
       </div>
 
-      <Card className="border-card-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Listă Clienți</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="ml-4 text-muted-foreground">Se încarcă clienții...</p>
-            </div>
-          ) : filteredCustomers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-10">
-              <Users className="w-12 h-12 mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold">Niciun client găsit</h3>
-              <p className="text-sm max-w-xs mt-1">
-                Clienții apar automat din contracte, rezervări, programări și mesaje.
-              </p>
-            </div>
+      {activeSegment === "inlucru" && inLucruCount === 0 && !search.trim() ? (
+        <div className="bg-success-light rounded-xl p-4 flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-success text-success-foreground flex items-center justify-center flex-shrink-0">
+            <Check className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-medium text-success">Nimic în lucru</h3>
+            <p className="text-sm text-success">Nicio rezervare, ofertă sau programare activă.</p>
+          </div>
+        </div>
+      ) : (activeSegment === "inlucru" ? inLucruGrouped.length === 0 : totiFiltered.length === 0) ? (
+        <div className="text-[15px] text-muted-foreground text-center py-8">
+          Niciun client găsit pentru „{search}"
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {activeSegment === "inlucru" ? (
+            inLucruGrouped.map((group, groupIndex) => (
+              <div key={group.bucket}>
+                <div className={getHeaderClasses(group.bucket, groupIndex === 0)}>
+                  {group.label}
+                </div>
+                {group.customers.map((customer) => (
+                  <div key={customer.phone} className="border-t border-border">
+                    {/* Rendered with variant action: filled button, no-day prefix in appointment lead, show line 3 */}
+                    <CustomerRow customer={customer} variant="action" />
+                  </div>
+                ))}
+              </div>
+            ))
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Nume</TableHead>
-                    <TableHead className="text-foreground font-medium">Telefon</TableHead>
-                    <TableHead className="text-foreground font-medium">Activitate</TableHead>
-                    <TableHead className="text-foreground font-medium">Mașini cumpărate</TableHead>
-                    <TableHead className="text-foreground font-medium">Ultima interacțiune</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map((customer) => (
-                    <TableRow
-                      key={customer.phone}
-                      onClick={() => navigate(`/customers/${encodeURIComponent(customer.phone)}`)}
-                      className="border-border cursor-pointer hover:bg-muted/50 transition-colors"
-                    >
-                      <TableCell className="font-semibold text-foreground">
-                        {customer.name || "Nume necunoscut"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        +{customer.phone}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customer.contractsCount > 0 && (
-                            <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/10 border-blue-500/20">
-                              Cumpărător
-                            </Badge>
-                          )}
-                          {customer.reservationsCount > 0 && (
-                            <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/10 border-amber-500/20">
-                              Rezervare
-                            </Badge>
-                          )}
-                          {customer.appointmentsCount > 0 && (
-                            <Badge className="bg-teal-500/10 text-teal-500 hover:bg-teal-500/10 border-teal-500/20">
-                              Programare
-                            </Badge>
-                          )}
-                          {customer.messagesCount > 0 && (
-                            <Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/10 border-purple-500/20">
-                              Mesaj
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-xs truncate">
-                        {getPurchasedCarsText(customer.purchasedCars)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatLastInteraction(customer.lastInteraction)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            totiFiltered.map((customer, index) => (
+              <div key={customer.phone} className={index > 0 ? "border-t border-border" : ""}>
+                {/* Rendered with variant plain: tinted button, day prefix in appointment lead (e.g. mâine), hide line 3 */}
+                <CustomerRow customer={customer} variant="plain" />
+              </div>
+            ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 };
