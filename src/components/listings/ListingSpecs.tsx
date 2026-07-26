@@ -7,6 +7,7 @@ import {
 
 interface AttributeValue {
   id: string;
+  attributeId?: string;
   stringValue?: string | null;
   numberValue?: number | null;
   booleanValue?: boolean | null;
@@ -30,6 +31,20 @@ export default function ListingSpecs({ attributeValues = [] }: ListingSpecsProps
   const formattedAttributes = attributeValues
     .map((av) => {
       if (!av.attribute) return null;
+
+      if (av.attributeId === "attr:colorDetail") {
+        const colorVal = attributeValues.find(x => x.attributeId === "attr:color")?.stringValue;
+        if (
+          colorVal !== undefined &&
+          colorVal !== null &&
+          av.stringValue !== undefined &&
+          av.stringValue !== null &&
+          av.stringValue.trim().toLowerCase() === colorVal.trim().toLowerCase()
+        ) {
+          return null;
+        }
+      }
+
       const name = av.attribute.name;
       const groupName = av.attribute.attributeGroup?.name || "Altele";
 

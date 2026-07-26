@@ -31,7 +31,7 @@ export default function BottomNav() {
         <Link
           to="/"
           className={cn(
-            "flex flex-col items-center gap-1 w-16 pb-1 transition-colors cursor-pointer",
+            "flex flex-col items-center gap-1 w-16 pt-2 pb-2 transition-colors cursor-pointer",
             isAziActive ? "text-primary" : "text-muted-foreground"
           )}
         >
@@ -45,7 +45,7 @@ export default function BottomNav() {
         <Link
           to="/listings"
           className={cn(
-            "flex flex-col items-center gap-1 w-16 pb-1 transition-colors cursor-pointer",
+            "flex flex-col items-center gap-1 w-16 pt-2 pb-2 transition-colors cursor-pointer",
             isMasiniActive ? "text-primary" : "text-muted-foreground"
           )}
         >
@@ -69,7 +69,7 @@ export default function BottomNav() {
         <Link
           to="/customers"
           className={cn(
-            "flex flex-col items-center gap-1 w-16 pb-1 transition-colors cursor-pointer",
+            "flex flex-col items-center gap-1 w-16 pt-2 pb-2 transition-colors cursor-pointer",
             isClientiActive ? "text-primary" : "text-muted-foreground"
           )}
         >
@@ -88,7 +88,7 @@ export default function BottomNav() {
         <Link
           to="/network"
           className={cn(
-            "flex flex-col items-center gap-1 w-16 pb-1 transition-colors cursor-pointer",
+            "flex flex-col items-center gap-1 w-16 pt-2 pb-2 transition-colors cursor-pointer",
             isReteaActive ? "text-primary" : "text-muted-foreground"
           )}
         >

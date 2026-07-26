@@ -2,7 +2,6 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 // Create a new axios instance
-console.log("[DEBUG] API Service Loaded - Version: 1.0.2 - Path: dashboard-listing/src/services/api.ts");
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 if (!apiBaseUrl) {
   console.error("CRITICAL ERROR: VITE_API_BASE_URL is not defined in environment variables!");

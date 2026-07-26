@@ -26,21 +26,14 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const location = useLocation();
   const token = localStorage.getItem('authToken');
 
-  // For debugging purposes, let's log the initial state
-  console.log(`[ProtectedRoute] Checking route: ${location.pathname}`);
-  console.log(`[ProtectedRoute] Required roles:`, allowedRoles);
-
   // 1. Check if token exists
   if (!token) {
-    console.log('[ProtectedRoute] No token found, redirecting to /login');
     // Allow access to login page from anywhere, but redirect if there's no token
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 2. Parse token to get user info
   const user = parseJwt(token);
-  console.log('[ProtectedRoute] Decoded user from token:', user);
-
 
   // 3. If token is invalid or parsing fails, clear it and redirect to login
   if (!user || !user.role) {
@@ -53,26 +46,21 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const isAuthorized = allowedRoles ? allowedRoles.includes(user.role) : true;
 
   if (isAuthorized) {
-    console.log(`[ProtectedRoute] User role '${user.role}' is authorized. Access granted.`);
     return <Outlet />;
   }
 
   // 5. If user is not authorized for the requested route, redirect them to their default page.
   // This prevents redirect loops.
-  console.log(`[ProtectedRoute] User role '${user.role}' is NOT authorized for this route.`);
   if (user.role === 'SUPER_ADMIN') {
-    console.log('[ProtectedRoute] Redirecting SUPER_ADMIN to /super-admin');
     return <Navigate to="/super-admin" replace />;
   }
   
   if (user.role === 'ADMIN') {
     // An ADMIN trying to access a SUPER_ADMIN page
-    console.log('[ProtectedRoute] Redirecting ADMIN to /');
     return <Navigate to="/" replace />;
   }
 
   // Fallback for any other unexpected roles, just in case
-  console.log('[ProtectedRoute] Unknown role, redirecting to /login');
   localStorage.removeItem('authToken');
   return <Navigate to="/login" replace />;
 };

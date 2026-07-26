@@ -771,7 +771,7 @@ const Listings = () => {
         <div className="bg-muted rounded-[var(--radius)] p-[3px] flex w-full">
           <button
             onClick={() => setActiveSegment("instoc")}
-            className={`flex-1 text-center py-2 text-sm rounded-md transition-all cursor-pointer font-medium ${
+            className={`flex-1 text-center py-3 text-sm rounded-md transition-all cursor-pointer font-medium ${
               activeSegment === "instoc"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -781,7 +781,7 @@ const Listings = () => {
           </button>
           <button
             onClick={() => setActiveSegment("vandute")}
-            className={`flex-1 text-center py-2 text-sm rounded-md transition-all cursor-pointer font-medium ${
+            className={`flex-1 text-center py-3 text-sm rounded-md transition-all cursor-pointer font-medium ${
               activeSegment === "vandute"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
