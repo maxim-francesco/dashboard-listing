@@ -197,6 +197,7 @@ const AddEditListing = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
   const [initialStatus, setInitialStatus] = useState<string>("AVAILABLE");
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   
   // Image & Video State
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
@@ -224,6 +225,9 @@ const AddEditListing = () => {
   // Field change helper
   const handleFieldChange = (key: keyof typeof fields, value: any) => {
     setFields(prev => ({ ...prev, [key]: value }));
+    if (["vatDeductible", "noAccidents", "serviceBook", "firstOwner", "registeredInRo"].includes(key)) {
+      setTouchedFields(prev => ({ ...prev, [key]: true }));
+    }
   };
 
   // Feature Toggle helper
@@ -450,7 +454,7 @@ const AddEditListing = () => {
         const parseNum = (v: any) => (v === "" || v === null || v === undefined) ? null : Number(v);
 
         // Build write contract payload
-        const listingPayload = {
+        const listingPayload: any = {
             title: fields.title,
             description: fields.description || null,
             internalNotes: fields.internalNotes || null,
@@ -462,7 +466,6 @@ const AddEditListing = () => {
             vin: fields.vin || null,
             firstRegistrationAt: fields.firstRegistrationAt || null,
             countryOfOrigin: fields.countryOfOrigin ? fields.countryOfOrigin.toUpperCase() : null,
-            registeredInRo: fields.registeredInRo,
             fuelType: fields.fuelType || null,
             gearbox: fields.gearbox || null,
             drivetrain: fields.drivetrain || null,
@@ -477,10 +480,6 @@ const AddEditListing = () => {
             airConditioning: fields.airConditioning || null,
             doors: parseNum(fields.doors),
             seats: parseNum(fields.seats),
-            vatDeductible: fields.vatDeductible,
-            noAccidents: fields.noAccidents,
-            serviceBook: fields.serviceBook,
-            firstOwner: fields.firstOwner,
             ownerCount: parseNum(fields.ownerCount),
             warrantyMonths: parseNum(fields.warrantyMonths),
             price: parseNum(fields.price),
@@ -492,6 +491,13 @@ const AddEditListing = () => {
             featureIds: selectedFeatures,
             extraSpecs: {}
         };
+
+        const booleanKeys = ["vatDeductible", "noAccidents", "serviceBook", "firstOwner", "registeredInRo"];
+        for (const key of booleanKeys) {
+            if (touchedFields[key]) {
+                listingPayload[key] = fields[key as keyof typeof fields];
+            }
+        }
         
         let savedListingId;
         if (listingId) {

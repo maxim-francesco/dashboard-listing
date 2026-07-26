@@ -110,7 +110,7 @@ const CustomerDetailPage = () => {
   return (
     <div className="space-y-6 pb-24">
       {/* Back navigation */}
-      <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+      <Button variant="outline" onClick={() => navigate('/customers')} className="border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground gap-2">
         <ArrowLeft className="w-4 h-4" /> Înapoi la clienți
       </Button>
 
@@ -159,8 +159,8 @@ const CustomerDetailPage = () => {
       {contracts.length > 0 && (
         <Card className="border-card-border bg-card">
           <CardHeader className="flex flex-row items-center gap-3">
-            <FileText className="w-5 h-5 text-blue-500" />
-            <CardTitle className="text-foreground">Contracte de Vânzare ({contracts.length})</CardTitle>
+            <FileText className="w-4 h-4 text-blue-500" />
+            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Contracte de Vânzare ({contracts.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
@@ -183,8 +183,8 @@ const CustomerDetailPage = () => {
       {reservations.length > 0 && (
         <Card className="border-card-border bg-card">
           <CardHeader className="flex flex-row items-center gap-3">
-            <BookmarkCheck className="w-5 h-5 text-amber-500" />
-            <CardTitle className="text-foreground">Rezervări înregistrate ({reservations.length})</CardTitle>
+            <BookmarkCheck className="w-4 h-4 text-amber-500" />
+            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Rezervări înregistrate ({reservations.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
@@ -207,8 +207,8 @@ const CustomerDetailPage = () => {
       {offers.length > 0 && (
         <Card className="border-card-border bg-card">
           <CardHeader className="flex flex-row items-center gap-3">
-            <FileText className="w-5 h-5 text-indigo-500" />
-            <CardTitle className="text-foreground">Oferte trimise ({offers.length})</CardTitle>
+            <FileText className="w-4 h-4 text-indigo-500" />
+            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Oferte trimise ({offers.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
@@ -247,8 +247,8 @@ const CustomerDetailPage = () => {
       {appointments.length > 0 && (
         <Card className="border-card-border bg-card">
           <CardHeader className="flex flex-row items-center gap-3">
-            <CalendarClock className="w-5 h-5 text-teal-500" />
-            <CardTitle className="text-foreground">Programări în Calendar ({appointments.length})</CardTitle>
+            <CalendarClock className="w-4 h-4 text-teal-500" />
+            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Programări în Calendar ({appointments.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
@@ -276,8 +276,8 @@ const CustomerDetailPage = () => {
       {messages.length > 0 && (
         <Card className="border-card-border bg-card">
           <CardHeader className="flex flex-row items-center gap-3">
-            <MessageSquare className="w-5 h-5 text-purple-500" />
-            <CardTitle className="text-foreground">Mesaje și Lead-uri ({messages.length})</CardTitle>
+            <MessageSquare className="w-4 h-4 text-purple-500" />
+            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Mesaje și Lead-uri ({messages.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {messages.map((m: any) => (

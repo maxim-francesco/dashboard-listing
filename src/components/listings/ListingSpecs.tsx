@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { formatEur } from "@/lib/format";
 
 interface AttributeValue {
   id: string;
@@ -52,7 +53,17 @@ export default function ListingSpecs({ attributeValues = [] }: ListingSpecsProps
       if (av.stringValue !== null && av.stringValue !== undefined && av.stringValue !== "") {
         displayValue = av.stringValue;
       } else if (av.numberValue !== null && av.numberValue !== undefined) {
-        displayValue = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(av.numberValue);
+        if (av.attributeId === "attr:year") {
+          displayValue = String(av.numberValue);
+        } else if (av.attributeId === "attr:price") {
+          displayValue = formatEur(av.numberValue);
+        } else if (av.attributeId === "attr:mileage") {
+          displayValue = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(av.numberValue) + " km";
+        } else if (av.attributeId === "attr:engineCapacity") {
+          displayValue = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(av.numberValue) + " cm³";
+        } else {
+          displayValue = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(av.numberValue);
+        }
       } else if (av.booleanValue !== null && av.booleanValue !== undefined) {
         displayValue = av.booleanValue ? "Da" : "Nu";
       } else {
