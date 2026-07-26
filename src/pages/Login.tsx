@@ -8,6 +8,7 @@ import { Mail, Lock, Building2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import api from "@/services/api";
 import Footer from "@/components/Footer";
+import DevQuickLogin from "@/components/dev/DevQuickLogin";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -48,6 +49,27 @@ const Login = () => {
       }
     } catch (err: any) {
       setError('Email sau parolă incorectă. Te rugăm să încerci din nou.');
+    }
+  };
+
+  const handleQuickLogin = async (emailStr: string, passwordStr: string) => {
+    try {
+      setError(""); 
+      const response = await api.post(
+        "/auth/login",
+        {
+          email: emailStr,
+          password: passwordStr,
+        }
+      );
+      if (response.data && response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userEmail', emailStr);
+        navigate('/');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Email sau parolă incorectă.';
+      throw new Error(msg);
     }
   };
 
@@ -135,6 +157,7 @@ const Login = () => {
                   Intră ca Demo Imobiliare
                 </Button>
               </div>
+              <DevQuickLogin onQuickLogin={handleQuickLogin} />
             </form>
           </CardContent>
         </Card>

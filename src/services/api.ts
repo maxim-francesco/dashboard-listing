@@ -302,6 +302,19 @@ export interface CustomerListItem {
   purchasedCars: string[];
   lastInteraction: string;
   sources: string[];
+  activeReservation?: {
+    id: string; car: string | null; expiresAt: string; depositAmount: number;
+  } | null;
+  pendingOffer?: {
+    id: string; car: string | null; offerPrice: number;
+    expiresAt: string; viewedAt: string | null;
+  } | null;
+  nextAppointment?: {
+    id: string; title: string; type: string; startAt: string;
+  } | null;
+  openLead?: {
+    id: string; status: string; createdAt: string; reminderAt: string | null;
+  } | null;
 }
 export const getCustomers = async (): Promise<CustomerListItem[]> => {
   const { data } = await api.get('/customers');
@@ -621,6 +634,7 @@ export interface TransportRun {
   createdAt: string;
   owner: TransportOwner | null;
   interestCount?: number;
+  myInterest?: boolean;
 }
 
 export interface TransportInterest {
@@ -974,6 +988,28 @@ export const cancelNegotiation = async (id: string): Promise<any> => {
 export const getPendingProposalsCount = async (): Promise<{ count: number }> => {
   const { data } = await api.get('/network/trade/negotiations/pending/count');
   return data as { count: number };
+};
+
+export interface NetworkSummaryCounts {
+  pendingNegotiations: number; unreadMessages: number; newTransportInterests: number;
+  browseCars: number; myExposedCars: number; browseRuns: number; myRuns: number;
+  dealers: number; conversations: number;
+}
+export type NetworkActionItem =
+  | { type: "NEGOTIATION"; id: string; dealerName: string; carTitle: string | null;
+      amount: number | null; proposalKind: "BUY" | "EXCHANGE";
+      role: "SELLER" | "BUYER"; when: string }
+  | { type: "MESSAGE"; id: string; dealerName: string; preview: string;
+      unreadCount: number; when: string }
+  | { type: "TRANSPORT_INTEREST"; id: string; fromCity: string; toCity: string;
+      departureDate: string; interestedCount: number; when: string };
+export interface NetworkSummary {
+  counts: NetworkSummaryCounts;
+  actionItems: NetworkActionItem[];
+}
+export const getNetworkSummary = async (): Promise<NetworkSummary> => {
+  const { data } = await api.get('/network/summary');
+  return data as NetworkSummary;
 };
 
 export default api;
