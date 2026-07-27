@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
-import { User, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import { isToday, isTomorrow, differenceInCalendarDays, format, formatDistanceToNow, isPast } from "date-fns";
 import { ro } from "date-fns/locale";
 import { CustomerListItem } from "@/services/api";
@@ -20,16 +21,6 @@ const STATUS_LABELS: Record<string, string> = {
   OFFER: "Ofertă",
   WON: "Câștigat",
   LOST: "Pierdut",
-};
-
-const getInitials = (name?: string | null) => {
-  if (!name) return null;
-  const cleanName = name.trim();
-  if (!cleanName) return null;
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return null;
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
 function getSortedCandidates(c: CustomerListItem) {
@@ -175,7 +166,6 @@ interface CustomerRowProps {
 
 export default function CustomerRow({ customer, variant = "plain" }: CustomerRowProps) {
   const navigate = useNavigate();
-  const initials = getInitials(customer.name);
   const deadline = getDeadline(customer);
   const secondaryText = getSecondary(customer);
   const withDay = variant === "plain";
@@ -221,9 +211,7 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
       onClick={() => navigate(`/customers/${encodeURIComponent(customer.phone)}`)}
       className="flex items-center gap-3 px-3.5 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
     >
-      <div className="w-9 h-9 rounded-full bg-primary-light text-primary flex items-center justify-center font-semibold flex-shrink-0 text-sm">
-        {initials ? initials : <User className="h-4 w-4" />}
-      </div>
+      <InitialsAvatar name={customer.name} />
       <div className="flex-1 min-w-0">
         <div className="text-[15px] font-medium text-foreground truncate">
           {customer.name || "Fără nume"}

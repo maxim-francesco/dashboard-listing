@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import {
   Dialog,
   DialogContent,
@@ -356,14 +357,6 @@ export const LeadDetailPanel = ({
     if (hasNext && onNavigate && orderedIds) {
       onNavigate(orderedIds[currentIndex + 1]);
     }
-  };
-
-  // Initials generator for avatar
-  const getInitials = (name: string) => {
-    if (!name) return "";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   // Quick Action normalization helpers
@@ -858,9 +851,7 @@ export const LeadDetailPanel = ({
             {/* Name / Avatar / Phone details */}
             <div className="flex items-center gap-3 min-w-0">
               {lead && (
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  {getInitials(lead.name)}
-                </div>
+                <InitialsAvatar name={lead.name} className="w-10 h-10" />
               )}
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-foreground truncate max-w-[180px] sm:max-w-[240px]">

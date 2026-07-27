@@ -9,16 +9,7 @@ import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { isForbidden } from "@/lib/isForbidden";
 import NetworkOffline from "@/components/network/NetworkOffline";
-
-const getInitials = (name?: string | null) => {
-  if (!name) return "";
-  const cleanName = name.trim();
-  if (!cleanName) return "";
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-};
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
 
 export default function NetworkDealers() {
   const navigate = useNavigate();
@@ -141,7 +132,6 @@ export default function NetworkDealers() {
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="flex flex-col">
                 {filteredDealers.map((dealer, idx) => {
-                  const initials = getInitials(dealer.name);
                   const isPending = mutation.isPending && mutation.variables === dealer.id;
 
                   return (
@@ -153,9 +143,7 @@ export default function NetworkDealers() {
                       )}
                     >
                       {/* Initials circle */}
-                      <div className="w-9 h-9 rounded-full bg-primary-light text-primary flex items-center justify-center font-semibold shrink-0 text-sm">
-                        {initials}
-                      </div>
+                      <InitialsAvatar name={dealer.name} />
 
                       {/* Middle block */}
                       <div className="flex-1 min-w-0">

@@ -4,7 +4,9 @@ import api from "@/services/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { normalizePhone } from "@/lib/phone";
-import { Phone, User } from "lucide-react";
+import { Phone } from "lucide-react";
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
+import { roCount } from "@/lib/plural";
 
 interface Message {
   id: string;
@@ -31,20 +33,6 @@ const TYPE_LABELS: Record<string, string> = {
   ORDER: "Comandă",
   BUYBACK: "Buy-back",
 };
-
-const getInitials = (name?: string | null) => {
-  if (!name) return null;
-  const cleanName = name.trim();
-  if (!cleanName) return null;
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return null;
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-};
-
-const rom = (n: number, one: string, many: string) =>
-  n === 1 ? `${n} ${one}` : n >= 20 ? `${n} de ${many}` : `${n} ${many}`;
-
 
 export default function ActionCallList() {
   const navigate = useNavigate();
@@ -123,7 +111,7 @@ export default function ActionCallList() {
   }
 
   const displayItems = sorted.slice(0, 3);
-  const countLabel = rom(distinctCount, "persoană de sunat", "persoane de sunat").substring(String(distinctCount).length + 1);
+  const countLabel = distinctCount === 1 ? "persoană de sunat" : distinctCount < 20 ? "persoane de sunat" : "de persoane de sunat";
 
   return (
     <div>
@@ -137,7 +125,6 @@ export default function ActionCallList() {
         </div>
         <div>
           {displayItems.map((item, index) => {
-            const initials = getInitials(item.name);
             const isOverdue = !!(item.reminderAt && new Date(item.reminderAt) < now && item.status !== "WON" && item.status !== "LOST");
             const subText = item.listing?.title || TYPE_LABELS[item.type] || "";
             
@@ -152,9 +139,7 @@ export default function ActionCallList() {
                   onClick={() => navigate("/messages")}
                   className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-full bg-primary-light text-primary flex items-center justify-center font-semibold flex-shrink-0 text-sm">
-                    {initials ? initials : <User className="h-4 w-4" />}
-                  </div>
+                  <InitialsAvatar name={item.name} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-medium text-foreground truncate">
                       {item.name || "Fără nume"}
@@ -193,7 +178,7 @@ export default function ActionCallList() {
               onClick={() => navigate("/messages")}
               className="w-full text-[13px] text-muted-foreground font-medium py-3 text-center border-t border-border transition-colors block cursor-pointer min-h-[44px]"
             >
-              {rom(unreachableCount, "mesaj fără telefon", "mesaje fără telefon")}
+              {roCount(unreachableCount, "mesaj fără telefon", "mesaje fără telefon")}
             </button>
           )}
         </div>
