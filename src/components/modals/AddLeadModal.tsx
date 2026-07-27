@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { normalizePhone } from "@/lib/phone";
 
 import {
   Dialog,
@@ -30,19 +31,6 @@ interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const normalizePhone = (raw: string) => {
-  if (!raw) return "";
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 6) return "";
-
-  if (digits.startsWith("0")) {
-    if (digits.length >= 10) {
-      return "40" + digits.substring(1);
-    }
-  }
-  return digits;
-};
 
 const AddLeadModal = ({ isOpen, onClose }: AddLeadModalProps) => {
   const navigate = useNavigate();

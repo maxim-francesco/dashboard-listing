@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizePhone } from "@/lib/phone";
 import { Phone, User } from "lucide-react";
 
 interface Message {
@@ -40,6 +41,10 @@ const getInitials = (name?: string | null) => {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
+
+const rom = (n: number, one: string, many: string) =>
+  n === 1 ? `${n} ${one}` : n >= 20 ? `${n} de ${many}` : `${n} ${many}`;
+
 
 export default function ActionCallList() {
   const navigate = useNavigate();
@@ -87,7 +92,7 @@ export default function ActionCallList() {
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
 
-  const filtered = (messages || []).filter((m) => {
+  const openLeadSet = (messages || []).filter((m) => {
     if (m.status === "NEW") return true;
     if (m.reminderAt && m.status !== "WON" && m.status !== "LOST") {
       return new Date(m.reminderAt) <= endOfToday;
@@ -95,7 +100,10 @@ export default function ActionCallList() {
     return false;
   });
 
-  const sorted = [...filtered].sort((a, b) => {
+  const callableLeads = openLeadSet.filter((lead) => normalizePhone(lead.phone) !== null);
+  const unreachableCount = openLeadSet.length - callableLeads.length;
+
+  const sorted = [...callableLeads].sort((a, b) => {
     const aReminder = a.reminderAt ? new Date(a.reminderAt).getTime() : null;
     const bReminder = b.reminderAt ? new Date(b.reminderAt).getTime() : null;
 
@@ -108,12 +116,14 @@ export default function ActionCallList() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  if (sorted.length === 0) {
+  const distinctCount = new Set(callableLeads.map((lead) => normalizePhone(lead.phone))).size;
+
+  if (distinctCount === 0 && unreachableCount === 0) {
     return null;
   }
 
   const displayItems = sorted.slice(0, 3);
-  const countLabel = sorted.length === 1 ? "persoană de sunat" : "persoane de sunat";
+  const countLabel = rom(distinctCount, "persoană de sunat", "persoane de sunat").substring(String(distinctCount).length + 1);
 
   return (
     <div>
@@ -122,7 +132,7 @@ export default function ActionCallList() {
       </div>
       <Card className="border-border bg-card shadow-sm rounded-[14px]">
         <div className="p-4 pb-3 flex items-baseline gap-1.5">
-          <span className="text-[34px] font-medium leading-none">{sorted.length}</span>
+          <span className="text-[34px] font-medium leading-none">{distinctCount}</span>
           <span className="text-[15px] text-muted-foreground">{countLabel}</span>
         </div>
         <div>
@@ -175,6 +185,15 @@ export default function ActionCallList() {
               className="w-full text-primary hover:text-primary-hover font-medium text-[14px] py-3 text-center border-t border-border transition-colors block cursor-pointer"
             >
               Vezi toate
+            </button>
+          )}
+
+          {unreachableCount > 0 && (
+            <button
+              onClick={() => navigate("/messages")}
+              className="w-full text-[13px] text-muted-foreground font-medium py-3 text-center border-t border-border transition-colors block cursor-pointer min-h-[44px]"
+            >
+              {rom(unreachableCount, "mesaj fără telefon", "mesaje fără telefon")}
             </button>
           )}
         </div>
