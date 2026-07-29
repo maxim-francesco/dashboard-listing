@@ -414,7 +414,7 @@ export default function ListingDetail() {
   // Figures computations
   const daysInStock = differenceInDays(new Date(), new Date(listing.createdAt));
   const viewCount = listing._count?.views !== undefined ? listing._count.views : "—";
-  const leadsCount = listing._count?.messages !== undefined ? listing._count.messages : "—";
+  const leadsCount = listing._count?.messages ?? 0;
 
   const getDaysColorClass = (days: number) => {
     if (days >= 90) return "text-destructive";
