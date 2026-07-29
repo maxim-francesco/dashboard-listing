@@ -739,7 +739,7 @@ const Listings = () => {
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0"
+              className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0"
             >
               <MoreVertical className="h-5 w-5 text-foreground" />
             </Button>

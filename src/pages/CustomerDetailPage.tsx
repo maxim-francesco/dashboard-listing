@@ -44,11 +44,36 @@ const RESERVATION_STATUS_LABELS: Record<string, string> = {
   EXPIRED: 'Expirată',
 };
 
+const LEAD_CAT_LABELS = { 
+  CONTACT: "Contact", 
+  FINANCING: "Finanțare", 
+  STOCK: "Stoc", 
+  ORDER: "Comandă", 
+  BUYBACK: "Buy-Back" 
+};
+
+const LEAD_CAT_COLORS = { 
+  CONTACT: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", 
+  FINANCING: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", 
+  STOCK: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", 
+  ORDER: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300", 
+  BUYBACK: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" 
+};
+
+const getLeadCategory = (m: any): keyof typeof LEAD_CAT_LABELS => {
+  if (m.type === "BUYBACK") return "BUYBACK";
+  if (m.type === "ORDER") return "ORDER";
+  if (m.type === "STOCK") return "STOCK";
+  if (m.type === "GENERAL" && typeof m.message === "string" && m.message.trim().startsWith("[Cerere finanțare]")) return "FINANCING";
+  return "CONTACT";
+};
+
 const CustomerDetailPage = () => {
   const { phone } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [leadFilter, setLeadFilter] = useState<string>("ALL");
 
   const { data: customer, isLoading, isError } = useQuery({
     queryKey: ['customer', phone],
@@ -78,7 +103,7 @@ const CustomerDetailPage = () => {
   if (isError || !customer) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2">
+        <Button variant="ghost" onClick={() => navigate('/customers')} className="h-11 gap-2">
           <ArrowLeft className="w-4 h-4" /> Înapoi la clienți
         </Button>
         <Card className="border-card-border bg-card max-w-md mx-auto text-center py-10">
@@ -101,6 +126,21 @@ const CustomerDetailPage = () => {
   const appointments = customer.appointments ?? [];
   const messages = customer.messages ?? [];
 
+  const sortedMessages = [...messages].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  const counts = {
+    ALL: sortedMessages.length,
+    CONTACT: sortedMessages.filter((m: any) => getLeadCategory(m) === "CONTACT").length,
+    FINANCING: sortedMessages.filter((m: any) => getLeadCategory(m) === "FINANCING").length,
+    STOCK: sortedMessages.filter((m: any) => getLeadCategory(m) === "STOCK").length,
+    ORDER: sortedMessages.filter((m: any) => getLeadCategory(m) === "ORDER").length,
+    BUYBACK: sortedMessages.filter((m: any) => getLeadCategory(m) === "BUYBACK").length,
+  };
+
+  const visibleMessages = leadFilter === "ALL" 
+    ? sortedMessages 
+    : sortedMessages.filter((m: any) => getLeadCategory(m) === leadFilter);
+
   const tomorrowStart = new Date();
   tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   tomorrowStart.setHours(10, 0, 0, 0);
@@ -110,7 +150,7 @@ const CustomerDetailPage = () => {
   return (
     <div className="space-y-6 pb-24">
       {/* Back navigation */}
-      <Button variant="outline" onClick={() => navigate('/customers')} className="border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground gap-2">
+      <Button variant="outline" onClick={() => navigate('/customers')} className="border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground gap-2 h-11">
         <ArrowLeft className="w-4 h-4" /> Înapoi la clienți
       </Button>
 
@@ -275,33 +315,64 @@ const CustomerDetailPage = () => {
       {/* 4. MESSAGES SECTION */}
       {messages.length > 0 && (
         <Card className="border-card-border bg-card">
-          <CardHeader className="flex flex-row items-center gap-3">
-            <MessageSquare className="w-4 h-4 text-purple-500" />
-            <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Mesaje și Lead-uri ({messages.length})</CardTitle>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex flex-row items-center gap-3">
+              <MessageSquare className="w-4 h-4 text-purple-500" />
+              <CardTitle className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Mesaje și Lead-uri ({messages.length})</CardTitle>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: "ALL", label: "Toate" },
+                { key: "CONTACT", label: "Contact" },
+                { key: "FINANCING", label: "Finanțare" },
+                { key: "STOCK", label: "Stoc" },
+                { key: "ORDER", label: "Comandă" },
+                { key: "BUYBACK", label: "Buy-Back" }
+              ].map((cat) => {
+                const count = counts[cat.key as keyof typeof counts];
+                const isSelected = leadFilter === cat.key;
+                if (cat.key !== "ALL" && count === 0) return null;
+                return (
+                  <Button
+                    key={cat.key}
+                    variant={isSelected ? "default" : "outline"}
+                    onClick={() => setLeadFilter(cat.key)}
+                    className="w-full min-h-[52px] text-sm font-medium justify-center"
+                  >
+                    {cat.label} ({count})
+                  </Button>
+                );
+              })}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {messages.map((m: any) => (
-              <div key={m.id} className="p-4 rounded-lg border border-border bg-muted/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{formatDate(m.createdAt, "dd MMM yyyy, HH:mm")}</span>
-                    {m.type && (
-                      <Badge variant="outline" className="text-[10px] py-0 font-normal">
-                        {m.type}
-                      </Badge>
-                    )}
+            {visibleMessages.length > 0 ? (
+              visibleMessages.map((m: any) => {
+                const cat = getLeadCategory(m);
+                return (
+                  <div key={m.id} className="p-5 rounded-lg border border-border bg-muted/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{formatDate(m.createdAt, "dd MMM yyyy, HH:mm")}</span>
+                        <Badge className={`text-xs py-0.5 font-normal ${LEAD_CAT_COLORS[cat]}`}>
+                          {LEAD_CAT_LABELS[cat]}
+                        </Badge>
+                      </div>
+                      {m.car && (
+                        <span className="text-sm font-semibold text-muted-foreground truncate max-w-xs">
+                          Vehicul de interes: {m.car}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-base leading-relaxed text-foreground italic">
+                      {m.message || m.content || m.text || "Fără conținut textual."}
+                    </p>
                   </div>
-                  {m.car && (
-                    <span className="text-xs font-semibold text-muted-foreground truncate max-w-xs">
-                      Vehicul de interes: {m.car}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-foreground italic">
-                  {m.message || m.content || m.text || "Fără conținut textual."}
-                </p>
-              </div>
-            ))}
+                );
+              })
+            ) : (
+              <p className="text-base text-muted-foreground text-center py-4">Niciun lead în această categorie.</p>
+            )}
           </CardContent>
         </Card>
       )}

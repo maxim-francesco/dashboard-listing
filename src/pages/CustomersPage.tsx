@@ -5,6 +5,7 @@ import { getCustomers, CustomerListItem } from "@/services/api";
 import CustomerRow, { getDeadline, getBucket, Bucket } from "@/components/customers/CustomerRow";
 import { Input } from "@/components/ui/input";
 import { formatEur } from "@/lib/format";
+import { roCount } from "@/lib/plural";
 import { isInLucru } from "@/hooks/useInLucruCount";
 
 const BUCKET_ORDER: Bucket[] = ["expirat", "azi", "maine", "saptamana", "tarziu"];
@@ -75,7 +76,7 @@ const CustomersPage = () => {
       }
       return parts.join(" · ");
     } else {
-      return `${customers.length} ${customers.length === 1 ? "persoană" : "persoane"}`;
+      return roCount(customers.length, "persoană", "persoane");
     }
   }, [activeSegment, urgente, avans, inLucruCount, customers.length]);
 
@@ -204,6 +205,8 @@ const CustomersPage = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            id="customer-search"
+            name="customer-search"
             placeholder="Caută după nume sau telefon..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
