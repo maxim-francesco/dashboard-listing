@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
-import Listings from "./pages/Listings";
+import ListingsPage from "./pages/ListingsPage";
 import AddEditListing from "./pages/AddEditListing";
 import ListingDetail from "./pages/ListingDetail";
 import { Toaster as HotToaster } from "react-hot-toast";
@@ -76,7 +76,7 @@ const App = () => (
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/listings" element={<Listings />} />
+              <Route path="/listings" element={<ListingsPage />} />
               <Route path="/contracts" element={<ContractsPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/customers/:phone" element={<CustomerDetailPage />} />

@@ -90,8 +90,12 @@ const ListingCardSkeleton = () => (
   </div>
 );
 
-const Listings = () => {
-  const [activeSegment, setActiveSegment] = useState<"instoc" | "vandute">("instoc");
+interface ListingsProps {
+  initialSegment?: "instoc" | "vandute";
+}
+
+const Listings = ({ initialSegment }: ListingsProps) => {
+  const [activeSegment, setActiveSegment] = useState<"instoc" | "vandute">(initialSegment ?? "instoc");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
   const [isDiagnoseModalOpen, setIsDiagnoseModalOpen] = useState(false);
@@ -125,6 +129,10 @@ const Listings = () => {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (initialSegment) setActiveSegment(initialSegment);
+  }, [initialSegment]);
 
   // "În stoc" segment query (AVAILABLE + RESERVED + INCOMING)
   const { data: inStockListings = [], isLoading: isInStockLoading, refetch: refetchInStock } = useQuery<Listing[]>({
@@ -731,9 +739,15 @@ const Listings = () => {
 
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full">
+      {/* Back to hub */}
+      <div className="px-1 pt-1">
+        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline">
+          ← Toate categoriile
+        </Link>
+      </div>
       {/* (a) Header row */}
       <div className="flex justify-between items-center py-2 px-1">
-        <h1 className="text-[20px] font-semibold text-foreground">Mașini</h1>
+        <h1 className="text-[20px] font-semibold text-foreground">{activeSegment === "instoc" ? "În stoc" : "Vândute"}</h1>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -766,31 +780,7 @@ const Listings = () => {
         />
       </div>
 
-      {/* (c) Two-segment control */}
-      <div className="px-1">
-        <div className="bg-muted rounded-[var(--radius)] p-[3px] flex w-full">
-          <button
-            onClick={() => setActiveSegment("instoc")}
-            className={`flex-1 text-center py-3 text-sm rounded-md transition-all cursor-pointer font-medium ${
-              activeSegment === "instoc"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            În stoc {inStockListings.length > 0 ? `· ${inStockListings.length}` : ""}
-          </button>
-          <button
-            onClick={() => setActiveSegment("vandute")}
-            className={`flex-1 text-center py-3 text-sm rounded-md transition-all cursor-pointer font-medium ${
-              activeSegment === "vandute"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Vândute {soldListings.length > 0 ? `· ${soldListings.length}` : ""}
-          </button>
-        </div>
-      </div>
+
 
       {activeSegment === "vandute" && (
         <div className="px-1 space-y-2.5">

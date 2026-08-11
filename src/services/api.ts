@@ -151,6 +151,16 @@ export const getSoldListings = async () => {
   return response.data;
 };
 
+export const getIncomingListings = async () => {
+  const response = await api.get('/listings/status/incoming');
+  return response.data;
+};
+
+export const getStockCounts = async () => {
+  const response = await api.get('/dashboard/stock-counts');
+  return response.data;
+};
+
 export const markListingAsSold = (
   listingId: string, 
   saleData: { sellingPrice: number; soldAt: string }
