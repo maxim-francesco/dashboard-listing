@@ -1,16 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,21 +40,15 @@ const DEFAULT_CLAUSES = "Vânzătorul declară că autovehiculul este proprietat
 
 const GenerateContractModal = ({ isOpen, onClose, listing, onGenerate }: GenerateContractModalProps) => {
   const todayStr = new Date().toISOString().substring(0, 10);
+  const [step, setStep] = useState(1);
 
   const form = useForm<ContractFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       buyerType: "INDIVIDUAL",
-      buyerName: "",
-      buyerAddress: "",
-      buyerPhone: "",
-      buyerEmail: "",
-      buyerCnp: "",
-      buyerCiSeries: "",
-      buyerCiNumber: "",
-      buyerCui: "",
-      buyerRegCom: "",
-      buyerLegalRep: "",
+      buyerName: "", buyerAddress: "", buyerPhone: "", buyerEmail: "",
+      buyerCnp: "", buyerCiSeries: "", buyerCiNumber: "",
+      buyerCui: "", buyerRegCom: "", buyerLegalRep: "",
       salePrice: listing?.price ?? 0,
       saleDate: todayStr,
       plateNumber: "",
@@ -75,18 +61,12 @@ const GenerateContractModal = ({ isOpen, onClose, listing, onGenerate }: Generat
 
   useEffect(() => {
     if (isOpen && listing) {
+      setStep(1);
       form.reset({
         buyerType: "INDIVIDUAL",
-        buyerName: "",
-        buyerAddress: "",
-        buyerPhone: "",
-        buyerEmail: "",
-        buyerCnp: "",
-        buyerCiSeries: "",
-        buyerCiNumber: "",
-        buyerCui: "",
-        buyerRegCom: "",
-        buyerLegalRep: "",
+        buyerName: "", buyerAddress: "", buyerPhone: "", buyerEmail: "",
+        buyerCnp: "", buyerCiSeries: "", buyerCiNumber: "",
+        buyerCui: "", buyerRegCom: "", buyerLegalRep: "",
         salePrice: listing.price ?? 0,
         saleDate: todayStr,
         plateNumber: "",
@@ -94,291 +74,219 @@ const GenerateContractModal = ({ isOpen, onClose, listing, onGenerate }: Generat
         clauses: DEFAULT_CLAUSES,
       });
     }
-  }, [listing, isOpen, form, todayStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing, isOpen]);
+
+  const next1 = async () => {
+    const ok = await form.trigger(["buyerName", "buyerEmail"]);
+    if (ok) setStep(2);
+  };
+  const next2 = async () => {
+    const ok = await form.trigger(["salePrice", "saleDate", "mileageAtSale"]);
+    if (ok) setStep(3);
+  };
+  const back = () => setStep((s) => Math.max(1, s - 1));
 
   function onSubmit(values: ContractFormData) {
     onGenerate(values);
     onClose();
   }
 
+  const stepTitle = step === 1 ? "Cumpărător" : step === 2 ? "Mașină și preț" : "Clauze contract";
+
+  const inputCls = "bg-background border-input text-foreground min-h-[50px] text-[16px]";
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        form.reset();
-        onClose();
-      }
-    }}>
-      <DialogContent className="bg-popover border-border max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-foreground">Generează contract de vânzare-cumpărare</DialogTitle>
-          <DialogDescription>
-            Introduceți datele contractului pentru vehiculul: <span className="font-semibold">{listing?.title}</span>
-          </DialogDescription>
-        </DialogHeader>
+    <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { form.reset(); onClose(); } }}>
+      <DrawerContent className="bg-background border-border max-h-[94vh]">
+        <DrawerHeader className="text-left pb-2">
+          <DrawerTitle className="text-[18px] font-semibold text-foreground">{stepTitle}</DrawerTitle>
+          {listing?.title && (
+            <p className="text-[13px] text-muted-foreground truncate">{listing.title}</p>
+          )}
+          <div className="space-y-1.5 pt-2">
+            <div className="text-[13px] text-muted-foreground">Pasul {step} din 3</div>
+            <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-300" style={{ width: (step / 3) * 100 + "%" }} />
+            </div>
+          </div>
+        </DrawerHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4 pt-2">
-              <FormField
-                control={form.control}
-                name="buyerType"
-                render={({ field }) => (
+          <div className="px-4 overflow-y-auto flex-1 min-h-0">
+            {step === 1 && (
+              <div className="space-y-4 pb-2">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => form.setValue("buyerType", "INDIVIDUAL")}
+                    className={"min-h-[52px] rounded-xl border text-[15px] font-medium transition-colors " + (buyerType === "INDIVIDUAL" ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted")}
+                  >
+                    Persoană fizică
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => form.setValue("buyerType", "COMPANY")}
+                    className={"min-h-[52px] rounded-xl border text-[15px] font-medium transition-colors " + (buyerType === "COMPANY" ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted")}
+                  >
+                    Persoană juridică
+                  </button>
+                </div>
+
+                <FormField control={form.control} name="buyerName" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tip Cumpărător</FormLabel>
-                    <FormControl>
-                      <select 
-                        {...field} 
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="INDIVIDUAL">Persoană Fizică (PF)</option>
-                        <option value="COMPANY">Persoană Juridică (PJ)</option>
-                      </select>
-                    </FormControl>
+                    <FormLabel>{buyerType === "COMPANY" ? "Denumire firmă" : "Nume cumpărător"}</FormLabel>
+                    <FormControl><Input placeholder={buyerType === "COMPANY" ? "ex: Auto SRL" : "ex: Popescu Ion"} {...field} className={inputCls} /></FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                )} />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="buyerName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nume / Denumire Cumpărător</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ex: Popescu Ion / Auto SRL" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="buyerPhone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefon</FormLabel>
+                    <FormControl><Input placeholder="07xx xxx xxx" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-                <FormField
-                  control={form.control}
-                  name="buyerPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefon Cumpărător</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ex: 07xxxxxxxx" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <FormField control={form.control} name="buyerEmail" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input type="email" placeholder="ex: client@email.com" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="buyerEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Cumpărător</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="ex: cumparator@email.com" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="buyerAddress" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adresă</FormLabel>
+                    <FormControl><Input placeholder="ex: Str. Principală Nr. 1" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-                <FormField
-                  control={form.control}
-                  name="buyerAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Adresă Cumpărător</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ex: Str. Principală Nr. 1" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {buyerType === "INDIVIDUAL" ? (
-                <div className="grid grid-cols-3 gap-4 border p-3 rounded-lg bg-muted/40">
-                  <FormField
-                    control={form.control}
-                    name="buyerCnp"
-                    render={({ field }) => (
+                {buyerType === "INDIVIDUAL" ? (
+                  <div className="space-y-4 border border-border rounded-xl p-3 bg-muted/40">
+                    <FormField control={form.control} name="buyerCnp" render={({ field }) => (
                       <FormItem>
                         <FormLabel>CNP</FormLabel>
-                        <FormControl>
-                          <Input placeholder="CNP cumpărător" {...field} className="bg-background" />
-                        </FormControl>
+                        <FormControl><Input placeholder="CNP cumpărător" {...field} className={inputCls} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="buyerCiSeries"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CI Serie</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: RX" {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="buyerCiNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CI Număr</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: 123456" {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-4 border p-3 rounded-lg bg-muted/40">
-                  <FormField
-                    control={form.control}
-                    name="buyerCui"
-                    render={({ field }) => (
+                    )} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField control={form.control} name="buyerCiSeries" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CI serie</FormLabel>
+                          <FormControl><Input placeholder="ex: RX" {...field} className={inputCls} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="buyerCiNumber" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CI număr</FormLabel>
+                          <FormControl><Input placeholder="ex: 123456" {...field} className={inputCls} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 border border-border rounded-xl p-3 bg-muted/40">
+                    <FormField control={form.control} name="buyerCui" render={({ field }) => (
                       <FormItem>
                         <FormLabel>CUI / CIF</FormLabel>
-                        <FormControl>
-                          <Input placeholder="CUI" {...field} className="bg-background" />
-                        </FormControl>
+                        <FormControl><Input placeholder="CUI" {...field} className={inputCls} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="buyerRegCom"
-                    render={({ field }) => (
+                    )} />
+                    <FormField control={form.control} name="buyerRegCom" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nr. Reg. Com.</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: J40/123/2020" {...field} className="bg-background" />
-                        </FormControl>
+                        <FormControl><Input placeholder="ex: J40/123/2020" {...field} className={inputCls} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="buyerLegalRep"
-                    render={({ field }) => (
+                    )} />
+                    <FormField control={form.control} name="buyerLegalRep" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reprezentant Legal</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nume reprezentant" {...field} className="bg-background" />
-                        </FormControl>
+                        <FormLabel>Reprezentant legal</FormLabel>
+                        <FormControl><Input placeholder="Nume reprezentant" {...field} className={inputCls} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="salePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Preț Vânzare (€)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="ex: 12000" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="saleDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data Vânzare</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    )} />
+                  </div>
+                )}
               </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="plateNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nr. Înmatriculare</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ex: B-123-ABC" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="mileageAtSale"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Km la Vânzare</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="ex: 150000" {...field} className="bg-background" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="clauses"
-                render={({ field }) => (
+            {step === 2 && (
+              <div className="space-y-4 pb-2">
+                <FormField control={form.control} name="salePrice" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Clauze Contractuale</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Clauze adiționale..." rows={4} {...field} className="bg-background" />
-                    </FormControl>
+                    <FormLabel>Preț vânzare (€)</FormLabel>
+                    <FormControl><Input type="number" placeholder="ex: 12000" {...field} className={inputCls} /></FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-            </div>
+                )} />
+                <FormField control={form.control} name="saleDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data vânzării</FormLabel>
+                    <FormControl><Input type="date" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="plateNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nr. înmatriculare</FormLabel>
+                    <FormControl><Input placeholder="ex: B-123-ABC" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="mileageAtSale" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Km la vânzare</FormLabel>
+                    <FormControl><Input type="number" placeholder="ex: 150000" {...field} className={inputCls} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
 
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-              >
-                Anulează
+            {step === 3 && (
+              <div className="space-y-4 pb-2">
+                <FormField control={form.control} name="clauses" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Clauze contractuale</FormLabel>
+                    <FormControl><Textarea rows={7} placeholder="Clauze adiționale..." {...field} className="bg-background border-input text-foreground text-[16px] min-h-[160px]" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-border mt-2">
+            {step === 1 && (
+              <Button type="button" className="w-full min-h-[52px] bg-primary text-primary-foreground font-semibold text-[16px]" onClick={next1}>
+                Înainte
               </Button>
-              <Button type="submit">
-                Generează contract
-              </Button>
-            </DialogFooter>
-          </form>
+            )}
+            {step === 2 && (
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" className="flex-1 min-h-[52px] bg-card border border-border text-foreground font-semibold text-[16px]" onClick={back}>Înapoi</Button>
+                <Button type="button" className="flex-1 min-h-[52px] bg-primary text-primary-foreground font-semibold text-[16px]" onClick={next2}>Înainte</Button>
+              </div>
+            )}
+            {step === 3 && (
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" className="flex-1 min-h-[52px] bg-card border border-border text-foreground font-semibold text-[16px]" onClick={back}>Înapoi</Button>
+                <Button type="button" className="flex-1 min-h-[52px] bg-primary text-primary-foreground font-semibold text-[16px]" onClick={form.handleSubmit(onSubmit)}>Generează contract</Button>
+              </div>
+            )}
+          </div>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 };
 

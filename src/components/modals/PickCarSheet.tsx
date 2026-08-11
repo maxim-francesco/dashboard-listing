@@ -9,9 +9,10 @@ interface PickCarSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onPick: (listing: any) => void;
+  statuses?: string[];
 }
 
-export default function PickCarSheet({ isOpen, onClose, onPick }: PickCarSheetProps) {
+export default function PickCarSheet({ isOpen, onClose, onPick, statuses = ["AVAILABLE"] }: PickCarSheetProps) {
   const [search, setSearch] = useState("");
   const { data: listings = [], isLoading } = useQuery<any[]>({
     queryKey: ["listings"],
@@ -20,7 +21,7 @@ export default function PickCarSheet({ isOpen, onClose, onPick }: PickCarSheetPr
     enabled: isOpen,
   });
 
-  const available = (listings as any[]).filter((l) => (l.status ?? "AVAILABLE") === "AVAILABLE");
+  const available = (listings as any[]).filter((l) => statuses.includes(l.status ?? "AVAILABLE"));
   const term = search.toLowerCase().trim();
   const filtered = term
     ? available.filter((l) => (l.title || "").toLowerCase().includes(term))
