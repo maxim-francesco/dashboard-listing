@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,7 @@ interface FullListingData {
 
 const AddEditListing = () => {
   const { listingId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -431,6 +432,13 @@ const AddEditListing = () => {
 
     loadCatalogAndListing();
   }, [listingId, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing && searchParams.get("status") === "INCOMING") {
+      setFields(prev => ({ ...prev, status: "INCOMING" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, searchParams]);
 
   // Form Submit Logic
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
