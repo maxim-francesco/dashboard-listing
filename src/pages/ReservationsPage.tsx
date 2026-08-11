@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, CalendarClock, Plus, User, Phone, Coins } from "lucide-react";
 import { format } from "date-fns";
@@ -99,6 +100,9 @@ export default function ReservationsPage() {
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full pb-24">
       <div className="px-1 pt-1">
+        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1">
+          ← Toate categoriile
+        </Link>
         <h1 className="text-[20px] font-semibold text-foreground leading-tight">Rezervări</h1>
         <p className="text-[13px] text-muted-foreground mt-0.5">
           {active.length > 0 ? roCount(active.length, "activă", "active") : "Mașini ținute cu avans"}
