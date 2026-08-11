@@ -239,6 +239,27 @@ export const createOffer = async (payload: CreateOfferPayload): Promise<CreateOf
   return data as CreateOfferResponse;
 };
 
+export interface OfferItem {
+  id: string;
+  code: string;
+  clientName: string;
+  clientPhone: string;
+  offerPrice: number;
+  listPrice: number | null;
+  listingId: string;
+  listingTitleSnapshot: string;
+  listingImageSnapshot: string | null;
+  createdAt: string;
+  expiresAt: string;
+  viewedAt: string | null;
+  publicUrl: string | null;
+}
+
+export const getOffers = async (): Promise<OfferItem[]> => {
+  const { data } = await api.get('/offers');
+  return data as OfferItem[];
+};
+
 export interface CreateContractPayload {
   listingId: string;
   buyerType: "INDIVIDUAL" | "COMPANY";

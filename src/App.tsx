@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import ListingsPage from "./pages/ListingsPage";
+import OffersPage from "./pages/OffersPage";
 import AddEditListing from "./pages/AddEditListing";
 import ListingDetail from "./pages/ListingDetail";
 import { Toaster as HotToaster } from "react-hot-toast";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/customers/:phone" element={<CustomerDetailPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />
+              <Route path="/offers" element={<OffersPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/listings/new" element={<AddEditListing />} />

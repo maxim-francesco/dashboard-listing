@@ -104,7 +104,7 @@ export default function ListingsMenu() {
       icon: Tag,
       borderClass: "border-l-4 border-l-purple-500",
       iconClass: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20",
-      to: "/customers?filter=offers",
+      to: "/offers",
     },
     {
       key: "contracts",
