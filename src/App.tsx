@@ -21,6 +21,7 @@ import AdminReviewsPage from "./pages/AdminReviewsPage";
 import ContractsPage from "./pages/ContractsPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import CalendarPage from "./pages/CalendarPage";
+import SchedulePage from "./pages/SchedulePage";
 import ProfitabilityReport from "./pages/Reports/ProfitabilityReport";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicFeedPreview from "./pages/PublicFeedPreview";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/customers/:phone" element={<CustomerDetailPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/listings/new" element={<AddEditListing />} />
               <Route path="/listings/:listingId/edit" element={<AddEditListing />} />
               <Route path="/listings/:listingId" element={<ListingDetail />} />

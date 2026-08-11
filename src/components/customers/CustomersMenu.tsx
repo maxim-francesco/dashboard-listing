@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Bell, Coins, Package, Calendar, FileText, Tag, Users, ChevronRight } from "lucide-react";
+import { Bell, Coins, Package, Calendar, CalendarDays, FileText, Tag, Users, ChevronRight } from "lucide-react";
 import { CustomerListItem, getMessageCounts } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -76,6 +76,17 @@ export default function CustomersMenu({ customers }: CustomersMenuProps) {
       iconClass: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20",
       to: "/customers?filter=appointments",
       total: appointmentsTotal,
+    },
+    {
+      key: "calendar",
+      title: "Calendar",
+      description: "Vezi programările pe zile",
+      icon: CalendarDays,
+      borderClass: "border-l-4 border-l-purple-500",
+      iconClass: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20",
+      to: "/schedule",
+      total: appointmentsTotal,
+      showChevron: true,
     },
     {
       key: "offers",
