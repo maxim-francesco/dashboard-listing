@@ -25,7 +25,7 @@ export default function ShareOfferSheet({ isOpen, onClose, publicUrl, clientPhon
   const priceTxt = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(offerPrice || 0) + " €";
   const validTxt = validityDays ? (" — valabilă " + validityDays + " zile") : "";
   const message = publicUrl
-    ? ("Bună ziua! Oferta pentru " + carTitle + ": " + publicUrl + validTxt + ". " + (firmName || ""))
+    ? ("Bună ziua! Oferta pentru " + carTitle + validTxt + ":\n\n" + publicUrl + "\n\n" + (firmName || ""))
     : ("Bună ziua! Oferta pentru " + carTitle + " la prețul de " + priceTxt + validTxt + ". " + (firmName || ""));
 
   const copyLink = async () => {
