@@ -21,7 +21,7 @@ import { getCustomer } from "@/services/api";
 import { formatEur } from "@/lib/format";
 import { roCount } from "@/lib/plural";
 import { relativeTime } from "@/lib/relativeTime";
-import AppointmentModal from "@/components/modals/AppointmentModal";
+import AppointmentWizard from "@/components/modals/AppointmentWizard";
 
 const TYPE_LABELS: Record<string, string> = {
   TEST_DRIVE: 'Test-drive',
@@ -141,11 +141,7 @@ const CustomerDetailPage = () => {
     ? sortedMessages 
     : sortedMessages.filter((m: any) => getLeadCategory(m) === leadFilter);
 
-  const tomorrowStart = new Date();
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  tomorrowStart.setHours(10, 0, 0, 0);
 
-  const tomorrowEnd = new Date(tomorrowStart.getTime() + 60 * 60 * 1000);
 
   return (
     <div className="space-y-6 pb-24">
@@ -377,18 +373,12 @@ const CustomerDetailPage = () => {
         </Card>
       )}
 
-      <AppointmentModal
+      <AppointmentWizard
         isOpen={modalOpen}
-        mode="create"
-        initial={{
-          clientName: customer.name || "",
-          clientPhone: customer.phone || "",
-          type: 'OTHER',
-          startAt: tomorrowStart.toISOString(),
-          endAt: tomorrowEnd.toISOString(),
-        }}
         onClose={() => setModalOpen(false)}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['customer', phone] })}
+        customerName={customer.name || ""}
+        customerPhone={customer.phone || ""}
       />
     </div>
   );
