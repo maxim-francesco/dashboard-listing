@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, Check } from "lucide-react";
 import { getCustomers, CustomerListItem } from "@/services/api";
 import CustomerRow, { getDeadline, getBucket, Bucket } from "@/components/customers/CustomerRow";
+import CustomersMenu from "@/components/customers/CustomersMenu";
 import { Input } from "@/components/ui/input";
 import { formatEur } from "@/lib/format";
 import { roCount } from "@/lib/plural";
@@ -29,6 +31,8 @@ const getHeaderClasses = (bucket: Bucket, isFirst: boolean) => {
 };
 
 const CustomersPage = () => {
+  const [searchParams] = useSearchParams();
+  const filter = searchParams.get("filter");
   const [search, setSearch] = useState("");
   const [activeSegment, setActiveSegment] = useState<"inlucru" | "toti">("inlucru");
 
@@ -95,44 +99,105 @@ const CustomersPage = () => {
       });
     }
 
-    const groupsMap: Record<Bucket, CustomerListItem[]> = {
-      expirat: [],
-      azi: [],
-      maine: [],
-      saptamana: [],
-      tarziu: [],
-    };
+    const needsAttentionList: CustomerListItem[] = [];
+    const restList: CustomerListItem[] = [];
 
     for (const c of list) {
+      const isUnread = !!(c.openLead && !c.openLead.isRead);
       const deadline = getDeadline(c);
       const bucket = getBucket(deadline);
-      groupsMap[bucket].push(c);
+      const isUrgent = bucket === "expirat" || bucket === "azi" || bucket === "maine";
+
+      if (isUnread || isUrgent) {
+        needsAttentionList.push(c);
+      } else {
+        restList.push(c);
+      }
     }
 
-    for (const bucket of BUCKET_ORDER) {
-      groupsMap[bucket].sort((a, b) => {
-        const dA = getDeadline(a);
-        const dB = getDeadline(b);
-        const tA = dA ? dA.getTime() : Infinity;
-        const tB = dB ? dB.getTime() : Infinity;
-        return tA - tB;
+    // Sort needsAttentionList: unread-first, then by deadline
+    needsAttentionList.sort((a, b) => {
+      const isUnreadA = !!(a.openLead && !a.openLead.isRead);
+      const isUnreadB = !!(b.openLead && !b.openLead.isRead);
+
+      if (isUnreadA !== isUnreadB) {
+        return isUnreadA ? -1 : 1;
+      }
+
+      const dA = getDeadline(a);
+      const dB = getDeadline(b);
+      const tA = dA ? dA.getTime() : Infinity;
+      const tB = dB ? dB.getTime() : Infinity;
+      return tA - tB;
+    });
+
+    // Sort restList: by deadline
+    restList.sort((a, b) => {
+      const dA = getDeadline(a);
+      const dB = getDeadline(b);
+      const tA = dA ? dA.getTime() : Infinity;
+      const tB = dB ? dB.getTime() : Infinity;
+      return tA - tB;
+    });
+
+    const groups: { id: "attention" | "rest"; label: string; headerClass: string; customers: CustomerListItem[] }[] = [];
+
+    if (needsAttentionList.length > 0) {
+      groups.push({
+        id: "attention",
+        label: "Necesită atenție",
+        headerClass: "bg-destructive/10 text-destructive",
+        customers: needsAttentionList,
       });
     }
 
-    const groups: { bucket: Bucket; label: string; customers: CustomerListItem[] }[] = [];
-    for (const bucket of BUCKET_ORDER) {
-      if (groupsMap[bucket].length > 0) {
-        groups.push({
-          bucket,
-          label: BUCKET_LABELS[bucket],
-          customers: groupsMap[bucket],
-        });
-      }
+    if (restList.length > 0) {
+      groups.push({
+        id: "rest",
+        label: "Restul",
+        headerClass: "bg-muted text-muted-foreground",
+        customers: restList,
+      });
     }
+
     return groups;
   }, [activeSegment, inLucruCustomers, search]);
 
   const totiFiltered = useMemo(() => {
+    if (filter) {
+      let list = customers;
+      if (filter === "noi") {
+        list = customers.filter((c) => c.hasUnreadLead === true);
+      } else if (filter === "financing") {
+        list = customers.filter((c) => c.leadTypes?.includes("FINANCING"));
+      } else if (filter === "order") {
+        list = customers.filter((c) => c.leadTypes?.includes("ORDER"));
+      } else if (filter === "appointments") {
+        list = customers.filter((c) => c.nextAppointment != null);
+      } else if (filter === "offers") {
+        list = customers.filter((c) => c.pendingOffer != null);
+      } else if (filter === "reservations") {
+        list = customers.filter((c) => c.activeReservation != null);
+      } else if (filter === "all") {
+        list = customers;
+      }
+
+      const term = search.toLowerCase().trim();
+      if (term) {
+        const cleanSearch = term.replace(/\D/g, "");
+        list = list.filter((c) => {
+          const cleanPhone = c.phone.replace(/\D/g, "");
+          const nameMatch = c.name.toLowerCase().includes(term);
+          const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
+          return nameMatch || phoneMatch;
+        });
+      }
+
+      return [...list].sort((a, b) =>
+        a.name.localeCompare(b.name, "ro", { sensitivity: "base" })
+      );
+    }
+
     if (activeSegment !== "toti") return [];
 
     const sorted = [...customers].sort((a, b) => {
@@ -150,7 +215,7 @@ const CustomersPage = () => {
       const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
       return nameMatch || phoneMatch;
     });
-  }, [activeSegment, customers, search]);
+  }, [activeSegment, customers, search, filter]);
 
   if (isLoading) {
     return (
@@ -171,89 +236,57 @@ const CustomersPage = () => {
 
   return (
     <div className="space-y-4 pb-24">
-      <div>
-        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Clienți</h1>
-        <p className="text-[13px] text-muted-foreground mt-0.5">
-          {subtitle}
-        </p>
-      </div>
-
-      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 space-y-3">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveSegment("inlucru")}
-            className={`flex-1 h-11 rounded-lg text-[15px] font-medium transition-colors ${
-              activeSegment === "inlucru"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card border border-border text-foreground"
-            }`}
-          >
-            În lucru ({inLucruCount})
-          </button>
-          <button
-            onClick={() => setActiveSegment("toti")}
-            className={`flex-1 h-11 rounded-lg text-[15px] font-medium transition-colors ${
-              activeSegment === "toti"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card border border-border text-foreground"
-            }`}
-          >
-            Toți ({customers.length})
-          </button>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            id="customer-search"
-            name="customer-search"
-            placeholder="Caută după nume sau telefon..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-background border-input text-foreground h-11"
-          />
-        </div>
-      </div>
-
-      {activeSegment === "inlucru" && inLucruCount === 0 && !search.trim() ? (
-        <div className="bg-success-light rounded-xl p-4 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-success text-success-foreground flex items-center justify-center flex-shrink-0">
-            <Check className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-medium text-success">Nimic în lucru</h3>
-            <p className="text-sm text-success">Nicio rezervare, ofertă sau programare activă.</p>
-          </div>
-        </div>
-      ) : (activeSegment === "inlucru" ? inLucruGrouped.length === 0 : totiFiltered.length === 0) ? (
-        <div className="text-[15px] text-muted-foreground text-center py-8">
-          Niciun client găsit pentru „{search}"
-        </div>
+      {!filter ? (
+        <CustomersMenu customers={customers} />
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {activeSegment === "inlucru" ? (
-            inLucruGrouped.map((group, groupIndex) => (
-              <div key={group.bucket}>
-                <div className={getHeaderClasses(group.bucket, groupIndex === 0)}>
-                  {group.label}
-                </div>
-                {group.customers.map((customer) => (
-                  <div key={customer.phone} className="border-t border-border">
-                    {/* Rendered with variant action: filled button, no-day prefix in appointment lead, show line 3 */}
-                    <CustomerRow customer={customer} variant="action" />
-                  </div>
-                ))}
-              </div>
-            ))
+        <>
+          <div>
+            <Link to="/customers" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1">
+              ← Înapoi la categorii
+            </Link>
+            <h1 className="text-[20px] font-semibold text-foreground leading-tight">
+              {filter === "noi" && "Cereri noi"}
+              {filter === "financing" && "Finanțare"}
+              {filter === "order" && "Mașini la comandă"}
+              {filter === "appointments" && "Programări"}
+              {filter === "offers" && "Oferte trimise"}
+              {filter === "reservations" && "Rezervări active"}
+              {filter === "all" && "Toți clienții"}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              {roCount(totiFiltered.length, "client", "clienți")}
+            </p>
+          </div>
+
+          <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="customer-search"
+                name="customer-search"
+                placeholder="Caută după nume sau telefon..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-background border-input text-foreground h-11"
+              />
+            </div>
+          </div>
+
+          {totiFiltered.length === 0 ? (
+            <div className="text-[15px] text-muted-foreground text-center py-8">
+              {search.trim() ? `Niciun client găsit pentru „${search}”` : "Niciun client în această categorie."}
+            </div>
           ) : (
-            totiFiltered.map((customer, index) => (
-              <div key={customer.phone} className={index > 0 ? "border-t border-border" : ""}>
-                {/* Rendered with variant plain: tinted button, day prefix in appointment lead (e.g. mâine), hide line 3 */}
-                <CustomerRow customer={customer} variant="plain" />
-              </div>
-            ))
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {totiFiltered.map((customer, index) => (
+                <div key={customer.phone} className={index > 0 ? "border-t border-border" : ""}>
+                  {/* Rendered with variant plain: tinted button, day prefix in appointment lead (e.g. mâine), hide line 3 */}
+                  <CustomerRow customer={customer} variant="plain" />
+                </div>
+              ))}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

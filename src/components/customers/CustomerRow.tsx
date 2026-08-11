@@ -1,10 +1,23 @@
 import { useNavigate } from "react-router";
-import { Phone } from "lucide-react";
+import {
+  Phone,
+  MessageSquare,
+  Car,
+  Package,
+  RefreshCw,
+  Coins,
+  Calendar,
+  FileText,
+  Check,
+  User,
+  Tag
+} from "lucide-react";
 import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import { isToday, isTomorrow, differenceInCalendarDays, format, formatDistanceToNow, isPast } from "date-fns";
 import { ro } from "date-fns/locale";
 import { CustomerListItem } from "@/services/api";
 import { formatEur } from "@/lib/format";
+import { TYPE_LABELS, TYPE_COLORS } from "@/components/leads/LeadDetailPanel";
 
 const TYPE_LABELS_LOWER: Record<string, string> = {
   TEST_DRIVE: "test-drive",
@@ -21,6 +34,22 @@ const STATUS_LABELS: Record<string, string> = {
   OFFER: "Ofertă",
   WON: "Câștigat",
   LOST: "Pierdut",
+};
+
+const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  GENERAL: MessageSquare,
+  STOCK: Car,
+  ORDER: Package,
+  BUYBACK: RefreshCw,
+  FINANCING: Coins,
+};
+
+const DOT_COLORS: Record<string, string> = {
+  GENERAL: "bg-blue-500",
+  STOCK: "bg-purple-500",
+  ORDER: "bg-indigo-500",
+  BUYBACK: "bg-amber-500",
+  FINANCING: "bg-green-500",
 };
 
 function getSortedCandidates(c: CustomerListItem) {
@@ -126,7 +155,6 @@ export function getSecondary(c: CustomerListItem): string | null {
   return null;
 }
 
-// Keep existing exports working
 export function getSignal(c: CustomerListItem): {
   text: string;
   tone: "warning" | "destructive" | "muted" | "foreground";
@@ -159,6 +187,106 @@ export function getSignal(c: CustomerListItem): {
   };
 }
 
+export interface PrimaryEvent {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClasses: string;
+  detail: string;
+}
+
+export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
+  const unreadLead = customer.openLead && !customer.openLead.isRead;
+  const appt = customer.nextAppointment;
+  const offer = customer.pendingOffer;
+  const resv = customer.activeReservation;
+
+  if (unreadLead) {
+    const type = customer.openLead!.type;
+    const statusLabel = STATUS_LABELS[customer.openLead!.status] || customer.openLead!.status;
+    const distanceStr = formatDistanceToNow(new Date(customer.openLead!.createdAt), { addSuffix: true, locale: ro });
+    return {
+      label: TYPE_LABELS[type] || type,
+      icon: TYPE_ICONS[type] || MessageSquare,
+      colorClasses: TYPE_COLORS[type] || "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+      detail: `${statusLabel} · ${distanceStr}`
+    };
+  }
+
+  if (appt) {
+    const startAt = new Date(appt.startAt);
+    const hhMm = format(startAt, "HH:mm");
+    let dayPrefix = "";
+    if (isToday(startAt)) {
+      dayPrefix = "Azi";
+    } else if (isTomorrow(startAt)) {
+      dayPrefix = "Mâine";
+    } else {
+      dayPrefix = format(startAt, "d MMM", { locale: ro });
+    }
+    const type = appt.type ?? "OTHER";
+    const typeLabelLower = TYPE_LABELS_LOWER[type] || "altele";
+    return {
+      label: "Programare",
+      icon: Calendar,
+      colorClasses: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+      detail: `${dayPrefix} ${hhMm} · ${typeLabelLower}`
+    };
+  }
+
+  if (offer) {
+    const offerPrice = offer.offerPrice ?? 0;
+    const car = offer.car || "autovehicul";
+    return {
+      label: "Ofertă",
+      icon: FileText,
+      colorClasses: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+      detail: `${car} · ${formatEur(offerPrice)}`
+    };
+  }
+
+  if (resv) {
+    const depositAmount = resv.depositAmount ?? 0;
+    const car = resv.car || "autovehicul";
+    return {
+      label: "Rezervare",
+      icon: Tag,
+      colorClasses: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+      detail: `${formatEur(depositAmount)} avans · ${car}`
+    };
+  }
+
+  // Fallback
+  let fallbackDetail = "";
+  if (customer.purchasedCars && customer.purchasedCars.length > 0) {
+    const firstCar = customer.purchasedCars[0];
+    fallbackDetail = `A cumpărat ${firstCar}${customer.purchasedCars.length > 1 ? ` și încă ${customer.purchasedCars.length - 1}` : ""}`;
+  } else if (customer.openLead) {
+    const statusLabel = STATUS_LABELS[customer.openLead.status] || customer.openLead.status;
+    const distanceStr = formatDistanceToNow(new Date(customer.openLead.createdAt), { addSuffix: true, locale: ro });
+    fallbackDetail = `${statusLabel} · ${distanceStr}`;
+  } else if (customer.lastInteraction) {
+    try {
+      const d = new Date(customer.lastInteraction);
+      if (!isNaN(d.getTime())) {
+        fallbackDetail = `Ultima interacțiune ${formatDistanceToNow(d, { addSuffix: true, locale: ro })}`;
+      } else {
+        fallbackDetail = customer.lastInteraction;
+      }
+    } catch {
+      fallbackDetail = customer.lastInteraction;
+    }
+  } else {
+    fallbackDetail = `+${customer.phone}`;
+  }
+
+  return {
+    label: customer.purchasedCars && customer.purchasedCars.length > 0 ? "Cumpărător" : "Client",
+    icon: customer.purchasedCars && customer.purchasedCars.length > 0 ? Check : User,
+    colorClasses: "bg-slate-100 text-slate-700 dark:bg-slate-800/40 dark:text-slate-400",
+    detail: fallbackDetail
+  };
+}
+
 interface CustomerRowProps {
   customer: CustomerListItem;
   variant?: "action" | "plain";
@@ -166,41 +294,19 @@ interface CustomerRowProps {
 
 export default function CustomerRow({ customer, variant = "plain" }: CustomerRowProps) {
   const navigate = useNavigate();
-  const deadline = getDeadline(customer);
-  const secondaryText = getSecondary(customer);
-  const withDay = variant === "plain";
+  
+  const hasUnreadLead = !!(customer.openLead && !customer.openLead.isRead);
+  const primaryEvent = getPrimaryEvent(customer);
+  const IconComponent = primaryEvent.icon;
 
-  let line2Content: React.ReactNode = null;
+  const presentEvents = [
+    !!(customer.openLead && !customer.openLead.isRead),
+    !!customer.nextAppointment,
+    !!customer.pendingOffer,
+    !!customer.activeReservation
+  ].filter(Boolean).length;
 
-  if (deadline) {
-    const bucket = getBucket(deadline);
-    const primary = getPrimary(customer, bucket, withDay);
-    line2Content = (
-      <div className="text-[13px] truncate">
-        <span className={`font-medium ${primary.tone}`}>{primary.lead}</span>{" "}
-        <span className="text-muted-foreground">{primary.rest}</span>
-      </div>
-    );
-  } else {
-    let fallbackText = "";
-    if (customer.openLead && customer.openLead.status === "NEW") {
-      fallbackText = `Lead nou · ${formatDistanceToNow(new Date(customer.openLead.createdAt), { addSuffix: true, locale: ro })}`;
-    } else if (customer.openLead) {
-      const statusLabel = STATUS_LABELS[customer.openLead.status] || customer.openLead.status;
-      fallbackText = `${statusLabel} · ${formatDistanceToNow(new Date(customer.openLead.createdAt), { addSuffix: true, locale: ro })}`;
-    } else if (customer.purchasedCars && customer.purchasedCars.length > 0) {
-      const firstCar = customer.purchasedCars[0];
-      fallbackText = `A cumpărat ${firstCar}${customer.purchasedCars.length > 1 ? ` și încă ${customer.purchasedCars.length - 1}` : ""}`;
-    } else {
-      fallbackText = `+${customer.phone}`;
-    }
-
-    line2Content = (
-      <div className="text-[13px] truncate text-muted-foreground">
-        {fallbackText}
-      </div>
-    );
-  }
+  const otherCount = presentEvents > 0 ? presentEvents - 1 : 0;
 
   const callBtnClass = variant === "action"
     ? "bg-success text-success-foreground"
@@ -209,25 +315,41 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
   return (
     <div
       onClick={() => navigate(`/customers/${encodeURIComponent(customer.phone)}`)}
-      className="flex items-center gap-3 px-3.5 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+      className="flex items-center gap-3.5 px-4 py-4 cursor-pointer hover:bg-muted/50 transition-colors"
     >
-      <InitialsAvatar name={customer.name} />
+      <InitialsAvatar name={customer.name} className="w-[46px] h-[46px] text-base" />
       <div className="flex-1 min-w-0">
-        <div className="text-[15px] font-medium text-foreground truncate">
-          {customer.name || "Fără nume"}
-        </div>
-        {line2Content}
-        {secondaryText && variant === "action" && (
-          <div className="text-[12px] text-muted-foreground truncate mt-0.5">
-            {secondaryText}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          {hasUnreadLead && (
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${DOT_COLORS[customer.openLead!.type]} shrink-0 animate-pulse`} />
+          )}
+          <div className="text-[17px] font-medium text-foreground truncate leading-snug">
+            {customer.name || "Fără nume"}
           </div>
-        )}
+        </div>
+        
+        <div className="flex items-center flex-wrap gap-2 mb-1">
+          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-medium ${primaryEvent.colorClasses}`}>
+            {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+            {primaryEvent.label}
+          </span>
+          
+          {otherCount > 0 && (
+            <span className="text-[12px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+              +{otherCount}
+            </span>
+          )}
+        </div>
+
+        <div className="text-[14px] text-muted-foreground truncate leading-normal">
+          {primaryEvent.detail}
+        </div>
       </div>
       {customer.phone && (
         <a
           href={`tel:+${customer.phone}`}
           onClick={(e) => e.stopPropagation()}
-          className={`w-11 h-11 rounded-full ${callBtnClass} flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-colors`}
+          className={`w-[50px] h-[50px] rounded-full ${callBtnClass} flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-colors`}
           aria-label={`Sună pe ${customer.name || "client"}`}
         >
           <Phone className="h-5 w-5" />

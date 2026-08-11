@@ -61,6 +61,7 @@ export const TYPE_LABELS: Record<string, string> = {
   STOCK: "Stoc",
   ORDER: "Comandă",
   BUYBACK: "Buyback",
+  FINANCING: "Finanțare",
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -80,11 +81,12 @@ export const LOST_REASON_LABELS: Record<string, string> = {
   OTHER: "Alt motiv",
 };
 
-const TYPE_COLORS: Record<string, string> = {
+export const TYPE_COLORS: Record<string, string> = {
   GENERAL: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
   STOCK: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
   ORDER: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
   BUYBACK: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  FINANCING: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -237,7 +239,7 @@ export const LeadDetailPanel = ({
     }
   };
 
-  const handleTypeChange = async (newType: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK') => {
+  const handleTypeChange = async (newType: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING') => {
     if (!lead) return;
 
     const hasLinkedListing = !!(lead.listingId || lead.listing?.id);
@@ -658,6 +660,7 @@ export const LeadDetailPanel = ({
             <SelectItem value="STOCK" className="text-base md:text-xs">Mașină din stoc</SelectItem>
             <SelectItem value="ORDER" className="text-base md:text-xs">Mașină la comandă</SelectItem>
             <SelectItem value="BUYBACK" className="text-base md:text-xs">Buyback</SelectItem>
+            <SelectItem value="FINANCING" className="text-base md:text-xs">Finanțare</SelectItem>
           </SelectContent>
         </Select>
       </div>

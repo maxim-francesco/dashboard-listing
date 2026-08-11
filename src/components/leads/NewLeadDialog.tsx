@@ -19,7 +19,7 @@ interface NewLeadDialogProps {
 export const NewLeadDialog = ({ open, onOpenChange, onSuccess }: NewLeadDialogProps) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
-  const [type, setType] = useState<"GENERAL" | "STOCK" | "ORDER" | "BUYBACK">("GENERAL");
+  const [type, setType] = useState<"GENERAL" | "STOCK" | "ORDER" | "BUYBACK" | "FINANCING">("GENERAL");
   const [listingId, setListingId] = useState<string | null>(null);
 
   const [listings, setListings] = useState<any[]>([]);
@@ -121,6 +121,7 @@ export const NewLeadDialog = ({ open, onOpenChange, onSuccess }: NewLeadDialogPr
                 <SelectItem value="STOCK" className="text-base md:text-xs">Stoc</SelectItem>
                 <SelectItem value="ORDER" className="text-base md:text-xs">Comandă</SelectItem>
                 <SelectItem value="BUYBACK" className="text-base md:text-xs">Buyback</SelectItem>
+                <SelectItem value="FINANCING" className="text-base md:text-xs">Finanțare</SelectItem>
               </SelectContent>
             </Select>
           </div>

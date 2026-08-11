@@ -64,7 +64,7 @@ const getLeadCategory = (m: any): keyof typeof LEAD_CAT_LABELS => {
   if (m.type === "BUYBACK") return "BUYBACK";
   if (m.type === "ORDER") return "ORDER";
   if (m.type === "STOCK") return "STOCK";
-  if (m.type === "GENERAL" && typeof m.message === "string" && m.message.trim().startsWith("[Cerere finanțare]")) return "FINANCING";
+  if (m.type === "FINANCING") return "FINANCING";
   return "CONTACT";
 };
 

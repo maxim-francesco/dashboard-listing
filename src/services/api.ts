@@ -202,7 +202,7 @@ export interface CreateManualLeadData {
   phone: string;
   email?: string;
   message?: string;
-  type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK';
+  type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING';
   listingId?: string | null;
 }
 
@@ -301,6 +301,8 @@ export interface CustomerListItem {
   purchasedCars: string[];
   lastInteraction: string;
   sources: string[];
+  leadTypes: string[];
+  hasUnreadLead: boolean;
   activeReservation?: {
     id: string; car: string | null; expiresAt: string; depositAmount: number;
   } | null;
@@ -311,9 +313,7 @@ export interface CustomerListItem {
   nextAppointment?: {
     id: string; title: string; type: string; startAt: string;
   } | null;
-  openLead?: {
-    id: string; status: string; createdAt: string; reminderAt: string | null;
-  } | null;
+  openLead?: { id: string; status: string; createdAt: string; reminderAt: string | null; type: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING'; isRead: boolean } | null;
 }
 export const getCustomers = async (): Promise<CustomerListItem[]> => {
   const { data } = await api.get('/customers');
@@ -399,7 +399,7 @@ export interface MessageDetail {
   message: string;
   isRead: boolean;
   createdAt: string;
-  type: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK';
+  type: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING';
   status: 'NEW' | 'CONTACTED' | 'VIEWING' | 'OFFER' | 'WON' | 'LOST';
   lostReason: 'PRICE' | 'BOUGHT_ELSEWHERE' | 'UNREACHABLE' | 'NOT_SERIOUS' | 'OTHER' | null;
   reminderAt: string | null;
@@ -423,7 +423,7 @@ export const updateMessageStatus = async (
 
 export const updateMessage = async (
   id: string,
-  payload: { type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK'; listingId?: string | null }
+  payload: { type?: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING'; listingId?: string | null }
 ): Promise<any> => {
   const response = await api.patch(`/messages/${id}`, payload);
   return response.data;

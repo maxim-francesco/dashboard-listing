@@ -28,6 +28,7 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
   TYPE_LABELS,
+  TYPE_COLORS,
 } from "@/components/leads/LeadDetailPanel";
 import { NewLeadDialog } from "@/components/leads/NewLeadDialog";
 
@@ -40,7 +41,7 @@ interface Message {
   message: string;
   isRead: boolean;
   createdAt: string;
-  type: "GENERAL" | "STOCK" | "ORDER" | "BUYBACK";
+  type: "GENERAL" | "STOCK" | "ORDER" | "BUYBACK" | "FINANCING";
   status: "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST";
   lostReason: string | null;
   reminderAt: string | null;
@@ -71,7 +72,10 @@ const MessagesPage = () => {
   // Filter states
   const [activeTab, setActiveTab] = useState<"action" | "all" | "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST">("action");
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [typeFilter, setTypeFilter] = useState<string>(() => {
+    const t = searchParams.get("type");
+    return t ? t.toUpperCase() : "ALL";
+  });
 
 
   const fetchCounts = async () => {
@@ -349,9 +353,17 @@ const MessagesPage = () => {
                     ) : null}
                     <div className="font-semibold text-foreground text-sm">{message.name}</div>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusPillClass(message.status)}`}>
-                    {STATUS_LABELS[message.status]}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                      TYPE_COLORS[message.type] || "bg-muted text-foreground"
+                    )}>
+                      {TYPE_LABELS[message.type]}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusPillClass(message.status)}`}>
+                      {STATUS_LABELS[message.status]}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
@@ -360,7 +372,7 @@ const MessagesPage = () => {
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
-                  <span>Trimis prin contact</span>
+                  <span />
                   <span className={isRed ? "text-rose-600 dark:text-rose-400 font-semibold" : ""}>
                     {formatDistanceToNow(new Date(message.createdAt), {
                       addSuffix: true,
@@ -379,7 +391,7 @@ const MessagesPage = () => {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="p-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider pl-6">
-                  Contact
+                  Client
                 </th>
                 <th className="p-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   Mașină
@@ -428,6 +440,12 @@ const MessagesPage = () => {
                               {message.phone}
                             </div>
                           )}
+                          <span className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1",
+                            TYPE_COLORS[message.type] || "bg-muted text-foreground"
+                          )}>
+                            {TYPE_LABELS[message.type]}
+                          </span>
                         </div>
                       </div>
                     </td>

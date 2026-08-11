@@ -11,7 +11,7 @@ interface Message {
   message: string;
   isRead: boolean;
   createdAt: string;
-  type: "GENERAL" | "STOCK" | "ORDER" | "BUYBACK";
+  type: "GENERAL" | "STOCK" | "ORDER" | "BUYBACK" | "FINANCING";
   status: "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST";
   lostReason: string | null;
   reminderAt: string | null;
