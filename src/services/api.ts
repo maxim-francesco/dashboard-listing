@@ -357,6 +357,11 @@ export const cancelReservation = async (id: string): Promise<any> => {
   const { data } = await api.patch(`/reservations/${id}/cancel`);
   return data;
 };
+
+export const extendReservation = async (id: string, days: number): Promise<any> => {
+  const { data } = await api.patch(`/reservations/${id}/extend`, { days });
+  return data;
+};
 export interface HandoverPayload {
   handoverDate?: string | null;
   handoverMileage?: number | null;

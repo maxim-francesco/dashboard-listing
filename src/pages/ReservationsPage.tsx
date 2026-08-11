@@ -1,197 +1,242 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CalendarClock, MoreHorizontal, Check, X } from "lucide-react";
+import { Loader2, CalendarClock, Plus, User, Phone, Coins } from "lucide-react";
 import { format } from "date-fns";
-import { 
-  getReservations, 
-  completeReservation, 
-  cancelReservation, 
-  ReservationItem 
-} from "@/services/api";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { ro } from "date-fns/locale";
 import { toast } from "react-hot-toast";
+import {
+  getReservations,
+  cancelReservation,
+  extendReservation,
+  createReservation,
+  ReservationItem,
+} from "@/services/api";
+import { roCount } from "@/lib/plural";
+import { formatEur } from "@/lib/format";
+import ReserveModal from "@/components/modals/ReserveModal";
+import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
+import PickCarSheet from "@/components/modals/PickCarSheet";
+import ExtendReservationSheet from "@/components/modals/ExtendReservationSheet";
 
-const ReservationsPage = () => {
+function daysLeft(expiresAt: string): number {
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+export default function ReservationsPage() {
   const queryClient = useQueryClient();
-
   const { data: reservations = [], isLoading } = useQuery<ReservationItem[]>({
-    queryKey: ['reservations'],
+    queryKey: ["reservations"],
     queryFn: getReservations,
     refetchOnWindowFocus: false,
   });
 
-  const handleComplete = async (id: string) => {
-    if (!window.confirm("Ești sigur că vrei să finalizezi această rezervare? Această acțiune va marca rezervarea ca finalizată.")) return;
+  const [pickOpen, setPickOpen] = useState(false);
+  const [reserveListing, setReserveListing] = useState<any | null>(null);
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const [extendRow, setExtendRow] = useState<ReservationItem | null>(null);
+  const [soldRow, setSoldRow] = useState<ReservationItem | null>(null);
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["reservations"] });
+    queryClient.invalidateQueries({ queryKey: ["listings"] });
+    queryClient.invalidateQueries({ queryKey: ["stock-counts"] });
+  };
+
+  const active = reservations
+    .filter((r) => r.status === "ACTIVE")
+    .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+  const history = reservations.filter((r) => r.status !== "ACTIVE");
+
+  const handlePick = (listing: any) => {
+    setPickOpen(false);
+    setReserveListing(listing);
+    setReserveOpen(true);
+  };
+
+  const handleCreate = async (data: { clientName: string; clientPhone: string; depositAmount: number; reservationDays: number }) => {
+    if (!reserveListing) return;
     try {
-      await completeReservation(id);
-      toast.success("Rezervare finalizată.");
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['listings'] });
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || "Nu s-a putut finaliza rezervarea.");
+      await createReservation({ listingId: reserveListing.id, ...data });
+      toast.success("Mașina a fost rezervată.");
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Nu s-a putut crea rezervarea.");
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!window.confirm("Ești sigur că vrei să anulezi această rezervare? Vehiculul va fi din nou disponibil.")) return;
+  const handleCancel = async (row: ReservationItem) => {
+    if (!window.confirm("Anulezi rezervarea? Mașina redevine disponibilă.")) return;
     try {
-      await cancelReservation(id);
+      await cancelReservation(row.id);
       toast.success("Rezervare anulată. Mașina este din nou disponibilă.");
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['listings'] });
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || "Nu s-a putut anula rezervarea.");
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Nu s-a putut anula rezervarea.");
     }
   };
 
-  const isUrgentOrExpired = (row: ReservationItem) => {
-    if (row.status !== 'ACTIVE') return false;
-    const expiry = new Date(row.expiresAt).getTime();
-    const now = Date.now();
-    const diffMs = expiry - now;
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return diffDays <= 2;
+  const handleExtend = async (days: number) => {
+    if (!extendRow) return;
+    try {
+      await extendReservation(extendRow.id, days);
+      toast.success("Rezervare prelungită cu " + days + " zile.");
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Nu s-a putut prelungi rezervarea.");
+    } finally {
+      setExtendRow(null);
+    }
+  };
+
+  const statusLabel = (s: string) => {
+    if (s === "COMPLETED") return "Finalizată";
+    if (s === "CANCELLED") return "Anulată";
+    if (s === "EXPIRED") return "Expirată";
+    return s;
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Rezervări</h1>
-        <p className="text-muted-foreground mt-2">
-          Mașinile rezervate cu avans.
+    <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full pb-24">
+      <div className="px-1 pt-1">
+        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Rezervări</h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">
+          {active.length > 0 ? roCount(active.length, "activă", "active") : "Mașini ținute cu avans"}
         </p>
       </div>
 
-      <Card className="border-card-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Listă Rezervări</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="ml-4 text-muted-foreground">Se încarcă rezervările...</p>
-            </div>
-          ) : reservations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-10">
-              <CalendarClock className="w-12 h-12 mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold">Nicio rezervare încă</h3>
-              <p className="text-sm">Când o mașină este rezervată cu avans, detaliile vor apărea aici.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground font-medium">Mașină</TableHead>
-                    <TableHead className="text-foreground font-medium">Client</TableHead>
-                    <TableHead className="text-foreground font-medium">Avans</TableHead>
-                    <TableHead className="text-foreground font-medium">Rezervat la</TableHead>
-                    <TableHead className="text-foreground font-medium">Expiră la</TableHead>
-                    <TableHead className="text-foreground font-medium">Status</TableHead>
-                    <TableHead className="text-foreground font-medium text-right">Acțiuni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reservations.map((row) => (
-                    <TableRow key={row.id} className="border-border">
-                      <TableCell className="font-semibold text-foreground">
-                        {row.listing?.title || "Vehicul necunoscut"}
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        <div>{row.clientName}</div>
-                        <div className="text-xs text-muted-foreground">{row.clientPhone}</div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-foreground">
-                        {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(row.depositAmount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {format(new Date(row.startDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className={isUrgentOrExpired(row) ? "text-destructive font-semibold animate-pulse" : ""}>
-                          {format(new Date(row.expiresAt), "dd MMM yyyy")}
+      <div className="px-1">
+        <button
+          onClick={() => setPickOpen(true)}
+          className="flex items-center gap-3 w-full min-h-[60px] py-4 px-4 bg-primary/5 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors"
+        >
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-primary bg-primary/10">
+            <Plus className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <div className="text-[16px] font-semibold text-foreground leading-snug">Adaugă rezervare</div>
+            <div className="text-[13px] text-muted-foreground leading-none mt-0.5">Alegi mașina, apoi clientul</div>
+          </div>
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : reservations.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center px-1">
+          <CalendarClock className="w-12 h-12 text-muted-foreground mb-3 opacity-60" />
+          <h3 className="text-[15px] font-medium text-foreground">Nicio rezervare încă</h3>
+          <p className="text-xs text-muted-foreground mt-1">Apasă „Adaugă rezervare" ca să ții o mașină cu avans.</p>
+        </div>
+      ) : (
+        <>
+          {active.length > 0 && (
+            <div className="px-1">
+              <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground mb-2">Active</p>
+              <div className="flex flex-col gap-2.5">
+                {active.map((row) => {
+                  const dl = daysLeft(row.expiresAt);
+                  const urgent = dl <= 2;
+                  return (
+                    <div key={row.id} className="bg-card border border-border rounded-xl p-3.5">
+                      <div className="flex justify-between items-start gap-2">
+                        <h3 className="text-[16px] font-semibold text-foreground leading-snug flex-1 min-w-0">
+                          {row.listing?.title || "Mașină"}
+                        </h3>
+                        <span className={"text-[12px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap " + (urgent ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
+                          {dl <= 0 ? "Expiră azi" : "Expiră în " + roCount(dl, "zi", "zile")}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        {row.status === "ACTIVE" && (
-                          <Badge className="bg-success/20 text-success border-success/30 hover:bg-success/20">
-                            Activă
-                          </Badge>
-                        )}
-                        {row.status === "COMPLETED" && (
-                          <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted">
-                            Finalizată
-                          </Badge>
-                        )}
-                        {row.status === "CANCELLED" && (
-                          <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted">
-                            Anulată
-                          </Badge>
-                        )}
-                        {row.status === "EXPIRED" && (
-                          <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/20">
-                            Expirată
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {row.status === "ACTIVE" ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Deschide meniu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover border-border">
-                              <DropdownMenuItem
-                                onClick={() => handleComplete(row.id)}
-                                className="cursor-pointer text-success hover:!bg-success/10 hover:!text-success"
-                              >
-                                <Check className="mr-2 h-4 w-4" />
-                                <span>Finalizează</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleCancel(row.id)}
-                                className="cursor-pointer text-destructive hover:!bg-destructive/10 hover:!text-destructive"
-                              >
-                                <X className="mr-2 h-4 w-4" />
-                                <span>Anulează</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 text-[14px] text-muted-foreground">
+                        <User className="w-4 h-4 shrink-0" />
+                        <span className="text-foreground">{row.clientName}</span>
+                        <a href={"tel:" + row.clientPhone} className="text-primary ml-auto inline-flex items-center gap-1">
+                          <Phone className="w-4 h-4" /> {row.clientPhone}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-[14px] text-muted-foreground">
+                        <Coins className="w-4 h-4 shrink-0" />
+                        <span>Avans {formatEur(row.depositAmount)}</span>
+                        <span className="ml-auto text-[12px]">din {format(new Date(row.startDate), "dd MMM", { locale: ro })}</span>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => setExtendRow(row)}
+                          className="flex-1 h-10 rounded-lg border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50"
+                        >
+                          Prelungește
+                        </button>
+                        <button
+                          onClick={() => handleCancel(row)}
+                          className="flex-1 h-10 rounded-lg border border-destructive/40 bg-card text-destructive text-[14px] font-medium hover:bg-destructive/10"
+                        >
+                          Anulează
+                        </button>
+                        <button
+                          onClick={() => setSoldRow(row)}
+                          className="flex-1 h-10 rounded-lg border border-success/40 bg-success/10 text-success text-[14px] font-medium hover:bg-success/20"
+                        >
+                          Vândut
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          {history.length > 0 && (
+            <div className="px-1">
+              <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground mb-2 mt-2">Istoric</p>
+              <div className="flex flex-col gap-2">
+                {history.map((row) => (
+                  <div key={row.id} className="bg-card border border-border rounded-xl p-3.5 opacity-80">
+                    <div className="flex justify-between items-center gap-2">
+                      <h3 className="text-[15px] font-medium text-foreground truncate flex-1 min-w-0">
+                        {row.listing?.title || "Mașină"}
+                      </h3>
+                      <span className="text-[12px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                        {statusLabel(row.status)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[13px] text-muted-foreground">
+                      {row.clientName} · {format(new Date(row.startDate), "dd MMM yyyy", { locale: ro })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <PickCarSheet isOpen={pickOpen} onClose={() => setPickOpen(false)} onPick={handlePick} />
+
+      <ReserveModal
+        isOpen={reserveOpen}
+        onClose={() => { setReserveOpen(false); setReserveListing(null); }}
+        listing={reserveListing}
+        onSubmit={handleCreate}
+      />
+
+      <ExtendReservationSheet
+        isOpen={!!extendRow}
+        onClose={() => setExtendRow(null)}
+        carTitle={extendRow?.listing?.title || "Mașină"}
+        onConfirm={handleExtend}
+      />
+
+      {soldRow && (
+        <MarkAsSoldModal
+          isOpen={!!soldRow}
+          onClose={() => { setSoldRow(null); refresh(); }}
+          listingId={soldRow.listing?.id || ""}
+          listingTitle={soldRow.listing?.title || "Mașină"}
+        />
+      )}
     </div>
   );
-};
-
-export default ReservationsPage;
+}
