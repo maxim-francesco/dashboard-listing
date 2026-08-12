@@ -135,13 +135,7 @@ const AddEditListing = () => {
     runGenerateDescription();
   };
 
-  const handleOpenMarketing = () => {
-    if (!fields.makeId || !fields.modelId) {
-      toast.error("Selectează marca și modelul înainte de generare.");
-      return;
-    }
-    setIsMarketingModalOpen(true);
-  };
+
 
   const isEditing = !!listingId;
   const [isLoading, setIsLoading] = useState(false);
@@ -928,15 +922,7 @@ const AddEditListing = () => {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleOpenMarketing}
-                      className="min-h-[44px] px-4 bg-background border-border text-foreground hover:bg-secondary flex items-center justify-center gap-2"
-                    >
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <span>Generează marketing</span>
-                    </Button>
+
                     <Button
                       type="button"
                       variant="outline"
