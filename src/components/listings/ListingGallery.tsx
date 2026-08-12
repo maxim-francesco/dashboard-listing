@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { ArrowLeft, Car } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ArrowLeft, Car, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ListingGalleryProps {
   images?: { url: string }[];
@@ -9,56 +10,201 @@ interface ListingGalleryProps {
 
 export default function ListingGallery({ images = [], title }: ListingGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    if (container.clientWidth > 0) {
-      const index = Math.round(container.scrollLeft / container.clientWidth);
-      setCurrentIndex(index);
-    }
-  };
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const thumbsRef = useRef<HTMLDivElement>(null);
 
   const hasImages = images && images.length > 0;
+  const total = images.length;
+
+  const goTo = useCallback(
+    (idx: number) => {
+      if (total === 0) return;
+      const next = (idx + total) % total;
+      setCurrentIndex(next);
+    },
+    [total]
+  );
+
+  const goNext = useCallback(() => goTo(currentIndex + 1), [currentIndex, goTo]);
+  const goPrev = useCallback(() => goTo(currentIndex - 1), [currentIndex, goTo]);
+
+  // Keyboard nav (arrows always; Esc closes fullscreen)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!hasImages) return;
+      if (e.key === "ArrowRight") goNext();
+      else if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "Escape" && isFullscreen) setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hasImages, goNext, goPrev, isFullscreen]);
+
+  // Keep active thumbnail in view
+  useEffect(() => {
+    const el = thumbsRef.current?.querySelector<HTMLElement>(`[data-idx="${currentIndex}"]`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [currentIndex]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) {
+      if (dx < 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+  };
+
+  const EMPTY = (
+    <div className="flex flex-col items-center justify-center w-full h-full text-muted-foreground bg-muted">
+      <Car className="w-[44px] h-[44px] text-muted-foreground" />
+    </div>
+  );
 
   return (
-    <div className="relative w-full h-[220px] bg-muted overflow-hidden shrink-0 select-none">
-      {/* Back button */}
-      <Link
-        to="/listings"
-        className="absolute top-3 left-3 z-10 w-[34px] h-[34px] rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5 text-white" />
-      </Link>
+    <div className="w-full shrink-0 select-none">
+      {/* MAIN IMAGE */}
+      <div className="relative w-full h-[220px] bg-muted overflow-hidden">
+        {/* Back button */}
+        <Link
+          to="/listings"
+          className="absolute top-3 left-3 z-20 w-[34px] h-[34px] rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </Link>
 
-      {hasImages ? (
-        <div className="relative w-full h-full">
-          <div
-            onScroll={handleScroll}
-            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
-            style={{
-              scrollSnapType: "x mandatory",
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            {images.map((img, idx) => (
-              <img
-                key={idx}
-                src={img.url}
-                alt={`${title} - Imaginea ${idx + 1}`}
-                className="snap-center shrink-0 w-full h-[220px] object-cover"
-              />
-            ))}
+        {hasImages ? (
+          <>
+            {/* Fullscreen button */}
+            <button
+              type="button"
+              aria-label="Ecran complet"
+              onClick={() => setIsFullscreen(true)}
+              className="absolute top-3 right-3 z-20 w-[34px] h-[34px] rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+            >
+              <Maximize2 className="w-4 h-4 text-white" />
+            </button>
+
+            <img
+              src={images[currentIndex].url}
+              alt={`${title} - Imaginea ${currentIndex + 1}`}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              className="w-full h-[220px] object-cover"
+            />
+
+            {total > 1 && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Imaginea anterioară"
+                  onClick={goPrev}
+                  className="absolute top-1/2 left-2 -translate-y-1/2 z-10 w-[38px] h-[38px] rounded-full bg-black/55 hover:bg-black/75 flex items-center justify-center transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6 text-white" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Imaginea următoare"
+                  onClick={goNext}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 z-10 w-[38px] h-[38px] rounded-full bg-black/55 hover:bg-black/75 flex items-center justify-center transition-colors"
+                >
+                  <ChevronRight className="w-6 h-6 text-white" />
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          EMPTY
+        )}
+      </div>
+
+      {/* COUNTER + THUMBNAILS */}
+      {hasImages && (
+        <div className="px-3 pt-2">
+          <div className="text-center text-sm text-muted-foreground">
+            {currentIndex + 1} / {total}
           </div>
-          {/* Counter pill */}
-          <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs rounded-[10px] px-2.5 py-0.5">
-            {currentIndex + 1} / {images.length}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center w-full h-full text-muted-foreground bg-muted">
-          <Car className="w-[44px] h-[44px] text-muted-foreground" />
+          {total > 1 && (
+            <div
+              ref={thumbsRef}
+              className="flex gap-2 mt-2 overflow-x-auto scrollbar-none pb-1"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  data-idx={idx}
+                  aria-label={`Vezi imaginea ${idx + 1}`}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`shrink-0 w-[56px] h-[42px] rounded-md overflow-hidden border-2 transition-colors ${
+                    idx === currentIndex ? "border-primary" : "border-transparent opacity-70"
+                  }`}
+                >
+                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* FULLSCREEN LIGHTBOX */}
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-none w-screen h-screen p-0 bg-black/95 border-none flex items-center justify-center [&>button]:hidden">
+          {hasImages && (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <button
+                type="button"
+                aria-label="Închide"
+                onClick={() => setIsFullscreen(false)}
+                className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+
+              <span className="absolute top-5 left-1/2 -translate-x-1/2 z-20 text-sm text-white/85">
+                {currentIndex + 1} / {total}
+              </span>
+
+              <img
+                src={images[currentIndex].url}
+                alt={`${title} - Imaginea ${currentIndex + 1}`}
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+                className="max-w-full max-h-full object-contain"
+              />
+
+              {total > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Imaginea anterioară"
+                    onClick={goPrev}
+                    className="absolute top-1/2 left-3 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                  >
+                    <ChevronLeft className="w-7 h-7 text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Imaginea următoare"
+                    onClick={goNext}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                  >
+                    <ChevronRight className="w-7 h-7 text-white" />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
