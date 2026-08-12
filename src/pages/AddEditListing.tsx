@@ -51,6 +51,8 @@ import {
   UPHOLSTERY_LABELS,
   AIR_CONDITIONINGS,
   AIR_CONDITIONING_LABELS,
+  ORIGIN_COUNTRIES,
+  ORIGIN_COUNTRY_LABELS,
   LISTING_STATUSES,
   STATUS_LABELS,
   getOptions,
@@ -153,6 +155,7 @@ const AddEditListing = () => {
   // Search combobox popover state
   const [makeSearchOpen, setMakeSearchOpen] = useState(false);
   const [modelSearchOpen, setModelSearchOpen] = useState(false);
+  const [countrySearchOpen, setCountrySearchOpen] = useState(false);
 
   // Form State
   const [fields, setFields] = useState({
@@ -199,6 +202,41 @@ const AddEditListing = () => {
   const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
   const [initialStatus, setInitialStatus] = useState<string>("AVAILABLE");
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+
+  // ===== WIZARD STATE =====
+  const TOTAL_STEPS = 9;
+  const [step, setStep] = useState(1);
+
+  const WIZARD_STEPS = [
+    { n: 1, label: "Mașina" },
+    { n: 2, label: "Acte & proveniență" },
+    { n: 3, label: "Motor & propulsie" },
+    { n: 4, label: "Caroserie & interior" },
+    { n: 5, label: "Stare & istoric" },
+    { n: 6, label: "Dotări" },
+    { n: 7, label: "Poze & video" },
+    { n: 8, label: "Preț & detalii" },
+    { n: 9, label: "Descriere & publicare" },
+  ];
+
+  const validateStep = (s: number): boolean => {
+    if (s === 1 && (!fields.makeId || !fields.modelId)) {
+      toast.error("Selectează marca și modelul pentru a continua.");
+      return false;
+    }
+    return true;
+  };
+
+  const goNext = () => {
+    if (!validateStep(step)) return;
+    setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goBack = () => {
+    setStep((prev) => Math.max(prev - 1, 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   
   // Image & Video State
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
@@ -441,8 +479,8 @@ const AddEditListing = () => {
   }, [isEditing, searchParams]);
 
   // Form Submit Logic
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async () => {
+    if (step !== TOTAL_STEPS) return;
     setIsLoading(true);
 
     try {
@@ -549,7 +587,7 @@ const AddEditListing = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [listingId, fields, selectedFeatures, imageFiles, existingImages, navigate, pendingRotations, queryClient, youtubeVideoId]);
+  }, [step, listingId, fields, selectedFeatures, imageFiles, existingImages, navigate, pendingRotations, queryClient, youtubeVideoId]);
 
   // Image & Video Handlers
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -777,13 +815,28 @@ const AddEditListing = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Accordion type="multiple" defaultValue={["generale", "identitate", "tehnic", "istoric", "dotari"]} className="w-full space-y-6">
+      <form onSubmit={(e) => e.preventDefault()}>
+        {/* WIZARD PROGRESS HEADER */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Pasul {step} din {TOTAL_STEPS}</span>
+            <span className="text-sm font-medium text-foreground">{WIZARD_STEPS[step - 1].label}</span>
+          </div>
+          <div className="flex gap-1.5">
+            {WIZARD_STEPS.map((s) => (
+              <div
+                key={s.n}
+                className={`h-1.5 flex-1 rounded-full ${s.n <= step ? "bg-primary" : "bg-border"}`}
+              />
+            ))}
+          </div>
+        </div>
+        <Accordion type="multiple" defaultValue={["generale", "identitate", "acte", "tehnic", "caroserie", "istoric", "dotari", "descriere"]} className="w-full space-y-6">
           
-          {/* SECȚIUNEA 1: DETALII GENERALE */}
+          {step === 8 && (
           <AccordionItem value="generale" className="border border-border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
-              Detalii Generale
+              Preț & detalii
             </AccordionTrigger>
             <AccordionContent className="space-y-4 pt-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -861,17 +914,25 @@ const AddEditListing = () => {
                   />
                 </div>
               </div>
+            </AccordionContent>
+          </AccordionItem>
+          )}
 
+          {step === 9 && (
+          <AccordionItem value="descriere" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Descriere & publicare
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Label htmlFor="description" className="text-foreground font-medium">Descriere Publică</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
                       onClick={handleOpenMarketing}
-                      className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
+                      className="min-h-[44px] px-4 bg-background border-border text-foreground hover:bg-secondary flex items-center justify-center gap-2"
                     >
                       <Sparkles className="h-4 w-4 text-primary" />
                       <span>Generează marketing</span>
@@ -879,10 +940,9 @@ const AddEditListing = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
                       onClick={handleGenerateDescription}
                       disabled={isGenerating}
-                      className="h-8 bg-background border-border text-foreground hover:bg-secondary flex items-center gap-2"
+                      className="min-h-[44px] px-4 bg-background border-border text-foreground hover:bg-secondary flex items-center justify-center gap-2"
                     >
                       {isGenerating ? (
                         <>
@@ -919,11 +979,12 @@ const AddEditListing = () => {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
-          {/* SECȚIUNEA 2: IDENTITATE */}
+          {step === 1 && (
           <AccordionItem value="identitate" className="border border-border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
-              Identitate Vehicul
+              Mașina
             </AccordionTrigger>
             <AccordionContent className="space-y-4 pt-2">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1049,6 +1110,18 @@ const AddEditListing = () => {
                     className="bg-background border-border focus:border-primary"
                   />
                 </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          )}
+
+          {step === 2 && (
+          <AccordionItem value="acte" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Acte & proveniență
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="vin" className="text-foreground font-medium">Serie Șasiu (VIN)</Label>
                   <Input
@@ -1072,16 +1145,47 @@ const AddEditListing = () => {
                     className="bg-background border-border focus:border-primary"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="countryOfOrigin" className="text-foreground font-medium">Țară Origine (2 litere)</Label>
-                  <Input
-                    id="countryOfOrigin"
-                    placeholder="ex: DE"
-                    maxLength={2}
-                    value={fields.countryOfOrigin}
-                    onChange={(e) => handleFieldChange("countryOfOrigin", e.target.value.toUpperCase())}
-                    className="bg-background border-border focus:border-primary"
-                  />
+                <div className="space-y-2 flex flex-col justify-end">
+                  <Label className="text-foreground font-medium mb-1">Țară Origine</Label>
+                  <Popover open={countrySearchOpen} onOpenChange={setCountrySearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countrySearchOpen}
+                        className="w-full justify-between bg-background border-border text-foreground hover:bg-secondary font-normal"
+                      >
+                        {fields.countryOfOrigin
+                          ? (ORIGIN_COUNTRY_LABELS[fields.countryOfOrigin as keyof typeof ORIGIN_COUNTRY_LABELS] || fields.countryOfOrigin)
+                          : "Selectează țara"}
+                        <span className="ml-2 h-4 w-4 shrink-0 opacity-50">▼</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0 bg-popover border-border z-[100]">
+                      <Command>
+                        <CommandInput placeholder="Căutare țară..." className="border-none focus:ring-0" />
+                        <CommandList className="max-h-[300px] overflow-y-auto">
+                          <CommandEmpty>Nu s-a găsit nicio țară.</CommandEmpty>
+                          <CommandGroup>
+                            {getOptions(ORIGIN_COUNTRY_LABELS, ORIGIN_COUNTRIES).map((opt) => (
+                              <CommandItem
+                                key={opt.value}
+                                value={opt.label}
+                                onSelect={() => {
+                                  handleFieldChange("countryOfOrigin", opt.value);
+                                  setCountrySearchOpen(false);
+                                }}
+                                className="text-foreground hover:bg-secondary cursor-pointer flex items-center justify-between p-2"
+                              >
+                                <span>{opt.label}</span>
+                                {fields.countryOfOrigin === opt.value && <Check className="h-4 w-4 text-primary" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex items-center space-x-2 pt-6">
                   <button
@@ -1100,11 +1204,12 @@ const AddEditListing = () => {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
-          {/* SECȚIUNEA 3: DETALII TEHNICE */}
+          {step === 3 && (
           <AccordionItem value="tehnic" className="border border-border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
-              Specificații Tehnic-Mecanice
+              Motor & propulsie
             </AccordionTrigger>
             <AccordionContent className="space-y-4 pt-2">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1158,21 +1263,6 @@ const AddEditListing = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-foreground font-medium">Tip Caroserie</Label>
-                  <Select value={fields.bodyType} onValueChange={(val) => handleFieldChange("bodyType", val)}>
-                    <SelectTrigger className="bg-background border-border focus:border-primary">
-                      <SelectValue placeholder="Alege caroserie" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {getOptions(BODY_TYPE_LABELS, BODY_TYPES).map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="engineCapacity" className="text-foreground font-medium">Capacitate Cilindrică (cm³)</Label>
@@ -1228,6 +1318,34 @@ const AddEditListing = () => {
                   />
                 </div>
 
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          )}
+
+          {step === 4 && (
+          <AccordionItem value="caroserie" className="border border-border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
+              Caroserie & interior
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Tip Caroserie</Label>
+                  <Select value={fields.bodyType} onValueChange={(val) => handleFieldChange("bodyType", val)}>
+                    <SelectTrigger className="bg-background border-border focus:border-primary">
+                      <SelectValue placeholder="Alege caroserie" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {getOptions(BODY_TYPE_LABELS, BODY_TYPES).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-foreground font-medium">Culoare</Label>
                   <Select value={fields.color} onValueChange={(val) => handleFieldChange("color", val)}>
@@ -1243,9 +1361,7 @@ const AddEditListing = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="colorDetail" className="text-foreground font-medium">Detaliu Culoare</Label>
                   <Input
@@ -1317,8 +1433,9 @@ const AddEditListing = () => {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
-          {/* SECȚIUNEA 4: ISTORIC & COMERCIAL */}
+          {step === 5 && (
           <AccordionItem value="istoric" className="border border-border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
               Istoric, Stare & Garanție
@@ -1405,8 +1522,9 @@ const AddEditListing = () => {
               </div>
             </AccordionContent>
           </AccordionItem>
+          )}
 
-          {/* SECȚIUNEA 5: DOTĂRI (CHIPS GROUPED) */}
+          {step === 6 && (
           <AccordionItem value="dotari" className="border border-border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-xl font-bold text-foreground hover:no-underline py-4">
               Dotări & Opționale
@@ -1449,9 +1567,10 @@ const AddEditListing = () => {
               )}
             </AccordionContent>
           </AccordionItem>
+          )}
         </Accordion>
 
-        {/* IMAGES CARD */}
+        {step === 7 && (
         <Card className="border-card-border bg-card my-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-foreground">Fotografii Anunț</CardTitle>
@@ -1567,15 +1686,16 @@ const AddEditListing = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
-        {isEditing && listingId && (
+        {step === 9 && isEditing && listingId && (
           <AutovitPublishPanel 
             listingId={listingId}
           />
         )}
 
         {/* VIDEO CARD */}
-        {hasVideoFeature && (
+        {step === 7 && hasVideoFeature && (
             <Card className="border-card-border bg-card mb-6">
                 <CardHeader>
                     <CardTitle className="text-foreground">Prezentare Video</CardTitle>
@@ -1649,25 +1769,49 @@ const AddEditListing = () => {
             </Card>
         )}
 
-        {/* ACTION BUTTONS */}
-        <div className="flex flex-col sm:flex-row-reverse justify-start space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mt-6">
-          <Button
-            type="submit"
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            disabled={isLoading || isUploadingVideo || isDeletingVideo}
-          >
-            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/listings")}
-            className="border-border hover:bg-secondary"
-            disabled={isUploadingVideo || isDeletingVideo}
-          >
-            Anulează
-          </Button>
+        {/* WIZARD FOOTER */}
+        <div className="flex items-center justify-between gap-3 mt-8">
+          {step === 1 ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/listings")}
+              className="border-border hover:bg-secondary min-h-[52px] px-6"
+              disabled={isUploadingVideo || isDeletingVideo}
+            >
+              Anulează
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              className="border-border hover:bg-secondary min-h-[52px] px-6"
+              disabled={isLoading}
+            >
+              ← Înapoi
+            </Button>
+          )}
+
+          {step < TOTAL_STEPS ? (
+            <Button
+              type="button"
+              onClick={goNext}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground min-h-[52px] px-8 flex-1 max-w-[65%]"
+            >
+              Continuă →
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground min-h-[52px] px-8 flex-1 max-w-[65%]"
+              disabled={isLoading || isUploadingVideo || isDeletingVideo}
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {isEditing ? "Actualizează Anunțul" : "Salvează Anunțul"}
+            </Button>
+          )}
         </div>
 
         <AlertDialog open={overwriteDialogOpen} onOpenChange={setOverwriteDialogOpen}>

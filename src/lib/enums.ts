@@ -119,6 +119,26 @@ export const getOptions = <T extends string>(labels: Record<T, string>, keys: re
   return keys.map((key) => ({ value: key, label: labels[key] }));
 };
 
+export const ORIGIN_COUNTRIES = ["DE", "FR", "IT", "BE", "NL", "AT", "ES", "CH", "RO", "HU", "PL", "CZ", "SK", "GB", "SE", "US"] as const;
+export const ORIGIN_COUNTRY_LABELS: Record<(typeof ORIGIN_COUNTRIES)[number], string> = {
+  DE: "Germania",
+  FR: "Franța",
+  IT: "Italia",
+  BE: "Belgia",
+  NL: "Olanda",
+  AT: "Austria",
+  ES: "Spania",
+  CH: "Elveția",
+  RO: "România",
+  HU: "Ungaria",
+  PL: "Polonia",
+  CZ: "Cehia",
+  SK: "Slovacia",
+  GB: "Marea Britanie",
+  SE: "Suedia",
+  US: "SUA",
+};
+
 // String normalization helper (accent/diacritic stripping)
 export const normalizeString = (str: string | null | undefined): string => {
   if (!str) return "";
