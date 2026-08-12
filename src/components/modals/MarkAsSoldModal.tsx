@@ -138,9 +138,11 @@ const MarkAsSoldModal = ({ isOpen, onClose, listingId, listingTitle }: MarkAsSol
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
+                        disabled={(date) => {
+                          const endOfToday = new Date();
+                          endOfToday.setHours(23, 59, 59, 999);
+                          return date > endOfToday || date < new Date("1900-01-01");
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
