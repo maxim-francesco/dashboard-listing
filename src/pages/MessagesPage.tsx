@@ -70,7 +70,7 @@ const MessagesPage = () => {
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
 
   // Filter states
-  const [activeTab, setActiveTab] = useState<"action" | "all" | "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST">("action");
+  const [activeTab, setActiveTab] = useState<"action" | "all" | "FINANCING" | "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST">("action");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>(() => {
     const t = searchParams.get("type");
@@ -161,6 +161,7 @@ const MessagesPage = () => {
   const filteredByTab = messages.filter((m) => {
     if (activeTab === "action") return isActionNeeded(m);
     if (activeTab === "all") return true;
+    if (activeTab === "FINANCING") return m.type === "FINANCING";
     return m.status === activeTab;
   });
 
@@ -209,6 +210,8 @@ const MessagesPage = () => {
         return "Niciun lead care necesită acțiune.";
       case "all":
         return "Niciun lead înregistrat în sistem.";
+      case "FINANCING":
+        return "Niciun lead de finanțare.";
       case "NEW":
         return "Niciun lead nou.";
       case "CONTACTED":
@@ -229,6 +232,7 @@ const MessagesPage = () => {
   const tabs = [
     { id: "action", label: "Necesită acțiune", count: counts?.actionNeeded ?? 0 },
     { id: "all", label: "Toate", count: messages.length },
+    { id: "FINANCING", label: "Finanțare", count: counts?.byType?.FINANCING ?? messages.filter((m) => m.type === "FINANCING").length },
     { id: "NEW", label: "Noi", count: counts?.byStatus?.NEW ?? 0 },
     { id: "CONTACTED", label: "Contactate", count: counts?.byStatus?.CONTACTED ?? 0 },
     { id: "VIEWING", label: "Vizionare", count: counts?.byStatus?.VIEWING ?? 0 },
