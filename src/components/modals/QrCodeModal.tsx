@@ -8,9 +8,12 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import QRCode from "react-qr-code";
+import * as QRCodeModule from "react-qr-code";
 import html2canvas from 'html2canvas';
 import { Download } from "lucide-react";
+
+const QRCodeNS: any = (QRCodeModule as any).default ?? QRCodeModule;
+const QRCode: any = QRCodeNS?.default ?? QRCodeNS?.QRCode ?? QRCodeNS;
 
 interface QrCodeModalProps {
   isOpen: boolean;
