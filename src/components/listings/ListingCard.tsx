@@ -89,70 +89,136 @@ export default function ListingCard({
   const leadsCount = listing._count?.messages ?? 0;
 
   return (
-    <Link 
-      to={`/listings/${listing.id}`}
-      className="bg-card border border-border rounded-xl p-2.5 flex gap-3 hover:bg-accent/5 transition-colors block w-full select-none"
-    >
-      {/* LEFT: Thumbnail */}
-      {listing.images && listing.images.length > 0 ? (
-        <img
-          src={listing.images[0].url}
-          alt={listing.title}
-          className="w-24 h-18 rounded-lg object-cover shrink-0 bg-muted"
-          style={{ width: "96px", height: "72px" }}
-        />
-      ) : (
-        <div className="w-24 h-18 rounded-lg bg-muted flex items-center justify-center shrink-0" style={{ width: "96px", height: "72px" }}>
-          <Car className="w-6 h-6 text-muted-foreground" />
-        </div>
-      )}
+    <>
+      {/* Mobile Card Layout */}
+      <Link 
+        to={`/listings/${listing.id}`}
+        className="bg-card border border-border rounded-xl p-2.5 flex gap-3 hover:bg-accent/5 transition-colors block w-full select-none lg:hidden"
+      >
+        {/* LEFT: Thumbnail */}
+        {listing.images && listing.images.length > 0 ? (
+          <img
+            src={listing.images[0].url}
+            alt={listing.title}
+            className="w-24 h-18 rounded-lg object-cover shrink-0 bg-muted"
+            style={{ width: "96px", height: "72px" }}
+          />
+        ) : (
+          <div className="w-24 h-18 rounded-lg bg-muted flex items-center justify-center shrink-0" style={{ width: "96px", height: "72px" }}>
+            <Car className="w-6 h-6 text-muted-foreground" />
+          </div>
+        )}
 
-      {/* RIGHT: Content */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-        <div className="flex justify-between items-start gap-2">
-          <h3 className="text-[15px] font-medium truncate text-foreground flex-1">
+        {/* RIGHT: Content */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="text-[15px] font-medium truncate text-foreground flex-1">
+              {listing.title}
+            </h3>
+          </div>
+
+          {/* Price */}
+          {segment === "vandute" ? (
+            listing.sellingPrice !== null && listing.sellingPrice !== undefined ? (
+              <div className="text-[17px] font-semibold text-foreground leading-none">
+                {formatEur(listing.sellingPrice)}
+              </div>
+            ) : (
+              <div className="text-[17px] text-muted-foreground leading-none">
+                preț nesalvat
+              </div>
+            )
+          ) : (
+            <div className="text-[17px] font-semibold text-foreground leading-none">
+              {new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(listing.price || 0)} €
+            </div>
+          )}
+
+          {/* Bottom Pill & Facts */}
+          <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground mt-0.5">
+            {segment === "vandute" ? (
+              listing.sellingPrice !== null && listing.sellingPrice !== undefined ? (
+                listing.soldAt ? (
+                  <span>{format(new Date(listing.soldAt), "dd MMM yyyy", { locale: ro })}</span>
+                ) : null
+              ) : (
+                <span>cerut: {formatEur(listing.price || 0)}</span>
+              )
+            ) : (
+              <>
+                {getStatusPill()}
+                <span>· {viewCount} {viewCount === 1 ? "vizualizare" : "vizualizări"}</span>
+                {leadsCount > 0 && (
+                  <span>· {leadsCount === 1 ? "1 lead" : `${leadsCount} lead-uri`}</span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {/* Desktop Row Layout */}
+      <Link
+        to={`/listings/${listing.id}`}
+        className="hidden lg:flex items-center gap-3 bg-card border border-border rounded-lg px-3 py-1.5 hover:bg-accent/5 transition-colors w-full select-none"
+      >
+        {/* 1. Thumbnail */}
+        {listing.images && listing.images.length > 0 ? (
+          <img
+            src={listing.images[0].url}
+            alt={listing.title}
+            className="rounded object-cover shrink-0 bg-muted"
+            style={{ width: "64px", height: "40px" }}
+          />
+        ) : (
+          <div className="rounded bg-muted flex items-center justify-center shrink-0" style={{ width: "64px", height: "40px" }}>
+            <Car className="w-5 h-5 text-muted-foreground" />
+          </div>
+        )}
+
+        {/* 2. Title */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[14px] font-medium truncate text-foreground">
             {listing.title}
           </h3>
         </div>
 
-        {/* Price */}
-        {segment === "vandute" ? (
-          listing.sellingPrice !== null && listing.sellingPrice !== undefined ? (
-            <div className="text-[17px] font-semibold text-foreground leading-none">
-              {formatEur(listing.sellingPrice)}
-            </div>
-          ) : (
-            <div className="text-[17px] text-muted-foreground leading-none">
-              preț nesalvat
-            </div>
-          )
-        ) : (
-          <div className="text-[17px] font-semibold text-foreground leading-none">
-            {new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(listing.price || 0)} €
-          </div>
-        )}
-
-        {/* Bottom Pill & Facts */}
-        <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground mt-0.5">
+        {/* 3. Price */}
+        <div className="w-32 shrink-0 text-right text-[15px] font-semibold tabular-nums text-foreground">
           {segment === "vandute" ? (
             listing.sellingPrice !== null && listing.sellingPrice !== undefined ? (
-              listing.soldAt ? (
-                <span>{format(new Date(listing.soldAt), "dd MMM yyyy", { locale: ro })}</span>
-              ) : null
+              formatEur(listing.sellingPrice)
             ) : (
-              <span>cerut: {formatEur(listing.price || 0)}</span>
+              <span className="text-muted-foreground text-sm font-normal">preț nesalvat</span>
             )
           ) : (
-            <>
-              {getStatusPill()}
-              <span>· {viewCount} {viewCount === 1 ? "vizualizare" : "vizualizări"}</span>
-              {leadsCount > 0 && (
-                <span>· {leadsCount === 1 ? "1 lead" : `${leadsCount} lead-uri`}</span>
-              )}
-            </>
+            `${new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(listing.price || 0)} €`
           )}
         </div>
-      </div>
-    </Link>
+
+        {/* 4. Days/status */}
+        <div className="w-28 shrink-0 flex justify-center text-[13px] text-muted-foreground text-center">
+          {segment === "vandute" ? (
+            listing.soldAt ? (
+              format(new Date(listing.soldAt), "dd MMM yyyy", { locale: ro })
+            ) : (
+              "—"
+            )
+          ) : (
+            getStatusPill()
+          )}
+        </div>
+
+        {/* 5. Views */}
+        <div className="w-24 shrink-0 text-right text-[13px] text-muted-foreground tabular-nums">
+          {viewCount}
+        </div>
+
+        {/* 6. Leads */}
+        <div className="w-20 shrink-0 text-right text-[13px] text-muted-foreground tabular-nums">
+          {leadsCount > 0 ? leadsCount : "—"}
+        </div>
+      </Link>
+    </>
   );
 }

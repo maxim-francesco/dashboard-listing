@@ -76,19 +76,40 @@ interface Business {
 }
 
 const ListingCardSkeleton = () => (
-  <div className="bg-card border border-border rounded-xl p-2.5 flex gap-3 animate-pulse">
-    <div className="w-[96px] h-[72px] bg-muted rounded-lg shrink-0" />
-    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-      <div className="space-y-2">
-        <div className="h-4 bg-muted rounded w-3/4" />
-        <div className="h-5 bg-muted rounded w-1/4" />
-      </div>
-      <div className="flex items-center gap-1.5 mt-1">
-        <div className="h-4 bg-muted rounded w-12" />
-        <div className="h-4 bg-muted rounded w-20" />
+  <>
+    <div className="bg-card border border-border rounded-xl p-2.5 flex gap-3 animate-pulse lg:hidden">
+      <div className="w-[96px] h-[72px] bg-muted rounded-lg shrink-0" />
+      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+        <div className="space-y-2">
+          <div className="h-4 bg-muted rounded w-3/4" />
+          <div className="h-5 bg-muted rounded w-1/4" />
+        </div>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="h-4 bg-muted rounded w-12" />
+          <div className="h-4 bg-muted rounded w-20" />
+        </div>
       </div>
     </div>
-  </div>
+
+    <div className="hidden lg:flex items-center gap-3 bg-card border border-border rounded-lg px-3 py-1.5 animate-pulse w-full">
+      <div className="w-16 h-[40px] bg-muted rounded shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="h-4 bg-muted rounded w-1/2" />
+      </div>
+      <div className="w-32 shrink-0 flex justify-end">
+        <div className="h-4 bg-muted rounded w-16" />
+      </div>
+      <div className="w-28 shrink-0 flex justify-center">
+        <div className="h-5 bg-muted rounded-full w-14" />
+      </div>
+      <div className="w-24 shrink-0 flex justify-end">
+        <div className="h-4 bg-muted rounded w-8" />
+      </div>
+      <div className="w-20 shrink-0 flex justify-end">
+        <div className="h-4 bg-muted rounded w-6" />
+      </div>
+    </div>
+  </>
 );
 
 interface ListingsProps {
@@ -710,9 +731,11 @@ const Listings = ({ initialSegment }: ListingsProps) => {
   };
 
   const currentListings = activeSegment === "instoc" ? inStockListings : soldListings;
-  const filteredListings = currentListings.filter((listing) =>
-    listing.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredListings = currentListings
+    .filter((listing) =>
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const renderEmptyState = () => {
     if (activeSegment === "instoc") {
@@ -831,15 +854,25 @@ const Listings = ({ initialSegment }: ListingsProps) => {
         ) : filteredListings.length === 0 ? (
           renderEmptyState()
         ) : (
-          <div className="flex flex-col gap-2.5 pb-20">
-            {filteredListings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                segment={activeSegment}
-              />
-            ))}
-          </div>
+          <>
+            <div className="hidden lg:flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground px-3 py-2 font-medium select-none border border-transparent">
+              <div className="w-16 shrink-0" />
+              <div className="flex-1 min-w-0">Mașină</div>
+              <div className="w-32 shrink-0 text-right">Preț</div>
+              <div className="w-28 shrink-0 text-center">Status</div>
+              <div className="w-24 shrink-0 text-right">Viz.</div>
+              <div className="w-20 shrink-0 text-right">Lead-uri</div>
+            </div>
+            <div className="flex flex-col gap-2.5 lg:gap-1 pb-20">
+              {filteredListings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  segment={activeSegment}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 

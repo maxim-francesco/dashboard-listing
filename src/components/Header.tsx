@@ -68,7 +68,7 @@ const Header = () => {
         {navigation.map((item) => {
           const isActive = isActiveItem(item.href);
           let badgeValue = 0;
-          if (item.href === "/messages") {
+          if (item.href === "/customers?filter=all") {
             badgeValue = inLucru;
           } else if (item.href === "/network") {
             badgeValue = reteaCount;
