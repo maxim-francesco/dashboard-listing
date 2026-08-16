@@ -294,6 +294,17 @@ export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
   };
 }
 
+export const CUSTOMER_COLS = {
+  avatar: "w-9",
+  name: "flex-1 min-w-0",
+  phone: "w-36",
+  type: "w-28",
+  detail: "w-72",
+  amount: "w-32",
+  deadline: "w-24",
+  call: "w-20",
+} as const;
+
 interface CustomerRowProps {
   customer: CustomerListItem;
   variant?: "action" | "plain";
@@ -319,51 +330,146 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
     ? "bg-success text-success-foreground"
     : "bg-success-light text-success";
 
+  const hasPhone = hasUsablePhone(customer.phone);
+  const handleClick = hasPhone
+    ? () => navigate(`/customers/${encodeURIComponent(normalizeRoPhone(customer.phone))}`)
+    : undefined;
+
+  const rawAmount = customer.activeReservation?.depositAmount ?? customer.pendingOffer?.offerPrice;
+
+  const deadline = getDeadline(customer);
+  let deadlineLabel = "—";
+  let deadlineTone = "text-muted-foreground";
+
+  if (deadline) {
+    const bucket = getBucket(deadline);
+    if (bucket === "expirat") {
+      deadlineLabel = "expirat";
+      deadlineTone = "text-destructive font-medium";
+    } else if (bucket === "azi") {
+      deadlineLabel = "azi";
+      deadlineTone = "text-warning font-medium";
+    } else if (bucket === "maine") {
+      deadlineLabel = "mâine";
+      deadlineTone = "text-warning font-medium";
+    } else if (bucket === "saptamana") {
+      deadlineLabel = "săptămâna";
+      deadlineTone = "text-muted-foreground";
+    } else {
+      deadlineLabel = format(deadline, "d MMM", { locale: ro });
+      deadlineTone = "text-muted-foreground";
+    }
+  }
+
   return (
-    <div
-      onClick={hasUsablePhone(customer.phone) ? () => navigate(`/customers/${encodeURIComponent(normalizeRoPhone(customer.phone))}`) : undefined}
-      className={`flex items-center gap-3.5 px-4 py-4 transition-colors ${hasUsablePhone(customer.phone) ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}`}
-    >
-      <InitialsAvatar name={customer.name} className="w-[46px] h-[46px] text-base" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          {hasUnreadLead && (
-            <span className={`inline-block w-2.5 h-2.5 rounded-full ${DOT_COLORS[customer.openLead!.type]} shrink-0 animate-pulse`} />
-          )}
-          <div className="text-[17px] font-medium text-foreground truncate leading-snug">
-            {customer.name || "Fără nume"}
+    <>
+      <div
+        onClick={handleClick}
+        className={`lg:hidden flex items-center gap-3.5 px-4 py-4 transition-colors ${hasPhone ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}`}
+      >
+        <InitialsAvatar name={customer.name} className="w-[46px] h-[46px] text-base" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {hasUnreadLead && (
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${DOT_COLORS[customer.openLead!.type]} shrink-0 animate-pulse`} />
+            )}
+            <div className="text-[17px] font-medium text-foreground truncate leading-snug">
+              {customer.name || "Fără nume"}
+            </div>
+          </div>
+          
+          <div className="flex items-center flex-wrap gap-2 mb-1">
+            {primaryEvent.label && (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-medium ${primaryEvent.colorClasses}`}>
+                {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                {primaryEvent.label}
+              </span>
+            )}
+            
+            {otherCount > 0 && (
+              <span className="text-[12px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+                +{otherCount}
+              </span>
+            )}
+          </div>
+
+          <div className="text-[14px] text-muted-foreground truncate leading-normal">
+            {primaryEvent.detail}
           </div>
         </div>
-        
-        <div className="flex items-center flex-wrap gap-2 mb-1">
-          {primaryEvent.label && (
-            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-medium ${primaryEvent.colorClasses}`}>
-              {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
-              {primaryEvent.label}
-            </span>
-          )}
-          
-          {otherCount > 0 && (
-            <span className="text-[12px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
-              +{otherCount}
-            </span>
+        {hasPhone && (
+          <a
+            href={telLink(customer.phone)}
+            onClick={(e) => e.stopPropagation()}
+            className={`w-[50px] h-[50px] rounded-full ${callBtnClass} flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-colors`}
+            aria-label={`Sună pe ${customer.name || "client"}`}
+          >
+            <Phone className="h-5 w-5" />
+          </a>
+        )}
+      </div>
+
+      <div
+        data-row
+        onClick={handleClick}
+        className={`hidden lg:flex items-center gap-3 px-3 py-1.5 h-[54px] border border-transparent transition-colors w-full select-none ${hasPhone ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}`}
+      >
+        <div data-col="avatar" className={`${CUSTOMER_COLS.avatar} shrink-0 relative`}>
+          <InitialsAvatar name={customer.name} className="w-9 h-9 text-[13px]" />
+          {hasUnreadLead && (
+            <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-card ${DOT_COLORS[customer.openLead!.type]}`} />
           )}
         </div>
 
-        <div className="text-[14px] text-muted-foreground truncate leading-normal">
+        <div data-col="name" className={`${CUSTOMER_COLS.name} text-[15px] font-medium text-foreground truncate`}>
+          {customer.name || "Fără nume"}
+        </div>
+
+        <div data-col="phone" className={`${CUSTOMER_COLS.phone} shrink-0 text-[13px] text-muted-foreground tabular-nums truncate`}>
+          {formatRoPhone(customer.phone) || "—"}
+        </div>
+
+        <div data-col="type" className={`${CUSTOMER_COLS.type} shrink-0 flex justify-center`}>
+          {primaryEvent.label ? (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium truncate ${primaryEvent.colorClasses}`}>
+              {IconComponent && <IconComponent className="w-3 h-3" />}
+              {primaryEvent.label}
+            </span>
+          ) : null}
+        </div>
+
+        <div data-col="detail" className={`${CUSTOMER_COLS.detail} shrink-0 text-[13px] text-muted-foreground truncate`}>
           {primaryEvent.detail}
         </div>
-      </div>
-      {hasUsablePhone(customer.phone) && (
-        <a
-          href={telLink(customer.phone)}
-          onClick={(e) => e.stopPropagation()}
-          className={`w-[50px] h-[50px] rounded-full ${callBtnClass} flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-colors`}
-          aria-label={`Sună pe ${customer.name || "client"}`}
+
+        <div
+          data-col="amount"
+          className={`${CUSTOMER_COLS.amount} shrink-0 text-right tabular-nums ${
+            rawAmount != null
+              ? "text-[15px] font-semibold text-foreground"
+              : "text-[13px] font-normal text-muted-foreground"
+          }`}
         >
-          <Phone className="h-5 w-5" />
-        </a>
-      )}
-    </div>
+          {rawAmount != null ? formatEur(rawAmount) : "—"}
+        </div>
+
+        <div data-col="deadline" className={`${CUSTOMER_COLS.deadline} shrink-0 text-right text-[13px] tabular-nums ${deadlineTone}`}>
+          {deadlineLabel}
+        </div>
+
+        <div data-col="call" className={`${CUSTOMER_COLS.call} shrink-0 flex justify-end`}>
+          {hasPhone && (
+            <a
+              href={telLink(customer.phone)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-8 h-8 rounded-full bg-success-light text-success flex items-center justify-center hover:opacity-90 transition-colors"
+              aria-label={`Sună pe ${customer.name || "client"}`}
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

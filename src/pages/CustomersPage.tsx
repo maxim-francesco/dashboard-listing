@@ -3,7 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, Check } from "lucide-react";
 import { getCustomers, CustomerListItem } from "@/services/api";
-import CustomerRow, { getDeadline, getBucket, Bucket } from "@/components/customers/CustomerRow";
+import CustomerRow, { getDeadline, getBucket, Bucket, CUSTOMER_COLS } from "@/components/customers/CustomerRow";
 import CustomersMenu from "@/components/customers/CustomersMenu";
 import { Input } from "@/components/ui/input";
 import { formatEur } from "@/lib/format";
@@ -273,14 +273,26 @@ const CustomersPage = () => {
               {search.trim() ? `Niciun client găsit pentru „${search}”` : "Niciun client în această categorie."}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              {totiFiltered.map((customer, index) => (
-                <div key={customer.phone} className={index > 0 ? "border-t border-border" : ""}>
-                  {/* Rendered with variant plain: tinted button, day prefix in appointment lead (e.g. mâine), hide line 3 */}
-                  <CustomerRow customer={customer} variant="plain" />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 border border-transparent text-[11px] tracking-wide font-medium uppercase text-muted-foreground">
+                <div data-col="avatar" className={`${CUSTOMER_COLS.avatar} shrink-0`} />
+                <div data-col="name" className={CUSTOMER_COLS.name}>Client</div>
+                <div data-col="phone" className={`${CUSTOMER_COLS.phone} shrink-0`}>Telefon</div>
+                <div data-col="type" className={`${CUSTOMER_COLS.type} shrink-0 flex justify-center`}>Tip</div>
+                <div data-col="detail" className={`${CUSTOMER_COLS.detail} shrink-0`}>Detaliu</div>
+                <div data-col="amount" className={`${CUSTOMER_COLS.amount} shrink-0 text-right`}>Sumă</div>
+                <div data-col="deadline" className={`${CUSTOMER_COLS.deadline} shrink-0 text-right`}>Termen</div>
+                <div data-col="call" className={`${CUSTOMER_COLS.call} shrink-0 flex justify-end`} />
+              </div>
+              <div className="bg-card border border-border rounded-xl overflow-hidden lg:bg-transparent lg:border-0 lg:rounded-none lg:overflow-visible lg:space-y-1">
+                {totiFiltered.map((customer, index) => (
+                  <div key={customer.phone} className={index > 0 ? "border-t border-border lg:border-t-0" : ""}>
+                    {/* Rendered with variant plain: tinted button, day prefix in appointment lead (e.g. mâine), hide line 3 */}
+                    <CustomerRow customer={customer} variant="plain" />
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
