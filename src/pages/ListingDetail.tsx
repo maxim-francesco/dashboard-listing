@@ -43,6 +43,8 @@ import api, {
 import ListingGallery from "@/components/listings/ListingGallery";
 import ListingGalleryDesktop from "@/components/listings/detail/ListingGalleryDesktop";
 import ListingSpecs from "@/components/listings/ListingSpecs";
+import ListingSpecsDesktop from "@/components/listings/detail/ListingSpecsDesktop";
+import ListingDescription from "@/components/listings/detail/ListingDescription";
 import ListingIdentity from "@/components/listings/detail/ListingIdentity";
 import ListingFigures from "@/components/listings/detail/ListingFigures";
 import ReservationNotice from "@/components/listings/detail/ReservationNotice";
@@ -658,7 +660,10 @@ export default function ListingDetail() {
             onCancelReservation={handleCancelReservation}
           />
 
-          {/* (e) SPECS */}
+          {/* (e) DESCRIPTION */}
+          <ListingDescription description={listing.description} variant="mobile" />
+
+          {/* (f) SPECS */}
           <ListingSpecs attributeValues={listing.attributeValues} />
         </div>
       </div>
@@ -680,7 +685,7 @@ export default function ListingDetail() {
               <ListingGalleryDesktop images={listing.images} title={listing.title} />
             </div>
             <div data-section="specs">
-              <ListingSpecs attributeValues={listing.attributeValues} />
+              <ListingSpecsDesktop attributeValues={listing.attributeValues} />
             </div>
           </div>
 
@@ -732,6 +737,10 @@ export default function ListingDetail() {
                 onOpenMoreActionsSheet={() => setMoreActionsSheetOpen(true)}
                 onCancelReservation={handleCancelReservation}
               />
+            </div>
+
+            <div data-section="description">
+              <ListingDescription description={listing.description} variant="desktop" />
             </div>
           </div>
         </div>

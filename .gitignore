@@ -26,6 +26,7 @@ dist-ssr
 # Ephemeral test artifacts
 _ai_shots/
 *_screenshots/
+.agents/baselines/screenshots/
 
 # Agent customizations: config may hold credentials
 .agents/mcp_config.json

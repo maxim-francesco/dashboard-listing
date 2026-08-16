@@ -1,0 +1,114 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "measuredAt": "2026-08-17T01:42:00+03:00",
+  "baselines": {
+    "cmrhdbm1j1c03p12av56o0oiw": {
+      "key": "V",
+      "title": "Volvo XC40 R-Design 4WD - Geartronic",
+      "status": "AVAILABLE",
+      "imageCount": 31,
+      "scrollHeight": 1680,
+      "galleryImage": {
+        "renderedWidth": 358.4,
+        "renderedHeight": 220.0
+      },
+      "sectionHeights": {
+        "gallery": 302.0,
+        "identity": 106.8,
+        "threeFigures": 64.1,
+        "reservationNotice": null,
+        "primaryActions": 65.6,
+        "actionList": 308.6,
+        "description": 373.6,
+        "specsAccordion": 87.6
+      }
+    },
+    "cmntafv7x01utu21qqchyu5vm": {
+      "key": "B",
+      "title": "BMW X1 2.0D 177CP X DRIVE 2010",
+      "status": "AVAILABLE",
+      "imageCount": 1,
+      "scrollHeight": 1602,
+      "galleryImage": {
+        "renderedWidth": 358.4,
+        "renderedHeight": 220.0
+      },
+      "sectionHeights": {
+        "gallery": 248.0,
+        "identity": 83.0,
+        "threeFigures": 64.1,
+        "reservationNotice": null,
+        "primaryActions": 65.6,
+        "actionList": 308.6,
+        "description": 373.6,
+        "specsAccordion": 87.6
+      }
+    },
+    "cmo1jxx59002fve045t5pnbb8": {
+      "key": "Z",
+      "title": "BMW 318d Gt F34 Pachet M din fabrica An 2015 Euro 6 Rate cu Istoric negativ Avans 0%, numere roșii + RCA incluse și pleci cu rezervorul plin!",
+      "status": "AVAILABLE",
+      "imageCount": 0,
+      "scrollHeight": 1670,
+      "galleryImage": {
+        "renderedWidth": 0.0,
+        "renderedHeight": 0.0
+      },
+      "sectionHeights": {
+        "gallery": 220.0,
+        "identity": 178.0,
+        "threeFigures": 64.1,
+        "reservationNotice": null,
+        "primaryActions": 65.6,
+        "actionList": 308.6,
+        "description": 373.6,
+        "specsAccordion": 87.6
+      }
+    },
+    "cmmgg3tpz00x9vf1qgojsb9ov": {
+      "key": "S",
+      "title": "Volvo XC40 R-Design - 4WD - Geartronic",
+      "status": "SOLD",
+      "imageCount": 40,
+      "scrollHeight": 1680,
+      "galleryImage": {
+        "renderedWidth": 358.4,
+        "renderedHeight": 220.0
+      },
+      "sectionHeights": {
+        "gallery": 302.0,
+        "identity": 106.8,
+        "threeFigures": 64.1,
+        "reservationNotice": null,
+        "primaryActions": 65.6,
+        "actionList": 308.6,
+        "description": 373.6,
+        "specsAccordion": 87.6
+      }
+    },
+    "cmoaye5nk0l87u21qtp8eohcp": {
+      "key": "R",
+      "title": "Renault Megane Bk Diesel 2015",
+      "status": "AVAILABLE",
+      "imageCount": 17,
+      "scrollHeight": 1657,
+      "galleryImage": {
+        "renderedWidth": 358.4,
+        "renderedHeight": 220.0
+      },
+      "sectionHeights": {
+        "gallery": 302.0,
+        "identity": 83.0,
+        "threeFigures": 64.1,
+        "reservationNotice": null,
+        "primaryActions": 65.6,
+        "actionList": 308.6,
+        "description": 373.6,
+        "specsAccordion": 87.6
+      }
+    }
+  }
+}

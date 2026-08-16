@@ -30,14 +30,14 @@ export default function ListingPrimaryActions({
         </button>
         <button
           onClick={onOpenReserveModal}
-          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border text-foreground text-xs font-medium min-h-[52px]"
         >
           <Calendar className="w-5 h-5 shrink-0" />
           <span>Rezervă</span>
         </button>
         <button
           onClick={onOpenSoldModal}
-          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border text-foreground text-xs font-medium min-h-[52px]"
         >
           <Check className="w-5 h-5 shrink-0" />
           <span>Vândut</span>
@@ -58,7 +58,7 @@ export default function ListingPrimaryActions({
         </button>
         <button
           onClick={onOpenSoldModal}
-          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border text-foreground text-xs font-medium min-h-[52px]"
         >
           <Check className="w-5 h-5 shrink-0" />
           <span>Vândut</span>
@@ -72,21 +72,18 @@ export default function ListingPrimaryActions({
       <div className="flex gap-2 w-full select-none">
         <button
           onClick={() => navigate("/contracts")}
-          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border text-foreground text-xs font-medium min-h-[52px]"
         >
           <FileText className="w-5 h-5 shrink-0" />
           <span>Vezi contractul</span>
         </button>
         <button
           onClick={onReactivate}
-          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
+          className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border text-foreground text-xs font-medium min-h-[52px]"
         >
           <RotateCw className="w-5 h-5 shrink-0" />
           <span>Reactivează</span>
         </button>
-        <div className="flex-1 py-3 flex flex-col items-center justify-center text-muted-foreground text-xs font-medium min-h-[52px]">
-          —
-        </div>
       </div>
     );
   }
