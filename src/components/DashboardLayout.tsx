@@ -11,7 +11,7 @@ const DashboardLayout = () => {
         <Header />
         
         <main className="flex-1 p-4 lg:p-6 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl lg:max-w-[1600px] mx-auto">
             <ErrorBoundary key={location.pathname}>
               <Outlet />
             </ErrorBoundary>

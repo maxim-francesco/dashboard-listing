@@ -10,8 +10,9 @@ import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
 
 const navigation = [
   { name: "Azi", href: "/" },
-  { name: "Mașini", href: "/listings" },
-  { name: "Clienți", href: "/customers" },
+  { name: "Lead-uri", href: "/messages" },
+  { name: "Stoc", href: "/listings?view=stoc" },
+  { name: "Clienți", href: "/customers?filter=all" },
   { name: "Rețea", href: "/network" },
 ];
 
@@ -30,15 +31,12 @@ const Header = () => {
 
   // Active state checking
   const isActiveItem = (href: string) => {
-    if (href === "/") return pathname === "/";
-    if (href === "/listings") return pathname === "/listings" || pathname.startsWith("/listings/");
-    if (href === "/customers") {
-      return pathname.startsWith("/customers") ||
-             pathname.startsWith("/messages") ||
-             pathname.startsWith("/contracts") ||
-             pathname.startsWith("/reservations");
-    }
-    if (href === "/network") return pathname.startsWith("/network");
+    const path = href.split("?")[0];
+    if (path === "/") return pathname === "/";
+    if (path === "/messages") return pathname.startsWith("/messages");
+    if (path === "/listings") return pathname === "/listings" || pathname.startsWith("/listings/");
+    if (path === "/customers") return pathname.startsWith("/customers");
+    if (path === "/network") return pathname.startsWith("/network");
     return false;
   };
 
@@ -70,7 +68,7 @@ const Header = () => {
         {navigation.map((item) => {
           const isActive = isActiveItem(item.href);
           let badgeValue = 0;
-          if (item.href === "/customers") {
+          if (item.href === "/messages") {
             badgeValue = inLucru;
           } else if (item.href === "/network") {
             badgeValue = reteaCount;

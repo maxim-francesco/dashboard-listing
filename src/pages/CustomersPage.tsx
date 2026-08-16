@@ -237,7 +237,7 @@ const CustomersPage = () => {
       ) : (
         <>
           <div>
-            <Link to="/customers" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1">
+            <Link to="/customers" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1 lg:hidden">
               ← Înapoi la categorii
             </Link>
             <h1 className="text-[20px] font-semibold text-foreground leading-tight">

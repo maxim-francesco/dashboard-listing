@@ -737,7 +737,7 @@ const Listings = ({ initialSegment }: ListingsProps) => {
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full">
       {/* Back to hub */}
       <div className="px-1 pt-1">
-        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline">
+        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline lg:hidden">
           ← Toate categoriile
         </Link>
       </div>
