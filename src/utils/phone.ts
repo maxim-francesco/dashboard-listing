@@ -1,7 +1,7 @@
 /**
  * Normalize Romanian phone numbers to a clean digits-only format starting with 40.
  */
-export const normalizeRoPhone = (raw: string): string => {
+export const normalizeRoPhone = (raw: string | null | undefined): string => {
   if (!raw) return "";
   
   // 1. Strip everything non-digit
@@ -32,13 +32,32 @@ export const normalizeRoPhone = (raw: string): string => {
     d = "40" + d;
   }
   
+  // Too short to be a usable phone number — keep in sync with backend src/utils/phone.js
+  if (d.length < 6) return "";
+
   return d;
+};
+
+export const formatRoPhone = (raw: string | null | undefined): string => {
+  const d = normalizeRoPhone(raw || "");
+  if (!d) return "";
+  // Romanian mobile: 40 7XX XXX XXX  -> display as 07XX XXX XXX
+  if (d.length === 11 && d.startsWith("40")) {
+    const national = "0" + d.substring(2);           // 0746832327
+    return national.substring(0, 4) + " " + national.substring(4, 7) + " " + national.substring(7);
+  }
+  // Anything else (foreign, malformed): show with a leading + and no grouping
+  return "+" + d;
+};
+
+export const hasUsablePhone = (raw: string | null | undefined): boolean => {
+  return !!normalizeRoPhone(raw || "");
 };
 
 /**
  * Generate a WhatsApp click-to-chat link.
  */
-export const waLink = (rawPhone: string, text: string): string => {
+export const waLink = (rawPhone: string | null | undefined, text: string): string => {
   const normalized = normalizeRoPhone(rawPhone);
   if (!normalized) return "";
   return `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`;
@@ -47,7 +66,7 @@ export const waLink = (rawPhone: string, text: string): string => {
 /**
  * Generate a standard tel href.
  */
-export const telLink = (rawPhone: string): string => {
+export const telLink = (rawPhone: string | null | undefined): string => {
   const normalized = normalizeRoPhone(rawPhone);
   if (!normalized) return "";
   return `tel:+${normalized}`;

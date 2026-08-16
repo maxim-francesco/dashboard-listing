@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { normalizePhone } from "@/lib/phone";
+import { normalizeRoPhone } from "@/utils/phone";
 import { Phone } from "lucide-react";
 import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import { roCount } from "@/lib/plural";
@@ -89,7 +89,7 @@ export default function ActionCallList() {
     return false;
   });
 
-  const callableLeads = openLeadSet.filter((lead) => normalizePhone(lead.phone) !== null);
+  const callableLeads = openLeadSet.filter((lead) => normalizeRoPhone(lead.phone) !== "");
   const unreachableCount = openLeadSet.length - callableLeads.length;
 
   const sorted = [...callableLeads].sort((a, b) => {
@@ -105,7 +105,7 @@ export default function ActionCallList() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  const distinctCount = new Set(callableLeads.map((lead) => normalizePhone(lead.phone))).size;
+  const distinctCount = new Set(callableLeads.map((lead) => normalizeRoPhone(lead.phone))).size;
 
   if (distinctCount === 0 && unreachableCount === 0) {
     return null;

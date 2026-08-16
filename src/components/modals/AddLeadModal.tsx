@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { normalizePhone } from "@/lib/phone";
+import { normalizeRoPhone } from "@/utils/phone";
 
 import {
   Dialog,
@@ -57,7 +57,7 @@ const AddLeadModal = ({ isOpen, onClose }: AddLeadModalProps) => {
       isSavingRef.current = false;
       
       const rawPhone = data?.phone;
-      const normalized = rawPhone ? normalizePhone(rawPhone) : "";
+      const normalized = normalizeRoPhone(rawPhone);
       if (normalized) {
         navigate(`/customers/${encodeURIComponent(normalized)}`);
       } else {
