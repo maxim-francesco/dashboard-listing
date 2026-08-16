@@ -26,3 +26,6 @@ dist-ssr
 # Ephemeral test artifacts
 _ai_shots/
 *_screenshots/
+
+# Agent customizations: config may hold credentials
+.agents/mcp_config.json
