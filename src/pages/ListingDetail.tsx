@@ -18,6 +18,7 @@ import {
   Share2, 
   MoreHorizontal, 
   ChevronRight,
+  ChevronLeft,
   FileText,
   Calendar,
   CheckCircle2,
@@ -40,7 +41,13 @@ import api, {
 } from "@/services/api";
 
 import ListingGallery from "@/components/listings/ListingGallery";
+import ListingGalleryDesktop from "@/components/listings/detail/ListingGalleryDesktop";
 import ListingSpecs from "@/components/listings/ListingSpecs";
+import ListingIdentity from "@/components/listings/detail/ListingIdentity";
+import ListingFigures from "@/components/listings/detail/ListingFigures";
+import ReservationNotice from "@/components/listings/detail/ReservationNotice";
+import ListingPrimaryActions from "@/components/listings/detail/ListingPrimaryActions";
+import ListingActionList from "@/components/listings/detail/ListingActionList";
 import PublishSheet from "@/components/listings/PublishSheet";
 import MoreActionsSheet from "@/components/listings/MoreActionsSheet";
 
@@ -601,235 +608,133 @@ export default function ListingDetail() {
     }
   };
 
-  // Primary Actions configuration by Status
-  const renderPrimaryActions = () => {
-    const status = listing.status;
-
-    if (status === "AVAILABLE" || status === "INCOMING") {
-      return (
-        <div className="flex gap-2 w-full select-none">
-          <button
-            onClick={() => setOfferModalOpen(true)}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-medium min-h-[52px]"
-          >
-            <FileText className="w-5 h-5 shrink-0" />
-            <span>Ofertă</span>
-          </button>
-          <button
-            onClick={() => setReserveModalOpen(true)}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
-          >
-            <Calendar className="w-5 h-5 shrink-0" />
-            <span>Rezervă</span>
-          </button>
-          <button
-            onClick={() => setIsSoldModalOpen(true)}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
-          >
-            <Check className="w-5 h-5 shrink-0" />
-            <span>Vândut</span>
-          </button>
-        </div>
-      );
-    }
-
-    if (status === "RESERVED") {
-      return (
-        <div className="flex gap-2 w-full select-none">
-          <button
-            onClick={() => setOfferModalOpen(true)}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-medium min-h-[52px]"
-          >
-            <FileText className="w-5 h-5 shrink-0" />
-            <span>Ofertă</span>
-          </button>
-          <button
-            onClick={() => setIsSoldModalOpen(true)}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
-          >
-            <Check className="w-5 h-5 shrink-0" />
-            <span>Vândut</span>
-          </button>
-        </div>
-      );
-    }
-
-    if (status === "SOLD") {
-      return (
-        <div className="flex gap-2 w-full select-none">
-          <button
-            onClick={() => navigate("/contracts")}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
-          >
-            <FileText className="w-5 h-5 shrink-0" />
-            <span>Vezi contractul</span>
-          </button>
-          <button
-            onClick={handleReactivate}
-            className="flex-1 rounded-[var(--radius)] py-3 flex flex-col items-center justify-center gap-1 bg-card border border-border-strong text-foreground text-xs font-medium min-h-[52px]"
-          >
-            <RotateCw className="w-5 h-5 shrink-0" />
-            <span>Reactivează</span>
-          </button>
-          <div className="flex-1 py-3 flex flex-col items-center justify-center text-muted-foreground text-xs font-medium min-h-[52px]">
-            —
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
-
   return (
-    <div className="w-full max-w-[390px] mx-auto bg-background min-h-screen flex flex-col pb-20 overflow-x-hidden">
-      {/* 1. Gallery */}
-      <ListingGallery images={listing.images} title={listing.title} />
+    <div className="w-full">
+      {/* Mobile composition */}
+      <div className="lg:hidden w-full max-w-[390px] mx-auto bg-background min-h-screen flex flex-col pb-20 overflow-x-hidden">
+        {/* 1. Gallery */}
+        <ListingGallery images={listing.images} title={listing.title} />
 
-      {/* 2. Listing Information and Actions */}
-      <div className="p-4 space-y-5 flex-1">
-        {/* (a) IDENTITY */}
-        <div className="space-y-1 text-left">
-          <h1 className="text-[19px] font-semibold text-foreground leading-tight">
-            {listing.title}
-          </h1>
-          <div className="text-[22px] font-semibold text-foreground leading-none pt-1">
-            {new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(listing.price || 0)} €
-          </div>
-          {identitySubtitle && (
-            <div className="text-sm text-muted-foreground pt-1.5 leading-snug">
-              {identitySubtitle}
-            </div>
-          )}
-        </div>
+        {/* 2. Listing Information and Actions */}
+        <div className="p-4 space-y-5 flex-1">
+          {/* (a) IDENTITY */}
+          <ListingIdentity
+            title={listing.title}
+            price={listing.price}
+            identitySubtitle={identitySubtitle}
+          />
 
-        {/* (b) THREE FIGURES */}
-        <div className="flex gap-2 select-none">
-          <div className="flex-1 bg-card border border-border rounded-[var(--radius)] p-2.5 text-center flex flex-col justify-between">
-            <span className={`text-[17px] font-semibold ${getDaysColorClass(daysInStock)}`}>
-              {daysInStock}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium pt-0.5">
-              zile în stoc
-            </span>
-          </div>
-          <div className="flex-1 bg-card border border-border rounded-[var(--radius)] p-2.5 text-center flex flex-col justify-between">
-            <span className="text-[17px] font-semibold text-foreground">
-              {viewCount}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium pt-0.5">
-              vizualizări
-            </span>
-          </div>
-          <div className="flex-1 bg-card border border-border rounded-[var(--radius)] p-2.5 text-center flex flex-col justify-between">
-            <span className="text-[17px] font-semibold text-foreground">
-              {leadsCount}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium pt-0.5">
-              lead-uri
-            </span>
-          </div>
-        </div>
+          {/* (b) THREE FIGURES */}
+          <ListingFigures
+            daysInStock={daysInStock}
+            viewCount={viewCount}
+            leadsCount={leadsCount}
+            getDaysColorClass={getDaysColorClass}
+          />
 
-        {/* (c) PRIMARY ACTIONS */}
-        {listing.status === "RESERVED" && listing.activeReservation && (
-          <div className="border border-border rounded-[var(--radius)] p-3 text-[13px] text-foreground bg-card select-none">
-            <div>Rezervată de {listing.activeReservation.clientName}</div>
-            <div className="text-muted-foreground mt-0.5">
-              {formatEur(listing.activeReservation.depositAmount)} avans · expiră {format(new Date(listing.activeReservation.expiresAt), "dd MMM yyyy", { locale: ro })}
-            </div>
-          </div>
-        )}
-        {renderPrimaryActions()}
-
-        {/* (d) ACTION LIST */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden select-none">
-          {/* Edit */}
-          <Link
-            to={`/listings/${listing.id}/edit`}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 transition-colors w-full cursor-pointer min-h-[44px]"
-          >
-            <Edit className="w-5 h-5 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground text-left">Editează anunțul</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-          </Link>
-
-          {/* Publicare */}
-          <button
-            onClick={() => setPublishSheetOpen(true)}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-          >
-            <Globe className="w-5 h-5 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground">Publicare</span>
-            <div className="flex items-center gap-2">
-              {listing.autovitStatus === "active" ? (
-                <span className="bg-success-light text-success font-medium text-xs rounded-full px-2.5 py-0.5">
-                  Pe Autovit
-                </span>
-              ) : (
-                <span className="bg-muted text-muted-foreground font-medium text-xs rounded-full px-2.5 py-0.5">
-                  Nepublicată
-                </span>
-              )}
-              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-            </div>
-          </button>
-
-          {/* AI Diagnose */}
-          <button
-            onClick={() => setIsDiagnoseModalOpen(true)}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-          >
-            <Sparkles className="w-5 h-5 text-primary shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground">De ce nu se vinde?</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-          </button>
-
-          {/* Marketing Texts */}
-          <button
-            onClick={() => setIsMarketingModalOpen(true)}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-          >
-            <Megaphone className="w-5 h-5 text-primary shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground">Texte de promovare</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-          </button>
-
-          {/* B2B Expose Trade */}
-          <button
-            onClick={() => setIsExposeModalOpen(true)}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-          >
-            <Share2 className="w-5 h-5 text-primary shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground">Expune la schimb în rețea</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-          </button>
-
-          {/* More Actions */}
-          <button
-            onClick={() => setMoreActionsSheetOpen(true)}
-            className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-accent/40 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-          >
-            <MoreHorizontal className="w-5 h-5 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-[15px] font-medium text-foreground">Altele</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-          </button>
-
-          {/* Cancel Reservation */}
+          {/* (c) PRIMARY ACTIONS */}
           {listing.status === "RESERVED" && listing.activeReservation && (
-            <button
-              onClick={handleCancelReservation}
-              className="flex items-center gap-3 px-3.5 py-3.5 hover:bg-destructive/5 border-t border-border transition-colors w-full cursor-pointer text-left min-h-[44px]"
-            >
-              <XCircle className="w-5 h-5 text-destructive shrink-0" />
-              <span className="flex-1 text-[15px] font-medium text-destructive">Anulează rezervarea</span>
-              <ChevronRight className="w-5 h-5 text-destructive shrink-0" />
-            </button>
+            <ReservationNotice reservation={listing.activeReservation} />
           )}
-        </div>
+          <ListingPrimaryActions
+            status={listing.status}
+            onOpenOfferModal={() => setOfferModalOpen(true)}
+            onOpenReserveModal={() => setReserveModalOpen(true)}
+            onOpenSoldModal={() => setIsSoldModalOpen(true)}
+            onReactivate={handleReactivate}
+          />
 
-        {/* (e) SPECS */}
-        <ListingSpecs attributeValues={listing.attributeValues} />
+          {/* (d) ACTION LIST */}
+          <ListingActionList
+            listingId={listing.id}
+            autovitStatus={listing.autovitStatus}
+            isReserved={listing.status === "RESERVED"}
+            hasActiveReservation={!!listing.activeReservation}
+            onOpenPublishSheet={() => setPublishSheetOpen(true)}
+            onOpenDiagnoseModal={() => setIsDiagnoseModalOpen(true)}
+            onOpenMarketingModal={() => setIsMarketingModalOpen(true)}
+            onOpenExposeModal={() => setIsExposeModalOpen(true)}
+            onOpenMoreActionsSheet={() => setMoreActionsSheetOpen(true)}
+            onCancelReservation={handleCancelReservation}
+          />
+
+          {/* (e) SPECS */}
+          <ListingSpecs attributeValues={listing.attributeValues} />
+        </div>
+      </div>
+
+      {/* Desktop composition */}
+      <div className="hidden lg:block w-full">
+        <div className="flex gap-6 items-start">
+          {/* Left Column: flex-1 min-w-0 */}
+          <div className="flex-1 min-w-0 space-y-4">
+            <Link
+              to="/listings"
+              className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Înapoi la mașini</span>
+            </Link>
+
+            <div data-section="gallery">
+              <ListingGalleryDesktop images={listing.images} title={listing.title} />
+            </div>
+            <div data-section="specs">
+              <ListingSpecs attributeValues={listing.attributeValues} />
+            </div>
+          </div>
+
+          {/* Right Column: w-[440px] shrink-0 sticky top-[88px] self-start space-y-5 */}
+          <div className="w-[440px] shrink-0 sticky top-[88px] self-start space-y-5">
+            <div data-section="identity">
+              <ListingIdentity
+                title={listing.title}
+                price={listing.price}
+                identitySubtitle={identitySubtitle}
+              />
+            </div>
+
+            <div data-section="figures">
+              <ListingFigures
+                daysInStock={daysInStock}
+                viewCount={viewCount}
+                leadsCount={leadsCount}
+                getDaysColorClass={getDaysColorClass}
+              />
+            </div>
+
+            {listing.status === "RESERVED" && listing.activeReservation && (
+              <div data-section="reservation">
+                <ReservationNotice reservation={listing.activeReservation} />
+              </div>
+            )}
+
+            <div data-section="primary-actions">
+              <ListingPrimaryActions
+                status={listing.status}
+                onOpenOfferModal={() => setOfferModalOpen(true)}
+                onOpenReserveModal={() => setReserveModalOpen(true)}
+                onOpenSoldModal={() => setIsSoldModalOpen(true)}
+                onReactivate={handleReactivate}
+              />
+            </div>
+
+            <div data-section="action-list">
+              <ListingActionList
+                listingId={listing.id}
+                autovitStatus={listing.autovitStatus}
+                isReserved={listing.status === "RESERVED"}
+                hasActiveReservation={!!listing.activeReservation}
+                onOpenPublishSheet={() => setPublishSheetOpen(true)}
+                onOpenDiagnoseModal={() => setIsDiagnoseModalOpen(true)}
+                onOpenMarketingModal={() => setIsMarketingModalOpen(true)}
+                onOpenExposeModal={() => setIsExposeModalOpen(true)}
+                onOpenMoreActionsSheet={() => setMoreActionsSheetOpen(true)}
+                onCancelReservation={handleCancelReservation}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Sheets Overlay */}
