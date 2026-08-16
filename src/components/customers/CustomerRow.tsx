@@ -53,6 +53,15 @@ const DOT_COLORS: Record<string, string> = {
   FINANCING: "bg-green-500",
 };
 
+const ageLabel = (status: string, createdAt: string): string => {
+  const label = STATUS_LABELS[status] || status;
+  if (status !== "NEW") return label;
+  const days = differenceInCalendarDays(new Date(), new Date(createdAt));
+  if (days <= 2) return "Nou";
+  if (days <= 14) return "Neatins";
+  return "Vechi";
+};
+
 function getSortedCandidates(c: CustomerListItem) {
   const candidates: { type: "reservation" | "offer" | "appointment"; date: Date }[] = [];
 
@@ -164,11 +173,8 @@ export function getSignal(c: CustomerListItem): {
   const deadline = getDeadline(c);
   if (!deadline) {
     let text = "";
-    if (c.openLead && c.openLead.status === "NEW") {
-      text = `Lead nou · ${formatDistanceToNow(new Date(c.openLead.createdAt), { addSuffix: true, locale: ro })}`;
-    } else if (c.openLead) {
-      const statusLabel = STATUS_LABELS[c.openLead.status] || c.openLead.status;
-      text = `${statusLabel} · ${formatDistanceToNow(new Date(c.openLead.createdAt), { addSuffix: true, locale: ro })}`;
+    if (c.openLead) {
+      text = `${ageLabel(c.openLead.status, c.openLead.createdAt)} · ${formatDistanceToNow(new Date(c.openLead.createdAt), { addSuffix: true, locale: ro })}`;
     } else if (c.purchasedCars && c.purchasedCars.length > 0) {
       const firstCar = c.purchasedCars[0];
       text = `A cumpărat ${firstCar}${c.purchasedCars.length > 1 ? ` și încă ${c.purchasedCars.length - 1}` : ""}`;
@@ -203,7 +209,7 @@ export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
 
   if (unreadLead) {
     const type = customer.openLead!.type;
-    const statusLabel = STATUS_LABELS[customer.openLead!.status] || customer.openLead!.status;
+    const statusLabel = ageLabel(customer.openLead!.status, customer.openLead!.createdAt);
     const distanceStr = formatDistanceToNow(new Date(customer.openLead!.createdAt), { addSuffix: true, locale: ro });
     return {
       label: TYPE_LABELS[type] || type,
@@ -262,7 +268,7 @@ export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
     const firstCar = customer.purchasedCars[0];
     fallbackDetail = `A cumpărat ${firstCar}${customer.purchasedCars.length > 1 ? ` și încă ${customer.purchasedCars.length - 1}` : ""}`;
   } else if (customer.openLead) {
-    const statusLabel = STATUS_LABELS[customer.openLead.status] || customer.openLead.status;
+    const statusLabel = ageLabel(customer.openLead.status, customer.openLead.createdAt);
     const distanceStr = formatDistanceToNow(new Date(customer.openLead.createdAt), { addSuffix: true, locale: ro });
     fallbackDetail = `${statusLabel} · ${distanceStr}`;
   } else if (customer.lastInteraction) {
@@ -281,7 +287,7 @@ export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
   }
 
   return {
-    label: customer.purchasedCars && customer.purchasedCars.length > 0 ? "Cumpărător" : "Client",
+    label: customer.purchasedCars && customer.purchasedCars.length > 0 ? "Cumpărător" : "",
     icon: customer.purchasedCars && customer.purchasedCars.length > 0 ? Check : User,
     colorClasses: "bg-slate-100 text-slate-700 dark:bg-slate-800/40 dark:text-slate-400",
     detail: fallbackDetail
@@ -330,10 +336,12 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
         </div>
         
         <div className="flex items-center flex-wrap gap-2 mb-1">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-medium ${primaryEvent.colorClasses}`}>
-            {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
-            {primaryEvent.label}
-          </span>
+          {primaryEvent.label && (
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-medium ${primaryEvent.colorClasses}`}>
+              {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+              {primaryEvent.label}
+            </span>
+          )}
           
           {otherCount > 0 && (
             <span className="text-[12px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">

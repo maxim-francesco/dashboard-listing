@@ -193,16 +193,12 @@ const CustomersPage = () => {
         });
       }
 
-      return [...list].sort((a, b) =>
-        a.name.localeCompare(b.name, "ro", { sensitivity: "base" })
-      );
+      return list;
     }
 
     if (activeSegment !== "toti") return [];
 
-    const sorted = [...customers].sort((a, b) => {
-      return a.name.localeCompare(b.name, "ro", { sensitivity: "base" });
-    });
+    const sorted = customers;
 
     const term = search.toLowerCase().trim();
     if (!term) return sorted;
