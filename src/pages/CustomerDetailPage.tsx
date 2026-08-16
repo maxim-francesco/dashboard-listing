@@ -13,6 +13,7 @@ import { formatEur } from "@/lib/format";
 import AppointmentWizard from "@/components/modals/AppointmentWizard";
 import AppointmentEditSheet from "@/components/modals/AppointmentEditSheet";
 import MessageDetailSheet from "@/components/modals/MessageDetailSheet";
+import { formatRoPhone, telLink, waLink, hasUsablePhone } from "@/utils/phone";
 
 const TYPE_LABELS: Record<string, string> = {
   TEST_DRIVE: "Test-drive",
@@ -81,10 +82,6 @@ const initials = (name?: string) => {
   if (!n) return "?";
   const parts = n.split(/\s+/);
   return (parts[0]?.[0] || "" + (parts[1]?.[0] || "")).toUpperCase().slice(0, 2) || "?";
-};
-const waLink = (phone?: string) => {
-  const digits = (phone || "").replace(/\D/g, "");
-  return "https://wa.me/" + digits;
 };
 
 const CustomerDetailPage = () => {
@@ -205,9 +202,15 @@ const CustomerDetailPage = () => {
           </div>
         </div>
 
-        <a href={"tel:+" + customer.phone} className="flex items-center gap-2.5 py-2.5 text-[14px] text-primary">
-          <Phone className="w-4 h-4 shrink-0" /> +{customer.phone}
-        </a>
+        {hasUsablePhone(customer.phone) ? (
+          <a href={telLink(customer.phone)} className="flex items-center gap-2.5 py-2.5 text-[14px] text-primary">
+            <Phone className="w-4 h-4 shrink-0" /> {formatRoPhone(customer.phone)}
+          </a>
+        ) : (
+          <div className="flex items-center gap-2.5 py-2.5 text-[14px] text-muted-foreground">
+            <Phone className="w-4 h-4 shrink-0" /> Fără telefon
+          </div>
+        )}
         {email && (
           <a href={"mailto:" + email} className="flex items-center gap-2.5 py-2.5 text-[14px] text-primary border-t border-border truncate">
             <Mail className="w-4 h-4 shrink-0" /> <span className="truncate">{email}</span>
@@ -215,12 +218,24 @@ const CustomerDetailPage = () => {
         )}
 
         <div className="grid grid-cols-3 gap-2 mt-3">
-          <a href={"tel:+" + customer.phone} className="py-2.5 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1">
-            <Phone className="w-5 h-5" /> <span className="text-[12px] font-medium">Sună</span>
-          </a>
-          <a href={waLink(customer.phone)} target="_blank" rel="noreferrer" className="py-2.5 rounded-xl border border-border bg-background flex flex-col items-center gap-1">
-            <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[12px] font-medium text-foreground">WhatsApp</span>
-          </a>
+          {hasUsablePhone(customer.phone) ? (
+            <a href={telLink(customer.phone)} className="py-2.5 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1">
+              <Phone className="w-5 h-5" /> <span className="text-[12px] font-medium">Sună</span>
+            </a>
+          ) : (
+            <div className="py-2.5 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1 opacity-40 pointer-events-none">
+              <Phone className="w-5 h-5" /> <span className="text-[12px] font-medium">Sună</span>
+            </div>
+          )}
+          {hasUsablePhone(customer.phone) ? (
+            <a href={waLink(customer.phone, "")} target="_blank" rel="noreferrer" className="py-2.5 rounded-xl border border-border bg-background flex flex-col items-center gap-1">
+              <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[12px] font-medium text-foreground">WhatsApp</span>
+            </a>
+          ) : (
+            <div className="py-2.5 rounded-xl border border-border bg-background flex flex-col items-center gap-1 opacity-40 pointer-events-none">
+              <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[12px] font-medium text-foreground">WhatsApp</span>
+            </div>
+          )}
           <button onClick={() => setCreateOpen(true)} className="py-2.5 rounded-xl border border-border bg-background flex flex-col items-center gap-1">
             <CalendarPlus className="w-5 h-5 text-foreground" /> <span className="text-[12px] font-medium text-foreground">Programare</span>
           </button>

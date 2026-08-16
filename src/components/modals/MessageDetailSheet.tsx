@@ -7,6 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { telLink, waLink, hasUsablePhone } from "@/utils/phone";
 
 interface MessageDetailSheetProps {
   isOpen: boolean;
@@ -55,8 +56,6 @@ const LEAD_TEXT: Record<string, string> = {
   ORDER: "text-indigo-700 dark:text-indigo-300",
   BUYBACK: "text-amber-700 dark:text-amber-300",
 };
-
-const waLink = (phone?: string | null) => "https://wa.me/" + (phone || "").replace(/\D/g, "");
 
 const MessageDetailSheet = ({ isOpen, onClose, message, customerPhone }: MessageDetailSheetProps) => {
   const cat = leadCat(message);
@@ -114,12 +113,24 @@ const MessageDetailSheet = ({ isOpen, onClose, message, customerPhone }: Message
 
         <div className="p-4 border-t border-border mt-2">
           <div className={"grid gap-2 " + (email ? "grid-cols-3" : "grid-cols-2")}>
-            <a href={"tel:+" + phone} className="py-3 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1">
-              <Phone className="w-5 h-5" /> <span className="text-[13px] font-medium">Sună</span>
-            </a>
-            <a href={waLink(phone)} target="_blank" rel="noreferrer" className="py-3 rounded-xl border border-border bg-card flex flex-col items-center gap-1">
-              <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[13px] font-medium text-foreground">WhatsApp</span>
-            </a>
+            {hasUsablePhone(phone) ? (
+              <a href={telLink(phone)} className="py-3 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1">
+                <Phone className="w-5 h-5" /> <span className="text-[13px] font-medium">Sună</span>
+              </a>
+            ) : (
+              <div className="py-3 rounded-xl bg-primary text-primary-foreground flex flex-col items-center gap-1 opacity-40 pointer-events-none">
+                <Phone className="w-5 h-5" /> <span className="text-[13px] font-medium">Sună</span>
+              </div>
+            )}
+            {hasUsablePhone(phone) ? (
+              <a href={waLink(phone, "")} target="_blank" rel="noreferrer" className="py-3 rounded-xl border border-border bg-card flex flex-col items-center gap-1">
+                <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[13px] font-medium text-foreground">WhatsApp</span>
+              </a>
+            ) : (
+              <div className="py-3 rounded-xl border border-border bg-card flex flex-col items-center gap-1 opacity-40 pointer-events-none">
+                <MessageCircle className="w-5 h-5 text-green-600" /> <span className="text-[13px] font-medium text-foreground">WhatsApp</span>
+              </div>
+            )}
             {email && (
               <a href={mailtoHref} className="py-3 rounded-xl border border-border bg-card flex flex-col items-center gap-1">
                 <Mail className="w-5 h-5 text-foreground" /> <span className="text-[13px] font-medium text-foreground">Email</span>

@@ -18,6 +18,7 @@ import { ro } from "date-fns/locale";
 import { CustomerListItem } from "@/services/api";
 import { formatEur } from "@/lib/format";
 import { TYPE_LABELS, TYPE_COLORS } from "@/components/leads/LeadDetailPanel";
+import { telLink, formatRoPhone, hasUsablePhone, normalizeRoPhone } from "@/utils/phone";
 
 const TYPE_LABELS_LOWER: Record<string, string> = {
   TEST_DRIVE: "test-drive",
@@ -172,7 +173,7 @@ export function getSignal(c: CustomerListItem): {
       const firstCar = c.purchasedCars[0];
       text = `A cumpărat ${firstCar}${c.purchasedCars.length > 1 ? ` și încă ${c.purchasedCars.length - 1}` : ""}`;
     } else {
-      text = `+${c.phone}`;
+      text = formatRoPhone(c.phone) || "Fără telefon";
     }
     return { text, tone: "muted", deadline: null };
   }
@@ -276,7 +277,7 @@ export function getPrimaryEvent(customer: CustomerListItem): PrimaryEvent {
       fallbackDetail = customer.lastInteraction;
     }
   } else {
-    fallbackDetail = `+${customer.phone}`;
+    fallbackDetail = formatRoPhone(customer.phone) || "Fără telefon";
   }
 
   return {
@@ -314,8 +315,8 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
 
   return (
     <div
-      onClick={() => navigate(`/customers/${encodeURIComponent(customer.phone)}`)}
-      className="flex items-center gap-3.5 px-4 py-4 cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={hasUsablePhone(customer.phone) ? () => navigate(`/customers/${encodeURIComponent(normalizeRoPhone(customer.phone))}`) : undefined}
+      className={`flex items-center gap-3.5 px-4 py-4 transition-colors ${hasUsablePhone(customer.phone) ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}`}
     >
       <InitialsAvatar name={customer.name} className="w-[46px] h-[46px] text-base" />
       <div className="flex-1 min-w-0">
@@ -345,9 +346,9 @@ export default function CustomerRow({ customer, variant = "plain" }: CustomerRow
           {primaryEvent.detail}
         </div>
       </div>
-      {customer.phone && (
+      {hasUsablePhone(customer.phone) && (
         <a
-          href={`tel:+${customer.phone}`}
+          href={telLink(customer.phone)}
           onClick={(e) => e.stopPropagation()}
           className={`w-[50px] h-[50px] rounded-full ${callBtnClass} flex items-center justify-center flex-shrink-0 hover:opacity-90 transition-colors`}
           aria-label={`Sună pe ${customer.name || "client"}`}
