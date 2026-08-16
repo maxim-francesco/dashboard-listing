@@ -38,6 +38,7 @@ import GenerateContractModal, { ContractFormData } from "@/components/modals/Gen
 import { PrintableContract } from "@/components/contracts/PrintableContract";
 import ReserveModal from "@/components/modals/ReserveModal";
 import ListingCard from "@/components/listings/ListingCard";
+import { waLink } from "@/utils/phone";
 
 interface Listing {
   id: string;
@@ -315,14 +316,6 @@ const Listings = ({ initialSegment }: ListingsProps) => {
           const safeTitle = (offerRenderData.listing.title || "Oferta").replace(/[\/\\\s]+/g, "-");
           pdf.save(`Oferta-${offerRenderData.offer.clientName}-${safeTitle}.pdf`);
 
-          const digitsOnly = offerRenderData.clientPhone.replace(/\D/g, "");
-          let waPhone = digitsOnly;
-          if (digitsOnly.startsWith("0")) {
-            waPhone = "40" + digitsOnly.slice(1);
-          } else if (!digitsOnly.startsWith("40") && digitsOnly.length > 0) {
-            waPhone = digitsOnly;
-          }
-
           let publicUrl: string | null = null;
           try {
             const created = await createOffer({
@@ -342,9 +335,12 @@ const Listings = ({ initialSegment }: ListingsProps) => {
           const messageText = publicUrl
             ? `Bună ziua! Oferta pentru ${offerRenderData.listing.title}: ${publicUrl} — valabilă ${offerRenderData.offer.validityDays} zile. ${firmName}`
             : `Bună ziua! Vă trimit oferta pentru ${offerRenderData.listing.title} la prețul de ${offerRenderData.offer.offerPrice} €, valabilă ${offerRenderData.offer.validityDays} zile. (Atașez documentul PDF.) — ${firmName}`;
-          const encodedMsg = encodeURIComponent(messageText);
-          const whatsappUrl = `https://wa.me/${waPhone}?text=${encodedMsg}`;
-          window.open(whatsappUrl, "_blank");
+          const whatsappUrl = waLink(offerRenderData.clientPhone, messageText);
+          if (whatsappUrl) {
+            window.open(whatsappUrl, "_blank");
+          } else {
+            toast.error("Numarul de telefon al clientului nu este valid — oferta a fost creata, dar nu am putut deschide WhatsApp.");
+          }
 
           if (publicUrl) {
             const linkForToast = publicUrl;

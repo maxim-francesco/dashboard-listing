@@ -2,6 +2,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Copy, MessageCircle, ExternalLink } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { waLink } from "@/utils/phone";
 
 interface ShareOfferSheetProps {
   isOpen: boolean;
@@ -12,13 +13,6 @@ interface ShareOfferSheetProps {
   offerPrice: number;
   validityDays?: number;
   firmName?: string;
-}
-
-function waLink(phone: string, text: string): string {
-  const digits = (phone || "").replace(/\D/g, "");
-  let wa = digits;
-  if (digits.startsWith("0")) wa = "40" + digits.slice(1);
-  return "https://wa.me/" + wa + "?text=" + encodeURIComponent(text);
 }
 
 export default function ShareOfferSheet({ isOpen, onClose, publicUrl, clientPhone, carTitle, offerPrice, validityDays, firmName }: ShareOfferSheetProps) {

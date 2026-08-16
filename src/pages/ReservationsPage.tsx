@@ -14,6 +14,7 @@ import {
 } from "@/services/api";
 import { roCount } from "@/lib/plural";
 import { formatEur } from "@/lib/format";
+import { telLink, formatRoPhone, hasUsablePhone } from "@/utils/phone";
 import ReserveModal from "@/components/modals/ReserveModal";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import PickCarSheet from "@/components/modals/PickCarSheet";
@@ -156,9 +157,11 @@ export default function ReservationsPage() {
                       <div className="flex items-center gap-2 mt-2 text-[14px] text-muted-foreground">
                         <User className="w-4 h-4 shrink-0" />
                         <span className="text-foreground">{row.clientName}</span>
-                        <a href={"tel:" + row.clientPhone} className="text-primary ml-auto inline-flex items-center gap-1">
-                          <Phone className="w-4 h-4" /> {row.clientPhone}
-                        </a>
+                        {hasUsablePhone(row.clientPhone) && (
+                          <a href={telLink(row.clientPhone)} className="text-primary ml-auto inline-flex items-center gap-1">
+                            <Phone className="w-4 h-4" /> {formatRoPhone(row.clientPhone)}
+                          </a>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[14px] text-muted-foreground">
                         <Coins className="w-4 h-4 shrink-0" />
