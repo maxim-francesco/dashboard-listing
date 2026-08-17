@@ -32,35 +32,25 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* EXPIRING ALERTS */}
-      <ExpiringAlerts />
+      {/* MOBILE LAYOUT */}
+      <div className="space-y-6 lg:hidden">
+        <ExpiringAlerts />
+        <TodayAgenda />
+        <ActionCallList />
+        <ViewedOffers />
+        <AllClearCard />
+        <NetworkPulse />
+        <GettingStarted />
+        <WeeklySummaryCard />
+        <StockPulse />
+        <ViewsChart />
+      </div>
 
-      {/* TODAY AGENDA */}
-      <TodayAgenda />
-
-      {/* ACTION CALL LIST */}
-      <ActionCallList />
-
-      {/* VIEWED OFFERS */}
-      <ViewedOffers />
-
-      {/* ALL CLEAR CARD */}
-      <AllClearCard />
-
-      {/* NETWORK PULSE */}
-      <NetworkPulse />
-
-      {/* GETTING STARTED */}
-      <GettingStarted />
-
-      {/* WEEKLY SUMMARY */}
-      <WeeklySummaryCard />
-
-      {/* STOCK PULSE */}
-      <StockPulse />
-
-      {/* CHART */}
-      <ViewsChart />
+      {/* DESKTOP LAYOUT */}
+      <div className="hidden lg:flex lg:justify-center lg:gap-6 items-start">
+        <div className="flex-1 min-w-0 space-y-4 empty:hidden"><AllClearCard /><ExpiringAlerts /><TodayAgenda /><ActionCallList /><ViewedOffers /><NetworkPulse /><GettingStarted /></div>
+        <div className="w-[380px] shrink-0 space-y-4 empty:hidden"><StockPulse /><ViewsChart /><WeeklySummaryCard /></div>
+      </div>
     </div>
   );
 };
