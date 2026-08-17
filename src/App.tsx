@@ -46,7 +46,6 @@ import BlogForm from "./pages/Blog/BlogForm";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
-import LabStockPage from "./lab/LabStockPage";
 
 const queryClient = new QueryClient();
 
@@ -78,10 +77,6 @@ const App = () => (
           <Route path="/politica-de-confidentialitate" element={<PrivacyPolicy />} />
           <Route path="/politica-cookies" element={<CookiePolicy />} />
           <Route path="/public-feed/:businessId" element={<PublicFeedPreview />} />
-          
-          {import.meta.env.DEV && (
-            <Route path="/lab/stoc" element={<LabStockPage />} />
-          )}
           
           {/* --- GROUP 2: Super Admin Route (Standalone) --- */}
           <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
