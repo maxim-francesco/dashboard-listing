@@ -4,6 +4,8 @@ import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -198,7 +200,7 @@ export const LeadDetailPanel = ({
     try {
       await updateMessageStatus(lead.id, { status: newStatus });
       if (newStatus === "WON") {
-        toast.success("Marcat ca Câștigat. Îl găsești în tab-ul «Câștigate».");
+        toast.success("Marcat ca Câștigat.");
       } else {
         toast.success(`Status schimbat în ${STATUS_LABELS[newStatus]}`);
       }
@@ -216,7 +218,7 @@ export const LeadDetailPanel = ({
         status: "LOST",
         lostReason: tempLostReason as any
       });
-      toast.success("Marcat ca Pierdut. Îl găsești în tab-ul «Pierdute».");
+      toast.success("Marcat ca Pierdut.");
       setLostReasonOpen(false);
       if (onMessageUpdated) onMessageUpdated();
       loadLeadDetail();
@@ -857,9 +859,10 @@ export const LeadDetailPanel = ({
                 <InitialsAvatar name={lead.name} className="w-10 h-10" />
               )}
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-foreground truncate max-w-[180px] sm:max-w-[240px]">
+                <DialogTitle className="text-base font-bold text-foreground truncate max-w-[180px] sm:max-w-[240px]">
                   {isLoading ? "Se încarcă..." : lead?.name || "Detalii Lead"}
-                </h2>
+                </DialogTitle>
+                <DialogDescription className="sr-only">Detalii și acțiuni pentru lead</DialogDescription>
                 {lead?.phone && (
                   <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                     <Phone className="w-3 h-3" />

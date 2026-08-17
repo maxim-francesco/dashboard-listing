@@ -12,7 +12,7 @@ import { getCustomer } from "@/services/api";
 import { formatEur } from "@/lib/format";
 import AppointmentWizard from "@/components/modals/AppointmentWizard";
 import AppointmentEditSheet from "@/components/modals/AppointmentEditSheet";
-import MessageDetailSheet from "@/components/modals/MessageDetailSheet";
+import { LeadDetailPanel } from "@/components/leads/LeadDetailPanel";
 import { formatRoPhone, telLink, waLink, hasUsablePhone } from "@/utils/phone";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -92,8 +92,7 @@ const CustomerDetailPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editInitial, setEditInitial] = useState<any>(null);
   const [leadFilter, setLeadFilter] = useState<string>("ALL");
-  const [msgOpen, setMsgOpen] = useState(false);
-  const [msgSelected, setMsgSelected] = useState<any>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const { data: customer, isLoading, isError } = useQuery({
     queryKey: ["customer", phone],
@@ -410,7 +409,7 @@ const CustomerDetailPage = () => {
                 return (
                   <button
                     key={m.id}
-                    onClick={() => { setMsgSelected(m); setMsgOpen(true); }}
+                    onClick={() => setSelectedLeadId(m.id)}
                     className="w-full text-left bg-card border border-border rounded-xl p-3 flex gap-3 hover:bg-accent/40 transition-colors"
                   >
                     <div className={"w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 " + (LEAD_ICON_WRAP[cat] || "")}>
@@ -451,11 +450,16 @@ const CustomerDetailPage = () => {
         onClose={() => setEditOpen(false)}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["customer", phone] })}
       />
-      <MessageDetailSheet
-        isOpen={msgOpen}
-        message={msgSelected}
-        customerPhone={customer.phone || ""}
-        onClose={() => setMsgOpen(false)}
+      <LeadDetailPanel
+        messageId={selectedLeadId}
+        onClose={() => setSelectedLeadId(null)}
+        onNavigate={(id) => setSelectedLeadId(id)}
+        orderedIds={sortedMessages.map((m: any) => m.id)}
+        onMessageUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["customer", phone] });
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
+          queryClient.invalidateQueries({ queryKey: ["message-counts"] });
+        }}
       />
     </div>
   );

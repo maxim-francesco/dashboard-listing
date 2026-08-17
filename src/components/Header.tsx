@@ -10,9 +10,8 @@ import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
 
 const navigation = [
   { name: "Azi", href: "/" },
-  { name: "Lead-uri", href: "/messages" },
   { name: "Stoc", href: "/listings?view=stoc" },
-  { name: "Clienți", href: "/customers?filter=all" },
+  { name: "Clienți", href: "/customers" },
   { name: "Rețea", href: "/network" },
 ];
 
@@ -68,7 +67,7 @@ const Header = () => {
         {navigation.map((item) => {
           const isActive = isActiveItem(item.href);
           let badgeValue = 0;
-          if (item.href === "/customers?filter=all") {
+          if (item.href === "/customers") {
             badgeValue = inLucru;
           } else if (item.href === "/network") {
             badgeValue = reteaCount;
