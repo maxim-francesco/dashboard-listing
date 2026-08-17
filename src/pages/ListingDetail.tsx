@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -139,7 +139,16 @@ const SkeletonDetail = () => (
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+
+  const handleBack = () => {
+    if (location.key !== "default" && (window.history.state?.idx ?? 0) > 0) {
+      navigate(-1);
+    } else {
+      navigate("/listings");
+    }
+  };
 
   // State controls for sheets and modals
   const [publishSheetOpen, setPublishSheetOpen] = useState(false);
@@ -385,9 +394,13 @@ export default function ListingDetail() {
       <div className="w-full max-w-[390px] mx-auto min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center select-none">
         <Car className="w-12 h-12 text-muted-foreground mb-3" />
         <h3 className="text-[17px] font-semibold text-foreground">Mașina nu a fost găsită.</h3>
-        <Link to="/listings" className="text-sm text-primary hover:underline mt-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="text-sm text-primary hover:underline mt-2 cursor-pointer"
+        >
           Înapoi la mașini
-        </Link>
+        </button>
       </div>
     );
   }
@@ -574,7 +587,7 @@ export default function ListingDetail() {
       toast.promise(promise, {
         loading: `Se șterge "${listing.title}"...`,
         success: () => {
-          navigate("/listings");
+          navigate("/listings?view=stoc");
           return `"${listing.title}" a fost șters cu succes.`;
         },
         error: () => "Nu s-a putut șterge anunțul. Te rugăm să încercați din nou.",
@@ -673,13 +686,14 @@ export default function ListingDetail() {
         <div className="flex gap-6 items-start">
           {/* Left Column: flex-1 min-w-0 */}
           <div className="flex-1 min-w-0 space-y-4">
-            <Link
-              to="/listings"
-              className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>Înapoi la mașini</span>
-            </Link>
+              <span>Înapoi</span>
+            </button>
 
             <div data-section="gallery">
               <ListingGalleryDesktop images={listing.images} title={listing.title} />

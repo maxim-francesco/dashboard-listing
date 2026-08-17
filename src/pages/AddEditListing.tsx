@@ -573,7 +573,7 @@ const AddEditListing = () => {
         toast.success('Anunțul a fost salvat cu succes!');
         
         await queryClient.invalidateQueries({ queryKey: ['listings'] });
-        navigate('/listings');
+        navigate('/listings?view=stoc');
 
     } catch (error) {
         console.error(error);

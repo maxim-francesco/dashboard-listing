@@ -10,7 +10,7 @@ import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
 
 const navigation = [
   { name: "Azi", href: "/" },
-  { name: "Stoc", href: "/listings?view=stoc" },
+  { name: "Mașini", href: "/listings" },
   { name: "Clienți", href: "/customers" },
   { name: "Rețea", href: "/network" },
 ];

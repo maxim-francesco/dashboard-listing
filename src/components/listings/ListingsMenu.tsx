@@ -41,6 +41,60 @@ function MenuRow({ item }: { item: MenuItem }) {
   );
 }
 
+function DesktopMenuCard({
+  title,
+  description,
+  icon: Icon,
+  to,
+  total,
+  isPrimaryAction = false,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  to: string;
+  total?: number;
+  isPrimaryAction?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={
+        "flex items-center justify-between h-[64px] px-4 bg-card border rounded-xl transition-colors select-none " +
+        (isPrimaryAction
+          ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
+          : "border-border hover:bg-accent/50")
+      }
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={
+            "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 " +
+            (isPrimaryAction
+              ? "bg-primary/10 text-primary"
+              : "bg-muted text-foreground")
+          }
+        >
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="text-left">
+          <h3 className="text-[15px] font-semibold text-foreground leading-snug">{title}</h3>
+          <p className="text-[13px] text-muted-foreground leading-none mt-0.5">{description}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {total !== undefined ? (
+          <span className="text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground tabular-nums">
+            {total}
+          </span>
+        ) : (
+          <ChevronRight className={"w-4 h-4 " + (isPrimaryAction ? "text-primary" : "text-muted-foreground")} />
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export default function ListingsMenu() {
   const { data: counts } = useQuery({
     queryKey: ["stock-counts"],
@@ -118,45 +172,107 @@ export default function ListingsMenu() {
   ];
 
   return (
-    <div className="space-y-4 pb-24">
-      <div>
-        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Mașini</h1>
-        <p className="text-[13px] text-muted-foreground mt-0.5">Ce vrei să faci?</p>
-      </div>
+    <>
+      {/* Mobile Layout */}
+      <div className="space-y-4 pb-24 lg:hidden">
+        <div>
+          <h1 className="text-[20px] font-semibold text-foreground leading-tight">Mașini</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">Ce vrei să faci?</p>
+        </div>
 
-      <Link
-        to="/listings/new"
-        className="flex items-center justify-between min-h-[64px] py-4 px-4 bg-primary/5 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-primary bg-primary/10">
-            <Plus className="w-5 h-5" />
+        <Link
+          to="/listings/new"
+          className="flex items-center justify-between min-h-[64px] py-4 px-4 bg-primary/5 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-primary bg-primary/10">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-[16px] font-semibold text-foreground leading-snug">Adaugă mașină</h3>
+              <p className="text-[13px] text-muted-foreground leading-none mt-0.5">Anunț nou în stoc</p>
+            </div>
           </div>
-          <div className="text-left">
-            <h3 className="text-[16px] font-semibold text-foreground leading-snug">Adaugă mașină</h3>
-            <p className="text-[13px] text-muted-foreground leading-none mt-0.5">Anunț nou în stoc</p>
+          <ChevronRight className="w-5 h-5 text-primary" />
+        </Link>
+
+        <div>
+          <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">Stocul tău</p>
+          <div className="grid gap-3">
+            {stockItems.map((item) => (
+              <MenuRow key={item.key} item={item} />
+            ))}
           </div>
         </div>
-        <ChevronRight className="w-5 h-5 text-primary" />
-      </Link>
 
-      <div>
-        <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">Stocul tău</p>
-        <div className="grid gap-3">
-          {stockItems.map((item) => (
-            <MenuRow key={item.key} item={item} />
-          ))}
+        <div>
+          <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">Vânzare și acte</p>
+          <div className="grid gap-3">
+            {paperItems.map((item) => (
+              <MenuRow key={item.key} item={item} />
+            ))}
+          </div>
         </div>
       </div>
 
-      <div>
-        <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">Vânzare și acte</p>
-        <div className="grid gap-3">
-          {paperItems.map((item) => (
-            <MenuRow key={item.key} item={item} />
-          ))}
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex flex-col space-y-6 pb-24">
+        <div>
+          <h1 className="text-[20px] font-semibold text-foreground leading-tight">Mașini</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">Ce vrei să faci?</p>
+        </div>
+
+        <div>
+          <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">
+            Acțiune
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            <DesktopMenuCard
+              title="Adaugă mașină"
+              description="Anunț nou în stoc"
+              icon={Plus}
+              to="/listings/new"
+              isPrimaryAction
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">
+            Stocul tău
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            {stockItems.map((item) => (
+              <DesktopMenuCard
+                key={item.key}
+                title={item.title}
+                description={item.description}
+                icon={item.icon}
+                to={item.to}
+                total={item.total}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] tracking-wide font-medium uppercase text-muted-foreground px-1 mb-2">
+            Vânzare și acte
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            {paperItems.map((item) => (
+              <DesktopMenuCard
+                key={item.key}
+                title={item.title}
+                description={item.description}
+                icon={item.icon}
+                to={item.to}
+                total={item.total}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
