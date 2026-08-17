@@ -70,7 +70,15 @@ const MessagesPage = () => {
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
 
   // Filter states
-  const [activeTab, setActiveTab] = useState<"action" | "all" | "FINANCING" | "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST">("action");
+  const VALID_TABS = ["action", "all", "FINANCING", "NEW", "CONTACTED", "VIEWING", "OFFER", "WON", "LOST"] as const;
+  type TabType = typeof VALID_TABS[number];
+
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const tabParam = searchParams.get("tab");
+    return tabParam && (VALID_TABS as readonly string[]).includes(tabParam)
+      ? (tabParam as TabType)
+      : "action";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>(() => {
     const t = searchParams.get("type");
