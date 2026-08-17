@@ -251,7 +251,7 @@ const MessagesPage = () => {
             {messages.length} lead-uri, {messages.filter((m) => !m.isRead).length} necitite
           </p>
         </div>
-        <Button onClick={() => setIsNewLeadOpen(true)} className="hidden md:inline-flex bg-primary hover:bg-primary-dark text-white font-semibold flex-shrink-0">
+        <Button onClick={() => setIsNewLeadOpen(true)} className="hidden md:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex-shrink-0">
           + Lead nou
         </Button>
       </div>
@@ -274,7 +274,7 @@ const MessagesPage = () => {
             <span className={cn(
               "text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors",
               activeTab === tab.id
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : tab.id === "WON"
                   ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
                   : tab.id === "LOST"
@@ -506,7 +506,7 @@ const MessagesPage = () => {
       {isMobile && (
         <Button
           onClick={() => setIsNewLeadOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary-dark text-white shadow-lg flex items-center justify-center z-40 border-none"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground shadow-lg flex items-center justify-center z-40 border-none"
           title="Adaugă lead nou"
         >
           <span className="text-2xl font-bold">+</span>

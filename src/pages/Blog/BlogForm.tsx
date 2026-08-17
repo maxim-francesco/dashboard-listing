@@ -96,7 +96,6 @@ export default function BlogForm() {
     guardOverwrite(() => genArticle.mutate({ template: 'subiect_liber', topic }))
   }
 
-
   // Load existing post if editing
   const { data: posts } = useQuery({
     queryKey: ['blog-posts'],
@@ -180,11 +179,11 @@ export default function BlogForm() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/blog')}
-            className="text-gray-500 hover:text-gray-700 text-sm"
+            className="text-muted-foreground hover:text-foreground text-sm"
           >
             ← Înapoi
           </button>
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-xl font-bold text-foreground">
             {isEditing ? 'Editează articol' : 'Articol nou'}
           </h1>
         </div>
@@ -193,7 +192,7 @@ export default function BlogForm() {
             type="button"
             onClick={() => handleSubmit(false)}
             disabled={isSaving}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted disabled:opacity-50"
           >
             {isSaving ? 'Se salvează...' : 'Salvează draft'}
           </button>
@@ -201,7 +200,7 @@ export default function BlogForm() {
             type="button"
             onClick={() => handleSubmit(true)}
             disabled={isSaving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover disabled:opacity-50"
           >
             {isSaving ? 'Se publică...' : '🌐 Publică'}
           </button>
@@ -209,7 +208,7 @@ export default function BlogForm() {
       </div>
 
       {errors.submit && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
           {errors.submit}
         </div>
       )}
@@ -218,17 +217,17 @@ export default function BlogForm() {
         {/* Main content — left 2/3 */}
         <div className="col-span-2 space-y-5">
           {/* AI Panel */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">✨</span>
-              <h3 className="text-sm font-semibold text-gray-800">Generează cu AI</h3>
+              <h3 className="text-sm font-semibold text-foreground">Generează cu AI</h3>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => handleGenerateClick('diesel_vs_benzina')}
                 disabled={genArticle.isPending}
-                className="px-3.5 py-2 text-xs font-medium bg-gray-50 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                className="px-3.5 py-2 text-xs font-medium bg-muted text-muted-foreground border border-border rounded-lg hover:bg-accent disabled:opacity-50 transition-colors"
               >
                 Diesel vs Benzină
               </button>
@@ -236,7 +235,7 @@ export default function BlogForm() {
                 type="button"
                 onClick={() => handleGenerateClick('prima_inmatriculare_de')}
                 disabled={genArticle.isPending}
-                className="px-3.5 py-2 text-xs font-medium bg-gray-50 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                className="px-3.5 py-2 text-xs font-medium bg-muted text-muted-foreground border border-border rounded-lg hover:bg-accent disabled:opacity-50 transition-colors"
               >
                 Prima înmatriculare (DE)
               </button>
@@ -244,7 +243,7 @@ export default function BlogForm() {
                 type="button"
                 onClick={() => handleGenerateClick('top_suv_stoc')}
                 disabled={genArticle.isPending}
-                className="px-3.5 py-2 text-xs font-medium bg-gray-50 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                className="px-3.5 py-2 text-xs font-medium bg-muted text-muted-foreground border border-border rounded-lg hover:bg-accent disabled:opacity-50 transition-colors"
               >
                 Top 5 SUV-uri din stoc
               </button>
@@ -254,8 +253,8 @@ export default function BlogForm() {
                 disabled={genArticle.isPending}
                 className={`px-3.5 py-2 text-xs font-medium border rounded-lg transition-colors ${
                   showTopicInput 
-                    ? 'bg-blue-50 text-blue-700 border-blue-300' 
-                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                    ? 'bg-primary/10 text-primary border-primary/30' 
+                    : 'bg-muted text-muted-foreground border-border hover:bg-accent'
                 } disabled:opacity-50`}
               >
                 Subiect liber
@@ -263,15 +262,15 @@ export default function BlogForm() {
             </div>
 
             {showTopicInput && (
-              <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+              <div className="mt-3 p-4 bg-muted border border-border rounded-lg space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Scrie ideea ta de articol</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Scrie ideea ta de articol</label>
                   <textarea
                     value={topic}
                     onChange={e => setTopic(e.target.value)}
                     placeholder="Ex: Cum aleg primul SUV pentru familie; ce să verific la un diesel cu mulți km..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
                     disabled={genArticle.isPending}
                   />
                 </div>
@@ -280,7 +279,7 @@ export default function BlogForm() {
                     type="button"
                     onClick={() => handleTopicSubmit()}
                     disabled={!topic.trim() || genArticle.isPending}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-lg text-sm disabled:opacity-50 transition-colors"
                   >
                     Generează articol
                   </button>
@@ -288,21 +287,21 @@ export default function BlogForm() {
                     type="button"
                     onClick={() => suggestMutation.mutate()}
                     disabled={suggestMutation.isPending}
-                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 bg-card border border-border text-foreground font-medium rounded-lg text-sm hover:bg-muted disabled:opacity-50 transition-colors"
                   >
                     {suggestMutation.isPending ? 'Se încarcă ideile...' : '💡 Nu știu, dă-mi idei'}
                   </button>
                 </div>
                 {suggestions.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t border-gray-200">
-                    <p className="text-[11px] text-gray-500 font-medium">Alege o idee, apoi editează dacă vrei și apasă Generează.</p>
+                  <div className="space-y-1.5 pt-2 border-t border-border">
+                    <p className="text-[11px] text-muted-foreground font-medium">Alege o idee, apoi editează dacă vrei și apasă Generează.</p>
                     <div className="flex flex-wrap gap-2">
                       {suggestions.map((suggestion, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => setTopic(suggestion)}
-                          className="px-3 py-1.5 text-xs text-left bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-700 rounded-full transition-colors font-medium shadow-sm"
+                          className="px-3 py-1.5 text-xs text-left bg-card border border-border hover:border-primary/40 hover:bg-primary/5 text-foreground rounded-full transition-colors font-medium shadow-sm"
                         >
                           {suggestion}
                         </button>
@@ -314,8 +313,8 @@ export default function BlogForm() {
             )}
 
             {genArticle.isPending && (
-              <div className="mt-4 flex items-center justify-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-800 text-sm">
-                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div className="mt-4 flex items-center justify-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm">
+                <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -326,7 +325,7 @@ export default function BlogForm() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               Titlu *
             </label>
             <input
@@ -334,38 +333,38 @@ export default function BlogForm() {
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               placeholder="Titlul articolului..."
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.title ? 'border-red-400' : 'border-gray-300'
+              className={`w-full px-3 py-2 bg-background text-foreground border rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent ${
+                errors.title ? 'border-destructive' : 'border-input'
               }`}
             />
-            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
+            {errors.title && <p className="mt-1 text-xs text-destructive">{errors.title}</p>}
           </div>
 
           {/* Excerpt */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               Rezumat *
-              <span className="text-gray-400 font-normal ml-1">(apare în lista de articole)</span>
+              <span className="text-muted-foreground font-normal ml-1">(apare în lista de articole)</span>
             </label>
             <textarea
               value={form.excerpt}
               onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}
               placeholder="Un scurt rezumat al articolului (2-3 propoziții)..."
               rows={3}
-              className={`w-full px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.excerpt ? 'border-red-400' : 'border-gray-300'
+              className={`w-full px-3 py-2 bg-background text-foreground border rounded-lg text-sm resize-none focus:ring-2 focus:ring-ring focus:border-transparent ${
+                errors.excerpt ? 'border-destructive' : 'border-input'
               }`}
             />
-            {errors.excerpt && <p className="mt-1 text-xs text-red-500">{errors.excerpt}</p>}
+            {errors.excerpt && <p className="mt-1 text-xs text-destructive">{errors.excerpt}</p>}
           </div>
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               Conținut *
             </label>
             {errors.content && (
-              <p className="mb-1 text-xs text-red-500">{errors.content}</p>
+              <p className="mb-1 text-xs text-destructive">{errors.content}</p>
             )}
             <RichTextEditor
               content={form.content}
@@ -378,24 +377,24 @@ export default function BlogForm() {
         {/* Sidebar — right 1/3 */}
         <div className="space-y-4">
           {/* Status */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Status</h3>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Status</h3>
             <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               form.isPublished
-                ? 'bg-green-100 text-green-700'
-                : 'bg-yellow-100 text-yellow-700'
+                ? 'bg-success-light text-success'
+                : 'bg-warning-light text-warning'
             }`}>
               {form.isPublished ? '● Publicat' : '○ Draft'}
             </div>
           </div>
 
           {/* Category */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Categorie</h3>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Categorie</h3>
             <select
               value={form.categoryKey}
               onChange={e => handleCategoryChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring"
             >
               {CATEGORIES.map(cat => (
                 <option key={cat.key} value={cat.key}>{cat.label}</option>
@@ -404,12 +403,12 @@ export default function BlogForm() {
           </div>
 
           {/* Read time */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Timp de citire</h3>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Timp de citire</h3>
             <select
               value={form.readTime}
               onChange={e => setForm(f => ({ ...f, readTime: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring"
             >
               {['1 min', '2 min', '3 min', '4 min', '5 min', '6 min', '8 min', '10 min'].map(t => (
                 <option key={t} value={t}>{t}</option>
@@ -418,17 +417,17 @@ export default function BlogForm() {
           </div>
 
           {/* Cover image URL */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
               Imagine cover
-              <span className="text-gray-400 font-normal ml-1">(opțional)</span>
+              <span className="text-muted-foreground font-normal ml-1">(opțional)</span>
             </h3>
             <input
               type="url"
               value={form.coverImage || ''}
               onChange={e => setForm(f => ({ ...f, coverImage: e.target.value || null }))}
               placeholder="https://..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring"
             />
             {form.coverImage && (
               <img
@@ -444,14 +443,14 @@ export default function BlogForm() {
 
       {overwriteConfirm !== null && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">Suprascrii articolul curent?</h3>
-            <p className="text-sm text-gray-600">Conținutul actual va fi înlocuit de articolul generat.</p>
+          <div className="bg-card rounded-xl border border-border shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Suprascrii articolul curent?</h3>
+            <p className="text-sm text-muted-foreground">Conținutul actual va fi înlocuit de articolul generat.</p>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setOverwriteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
               >
                 Anulează
               </button>
@@ -462,7 +461,7 @@ export default function BlogForm() {
                   setOverwriteConfirm(null)
                   a && a()
                 }}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
               >
                 Suprascrie și generează
               </button>

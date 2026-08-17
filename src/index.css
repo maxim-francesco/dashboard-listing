@@ -6,113 +6,66 @@
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 0 0% 100%;
-    --foreground: 218 11% 15%;
-    
-    /* Admin specific backgrounds */
-    --admin-bg: 220 14% 96%;
-    --sidebar-bg: 220 13% 18%;
-    --header-bg: 0 0% 100%;
+    color-scheme: dark;
 
-    /* Card system */
-    --card: 0 0% 100%;
-    --card-foreground: 218 11% 15%;
-    --card-border: 220 13% 91%;
+    --background: 0 0% 3%;
+    --foreground: 0 0% 97%;
+    --admin-bg: 0 0% 3%;
+    --sidebar-bg: 0 0% 6%;
+    --header-bg: 0 0% 8%;
 
-    /* Interactive elements */
-    --popover: 0 0% 100%;
-    --popover-foreground: 218 11% 15%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 97%;
+    --card-border: 0 0% 22%;
+    --surface-alt: 0 0% 15%;
 
-    /* Primary brand color - Professional Blue */
-    --primary: 217 91% 60%;
-    --primary-hover: 217 91% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 217 91% 95%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 97%;
 
-    /* Secondary system */
-    --secondary: 220 13% 95%;
-    --secondary-hover: 220 13% 90%;
-    --secondary-foreground: 218 11% 15%;
+    --primary: 217 91% 62%;
+    --primary-hover: 217 91% 68%;
+    --primary-foreground: 217 40% 12%;
+    --primary-light: 217 50% 17%;
 
-    /* Muted elements */
-    --muted: 220 13% 95%;
-    --muted-foreground: 220 9% 46%;
+    --secondary: 0 0% 14%;
+    --secondary-hover: 0 0% 18%;
+    --secondary-foreground: 0 0% 97%;
 
-    /* Accent colors */
-    --accent: 220 13% 95%;
-    --accent-foreground: 218 11% 15%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 68%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 97%;
 
-    /* Status colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --success-light: 142 76% 95%;
-    
-    --warning: 43 96% 56%;
-    --warning-foreground: 0 0% 100%;
-    --warning-light: 43 96% 95%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-hover: 0 84% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-light: 0 84% 95%;
+    --success: 142 62% 46%;
+    --success-foreground: 0 0% 6%;
+    --success-light: 142 35% 15%;
+    --warning: 45 95% 58%;
+    --warning-foreground: 0 0% 6%;
+    --warning-light: 45 42% 17%;
+    --destructive: 2 75% 58%;
+    --destructive-hover: 2 75% 64%;
+    --destructive-foreground: 0 0% 6%;
+    --destructive-light: 2 45% 17%;
 
-    /* Form elements */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --input-focus: 217 91% 60%;
-    --ring: 217 91% 60%;
+    --border: 0 0% 22%;
+    --input: 0 0% 14%;
+    --input-focus: 217 91% 62%;
+    --ring: 217 91% 62%;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+    --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 12px 24px -6px rgb(0 0 0 / 0.7);
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 218 11% 15%;
-    --foreground: 0 0% 100%;
-    
-    --admin-bg: 218 11% 10%;
-    --sidebar-bg: 218 11% 15%;
-    --header-bg: 218 11% 15%;
-
-    --card: 218 11% 15%;
-    --card-foreground: 0 0% 100%;
-    --card-border: 220 13% 25%;
-
-    --popover: 218 11% 15%;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 217 91% 60%;
-    --primary-hover: 217 91% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 217 91% 20%;
-
-    --secondary: 220 13% 25%;
-    --secondary-hover: 220 13% 30%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 220 13% 25%;
-    --muted-foreground: 220 9% 65%;
-
-    --accent: 220 13% 25%;
-    --accent-foreground: 0 0% 100%;
-
-    --border: 220 13% 25%;
-    --input: 220 13% 25%;
-    --ring: 217 91% 60%;
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 217 91% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 97%;
+    --sidebar-border: 0 0% 22%;
+    --sidebar-ring: 217 91% 62%;
   }
 }
 
@@ -134,4 +87,9 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+@media print {
+  :root { color-scheme: light; }
+  html, body { background: #ffffff !important; color: #000000 !important; }
 }

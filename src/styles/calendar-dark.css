@@ -1,0 +1,88 @@
+/* react-big-calendar dark theme overrides */
+
+.rbc-calendar {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.rbc-month-view,
+.rbc-time-view {
+  border-color: hsl(var(--border));
+}
+
+.rbc-header {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.rbc-header + .rbc-header {
+  border-left-color: hsl(var(--border));
+}
+
+.rbc-day-bg {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  border-left-color: hsl(var(--border));
+}
+
+.rbc-off-range-bg {
+  background-color: hsl(var(--muted));
+}
+
+.rbc-off-range {
+  color: hsl(var(--muted-foreground));
+}
+
+.rbc-today {
+  background-color: hsl(var(--primary-light));
+}
+
+.rbc-toolbar button {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.rbc-toolbar button:hover {
+  background-color: hsl(var(--secondary-hover));
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.rbc-toolbar-label {
+  color: hsl(var(--foreground));
+}
+
+.rbc-month-row,
+.rbc-day-slot,
+.rbc-time-slot,
+.rbc-timeslot-group,
+.rbc-time-header-content,
+.rbc-time-content,
+.rbc-time-column,
+.rbc-day-slot .rbc-time-slot {
+  border-color: hsl(var(--border));
+}
+
+.rbc-show-more {
+  color: hsl(var(--primary));
+  background-color: transparent;
+}
+
+.rbc-overlay {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--popover-foreground));
+}
+
+.rbc-overlay-header {
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}

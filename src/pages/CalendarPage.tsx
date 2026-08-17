@@ -1,5 +1,6 @@
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import '@/styles/calendar-dark.css';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

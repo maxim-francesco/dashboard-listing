@@ -46,6 +46,7 @@ import BlogForm from "./pages/Blog/BlogForm";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
+import LabStockPage from "./lab/LabStockPage";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +55,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HotToaster position="top-center" reverseOrder={false} />
+      <HotToaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: "hsl(var(--popover))",
+            color: "hsl(var(--popover-foreground))",
+            border: "1px solid hsl(var(--border))",
+          },
+        }}
+      />
       <BrowserRouter>
         <Routes>
           {/* --- GROUP 1: Public, Standalone Pages (No Layout) --- */}
@@ -67,6 +78,10 @@ const App = () => (
           <Route path="/politica-de-confidentialitate" element={<PrivacyPolicy />} />
           <Route path="/politica-cookies" element={<CookiePolicy />} />
           <Route path="/public-feed/:businessId" element={<PublicFeedPreview />} />
+          
+          {import.meta.env.DEV && (
+            <Route path="/lab/stoc" element={<LabStockPage />} />
+          )}
           
           {/* --- GROUP 2: Super Admin Route (Standalone) --- */}
           <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>

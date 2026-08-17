@@ -195,7 +195,7 @@ export const NewLeadDialog = ({ open, onOpenChange, onSuccess }: NewLeadDialogPr
             <Button
               type="submit"
               disabled={isSubmitting || !phone.trim()}
-              className="h-11 md:h-10 text-base md:text-xs font-semibold bg-primary hover:bg-primary-dark text-white px-4"
+              className="h-11 md:h-10 text-base md:text-xs font-semibold bg-primary hover:bg-primary-hover text-primary-foreground px-4"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Adaugă lead

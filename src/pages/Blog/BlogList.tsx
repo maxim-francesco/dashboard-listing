@@ -39,14 +39,14 @@ export default function BlogList() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Blog</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Blog</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {posts.length} articole · {posts.filter(p => p.isPublished).length} publicate
           </p>
         </div>
         <button
           onClick={() => navigate('/blog/new')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors"
         >
           + Articol nou
         </button>
@@ -54,16 +54,16 @@ export default function BlogList() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="text-center py-12 text-gray-500">Se încarcă...</div>
+        <div className="text-center py-12 text-muted-foreground">Se încarcă...</div>
       )}
 
       {/* Empty state */}
       {!isLoading && posts.length === 0 && (
-        <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl">
-          <p className="text-gray-400 text-lg mb-3">Niciun articol încă</p>
+        <div className="text-center py-16 border-2 border-dashed border-border rounded-xl">
+          <p className="text-muted-foreground text-lg mb-3">Niciun articol încă</p>
           <button
             onClick={() => navigate('/blog/new')}
-            className="text-blue-600 font-medium text-sm hover:underline"
+            className="text-primary font-medium text-sm hover:underline"
           >
             Creează primul articol →
           </button>
@@ -72,34 +72,34 @@ export default function BlogList() {
 
       {/* Posts table */}
       {posts.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">
+              <tr className="border-b border-border bg-muted">
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Titlu
                 </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Categorie
                 </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Status
                 </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Data
                 </th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {posts.map((post) => (
-                <tr key={post.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={post.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900 text-sm">{post.title}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{post.slug}</div>
+                    <div className="font-medium text-foreground text-sm">{post.title}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{post.slug}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                       {post.category}
                     </span>
                   </td>
@@ -108,28 +108,28 @@ export default function BlogList() {
                       onClick={() => togglePublish.mutate({ id: post.id, isPublished: !post.isPublished })}
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer ${
                         post.isPublished
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          ? 'bg-success-light text-success hover:bg-success-light/80'
+                          : 'bg-warning-light text-warning hover:bg-warning-light/80'
                       }`}
                     >
                       {post.isPublished ? '● Publicat' : '○ Draft'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {new Date(post.publishedAt).toLocaleDateString('ro-RO')}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => navigate(`/blog/${post.id}/edit`)}
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        className="text-sm text-primary hover:text-primary-hover font-medium"
                       >
                         Editează
                       </button>
                       <button
                         onClick={() => handleDelete(post.id)}
                         disabled={deletingId === post.id}
-                        className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
+                        className="text-sm text-destructive hover:text-destructive/80 font-medium disabled:opacity-50"
                       >
                         {deletingId === post.id ? '...' : 'Șterge'}
                       </button>
