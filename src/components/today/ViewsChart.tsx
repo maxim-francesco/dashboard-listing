@@ -3,6 +3,7 @@ import api from "@/services/api";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 import { ResponsiveContainer, AreaChart, Area, Tooltip } from "recharts";
+import { CARD, CARD_HEADER, CARD_LABEL, CARD_LABEL_M, CARD_COUNT } from "./cardRecipe";
 
 interface ChartDataPoint {
   date: string;
@@ -60,33 +61,32 @@ export default function ViewsChart() {
   const totalViews = chartData.reduce((sum, d) => sum + d.views, 0);
 
   return (
-    <div>
-      {/* Label OUTSIDE the panel */}
-      <div className="flex items-baseline justify-between mt-1 mb-2.5 px-0.5">
-        <span className="text-[17px] font-semibold text-foreground">
-          Vizualizări în ultimele 7 zile
+    <div className={`${CARD} overflow-hidden w-full`}>
+      {/* Header inside card using cardRecipe */}
+      <div className={CARD_HEADER}>
+        <span className={`${CARD_LABEL_M} lg:hidden`}>Vizualizări · 7 zile</span>
+        <span className={`${CARD_LABEL} hidden lg:block`}>Vizualizări · 7 zile</span>
+        <span className={CARD_COUNT}>
+          {totalViews}
+          {showTrend && (
+            <>
+              {" · "}
+              <span
+                className={
+                  viewsDeltaPct > 0 ? "text-success" : "text-destructive"
+                }
+              >
+                {viewsDeltaPct > 0 ? "+" : "−"}
+                {Math.abs(viewsDeltaPct)}%
+              </span>
+            </>
+          )}
         </span>
-        {showTrend && (
-          <span
-            className={`text-[13px] shrink-0 ${
-              viewsDeltaPct > 0 ? "text-success" : "text-destructive"
-            }`}
-          >
-            {viewsDeltaPct > 0 ? "+" : "−"}
-            {Math.abs(viewsDeltaPct)}% față de săptămâna trecută
-          </span>
-        )}
       </div>
 
-      {/* Panel */}
-      <div className="bg-card border border-border rounded-xl p-3.5">
-        {/* (a) A total row at the top */}
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-[28px] font-medium leading-none">{totalViews}</span>
-          <span className="text-[13px] text-muted-foreground">vizualizări</span>
-        </div>
-
-        {/* (b) The chart */}
+      {/* Body with padding */}
+      <div className="p-3.5">
+        {/* Chart */}
         <div className="h-[120px] lg:h-[180px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 6, right: 8, bottom: 0, left: 8 }}>
@@ -104,7 +104,7 @@ export default function ViewsChart() {
           </ResponsiveContainer>
         </div>
 
-        {/* (c) A day-label row under the chart */}
+        {/* Day-label row under chart */}
         <div className="flex justify-between mt-1.5 px-0.5">
           {chartData.map((d) => {
             const date = new Date(d.date + "T00:00:00");

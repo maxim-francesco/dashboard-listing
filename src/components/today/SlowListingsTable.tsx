@@ -107,7 +107,7 @@ export default function SlowListingsTable() {
           const ageColorClass = days >= 90 ? "text-destructive" : "text-warning";
 
           return (
-            <div key={listing.id} onClick={() => navigate(`/listings/${listing.id}/edit`)}>
+            <div key={listing.id} onClick={() => navigate(`/listings/${listing.id}`)}>
               {/* Mobile Row */}
               <div
                 data-row="listing-mobile"
