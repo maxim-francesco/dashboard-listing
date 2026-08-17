@@ -10,6 +10,7 @@ import NetworkPulse from "@/components/today/NetworkPulse";
 import GettingStarted from "@/components/today/GettingStarted";
 import ExpiringAlerts from "@/components/today/ExpiringAlerts";
 import StockPulse from "@/components/today/StockPulse";
+import StaleStock from "@/components/today/StaleStock";
 import ViewsChart from "@/components/today/ViewsChart";
 
 const Dashboard = () => {
@@ -42,13 +43,16 @@ const Dashboard = () => {
         <NetworkPulse />
         <GettingStarted />
         <WeeklySummaryCard />
-        <StockPulse />
+        <div className="space-y-4">
+          <StockPulse />
+          <StaleStock />
+        </div>
         <ViewsChart />
       </div>
 
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex lg:justify-center lg:gap-6 items-start">
-        <div className="flex-1 min-w-0 space-y-4 empty:hidden"><AllClearCard /><ExpiringAlerts /><TodayAgenda /><ActionCallList /><ViewedOffers /><NetworkPulse /><GettingStarted /></div>
+        <div className="flex-1 min-w-0 space-y-4 empty:hidden"><AllClearCard /><ExpiringAlerts /><TodayAgenda /><ActionCallList /><StaleStock /><ViewedOffers /><NetworkPulse /><GettingStarted /></div>
         <div className="w-[380px] shrink-0 space-y-4 empty:hidden"><StockPulse /><ViewsChart /><WeeklySummaryCard /></div>
       </div>
     </div>
