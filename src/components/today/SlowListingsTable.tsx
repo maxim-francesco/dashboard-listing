@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { differenceInDays } from "date-fns";
 import { Car } from "lucide-react";
-import { CARD, CARD_HEADER, CARD_LABEL, CARD_COUNT } from "./cardRecipe";
+import { CARD, CARD_HEADER, CARD_LABEL, CARD_LABEL_M, CARD_COUNT } from "./cardRecipe";
 
 export const SLOW_LISTING_COLS = {
   thumbnail: "w-16 shrink-0",
@@ -62,9 +62,8 @@ export default function SlowListingsTable() {
     <div className={`${CARD} overflow-hidden w-full`}>
       {/* Header inside card using cardRecipe */}
       <div className={CARD_HEADER}>
-        <span className={CARD_LABEL}>
-          Stau de mult în stoc
-        </span>
+        <span className={`${CARD_LABEL_M} lg:hidden`}>Stau de mult în stoc</span>
+        <span className={`${CARD_LABEL} hidden lg:block`}>Stau de mult în stoc</span>
         <span className={CARD_COUNT}>
           {shownCount} din {totalCount}
         </span>
@@ -112,27 +111,30 @@ export default function SlowListingsTable() {
               {/* Mobile Row */}
               <div
                 data-row="listing-mobile"
-                className="lg:hidden px-3.5 py-3 border-b border-border last:border-b-0 cursor-pointer hover:bg-accent/5 transition-colors"
+                className="lg:hidden min-h-[48px] px-3.5 py-2.5 border-b border-border last:border-b-0 cursor-pointer hover:bg-accent/5 transition-colors flex flex-col justify-center"
               >
+                {/* Line 1: Thumbnail + Title + Price */}
                 <div className="flex items-center gap-3">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0].url}
                       alt={listing.title}
-                      className="w-[44px] h-[34px] rounded-md object-cover shrink-0"
+                      className="w-[42px] h-[30px] rounded object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-[44px] h-[34px] rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <div className="w-[42px] h-[30px] rounded bg-muted flex items-center justify-center shrink-0">
                       <Car className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
-                  <span className="flex-1 min-w-0 truncate text-[15px] font-medium text-foreground">
+                  <span className="flex-1 min-w-0 truncate text-[14px] font-medium text-foreground">
                     {listing.title}
                   </span>
+                  <span className="text-[14px] font-medium tabular-nums text-foreground shrink-0">
+                    {priceStr}
+                  </span>
                 </div>
-                <div className="text-[13px] text-muted-foreground tabular-nums mt-1 pl-[56px]">
-                  <span>{priceStr}</span>
-                  <span className="mx-1.5">·</span>
+                {/* Line 2: Age + Views */}
+                <div className="text-[12px] text-muted-foreground tabular-nums mt-0.5 pl-[54px]">
                   <span className={ageColorClass}>{days} zile</span>
                   <span className="mx-1.5">·</span>
                   <span>{viewsPerMonthStr !== "—" ? `${viewsPerMonthStr} vizite/lună` : "—"}</span>

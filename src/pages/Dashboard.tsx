@@ -15,23 +15,23 @@ const Dashboard = () => {
     <div className="space-y-6 box-border w-full pb-10">
       {/* MOBILE LAYOUT */}
       <div className="space-y-6 lg:hidden">
-        <StatsStrip />
         <TodayAgenda />
         <ActionCallList />
+        <WeeklySummaryCard />
         <SlowListingsTable />
         <ExpiringAlerts />
         <ViewedOffers />
         <AllClearCard />
         <NetworkPulse />
         <GettingStarted />
-        <WeeklySummaryCard />
         <ViewsChart />
+        <StatsStrip />
       </div>
 
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex lg:justify-center lg:gap-6 items-start">
         <div className="flex-1 min-w-0 space-y-4 empty:hidden"><StatsStrip /><TodayAgenda /><ActionCallList /><SlowListingsTable /><AllClearCard /><ExpiringAlerts /><ViewedOffers /><NetworkPulse /><GettingStarted /></div>
-        <div className="w-[380px] shrink-0 space-y-4 empty:hidden"><ViewsChart /><WeeklySummaryCard /></div>
+        <div className="w-[380px] shrink-0 space-y-4 empty:hidden"><WeeklySummaryCard /><ViewsChart /></div>
       </div>
     </div>
   );

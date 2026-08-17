@@ -4,7 +4,8 @@ import api from "@/services/api";
 import { normalizeRoPhone } from "@/utils/phone";
 import { differenceInDays } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CARD } from "./cardRecipe";
+import { ChevronRight } from "lucide-react";
+import { CARD, CARD_HEADER, CARD_LABEL_M } from "./cardRecipe";
 
 interface StockCounts {
   available: number;
@@ -79,19 +80,29 @@ export default function StatsStrip() {
 
   if (isLoading) {
     return (
-      <div className={`${CARD} grid grid-cols-2 lg:flex overflow-hidden w-full`}>
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between ${
-              i % 2 === 0 ? "border-r border-border" : ""
-            } ${i < 4 ? "border-b border-border" : ""} lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`}
-          >
-            <Skeleton className="h-3 w-16 mb-2" />
-            <Skeleton className="h-5 w-10" />
-          </div>
-        ))}
-      </div>
+      <>
+        {/* Mobile Skeleton */}
+        <div className={`${CARD} overflow-hidden w-full lg:hidden p-4 space-y-3`}>
+          <Skeleton className="h-4 w-20 mb-2" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        {/* Desktop Skeleton */}
+        <div className={`${CARD} hidden lg:flex overflow-hidden w-full`}>
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between ${
+                i % 2 === 0 ? "border-r border-border" : ""
+              } ${i < 4 ? "border-b border-border" : ""} lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`}
+            >
+              <Skeleton className="h-3 w-16 mb-2" />
+              <Skeleton className="h-5 w-10" />
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
 
@@ -123,7 +134,7 @@ export default function StatsStrip() {
   // 5. Sold this month
   const soldThisMonth = stockCounts?.soldThisMonth ?? 0;
 
-  const stats: {
+  const desktopStats: {
     key: string;
     value: number;
     label: string;
@@ -143,20 +154,83 @@ export default function StatsStrip() {
   };
 
   return (
-    <div className={`${CARD} grid grid-cols-2 lg:flex overflow-hidden w-full`}>
-      {stats.map((stat, i) => {
-        const colorClass = getValueColor(stat.key, stat.value);
-        const borderClasses = `${i % 2 === 0 ? "border-r border-border" : ""} ${
-          i < 4 ? "border-b border-border" : ""
-        } lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`;
+    <>
+      {/* MOBILE BLOCK — Sumar Card */}
+      <div className={`${CARD} overflow-hidden w-full lg:hidden`}>
+        <div className={CARD_HEADER}>
+          <span className={CARD_LABEL_M}>Sumar</span>
+        </div>
+        <div className="divide-y divide-border">
+          {/* Row 1: În stoc (navigable) */}
+          <button
+            type="button"
+            onClick={() => navigate("/listings?view=stoc")}
+            className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between hover:bg-accent/5 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="text-[14px] text-foreground">În stoc</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-medium tabular-nums text-foreground">
+                {availableCount}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          </button>
 
-        if (stat.href) {
+          {/* Row 2: Vizite · 7 zile (non-navigable) */}
+          <div className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between">
+            <span className="text-[14px] text-foreground">Vizite · 7 zile</span>
+            <span className="text-[14px] font-medium tabular-nums text-foreground">
+              {viewsLast7Days}
+            </span>
+          </div>
+
+          {/* Row 3: Vândute luna asta (navigable) */}
+          <button
+            type="button"
+            onClick={() => navigate("/listings?view=vandute")}
+            className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between hover:bg-accent/5 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="text-[14px] text-foreground">Vândute luna asta</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-medium tabular-nums text-foreground">
+                {soldThisMonth}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* DESKTOP BLOCK — Preserved 5-cell flex strip */}
+      <div className={`${CARD} hidden lg:flex overflow-hidden w-full`}>
+        {desktopStats.map((stat, i) => {
+          const colorClass = getValueColor(stat.key, stat.value);
+          const borderClasses = `${i % 2 === 0 ? "border-r border-border" : ""} ${
+            i < 4 ? "border-b border-border" : ""
+          } lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`;
+
+          if (stat.href) {
+            return (
+              <button
+                key={stat.key}
+                type="button"
+                onClick={() => navigate(stat.href!)}
+                className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between text-left cursor-pointer hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors ${borderClasses}`}
+              >
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground truncate block">
+                  {stat.label}
+                </span>
+                <span className={`text-[19px] font-medium tabular-nums leading-none mt-1.5 ${colorClass}`}>
+                  {stat.value}
+                </span>
+              </button>
+            );
+          }
+
           return (
-            <button
+            <div
               key={stat.key}
-              type="button"
-              onClick={() => navigate(stat.href!)}
-              className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between text-left cursor-pointer hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors ${borderClasses}`}
+              className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between ${borderClasses}`}
             >
               <span className="text-[11px] uppercase tracking-wide text-muted-foreground truncate block">
                 {stat.label}
@@ -164,24 +238,10 @@ export default function StatsStrip() {
               <span className={`text-[19px] font-medium tabular-nums leading-none mt-1.5 ${colorClass}`}>
                 {stat.value}
               </span>
-            </button>
+            </div>
           );
-        }
-
-        return (
-          <div
-            key={stat.key}
-            className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between ${borderClasses}`}
-          >
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground truncate block">
-              {stat.label}
-            </span>
-            <span className={`text-[19px] font-medium tabular-nums leading-none mt-1.5 ${colorClass}`}>
-              {stat.value}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+        })}
+      </div>
+    </>
   );
 }

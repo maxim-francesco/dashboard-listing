@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
 import api from "@/services/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CARD, CARD_HEADER, CARD_LABEL, CARD_LABEL_M } from "@/components/today/cardRecipe";
 
 interface WeeklySummaryResponse {
   text: string;
@@ -29,38 +30,17 @@ const WeeklySummaryCard = () => {
     staleTime: 1000 * 60 * 60, // 1h
   });
 
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-  const textRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [data?.text]);
-
-  useEffect(() => {
-    if (!isExpanded && textRef.current) {
-      const checkOverflow = () => {
-        if (textRef.current) {
-          setIsOverflowing(textRef.current.scrollHeight > textRef.current.clientHeight);
-        }
-      };
-      // Short delay to ensure browser layout is updated
-      const timer = setTimeout(checkOverflow, 50);
-      window.addEventListener("resize", checkOverflow);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("resize", checkOverflow);
-      };
-    }
-  }, [data?.text, isExpanded]);
-
   if (isLoading) {
     return (
-      <div className="rounded-xl bg-primary-light p-3.5 flex gap-2.5 items-start w-full">
-        <Sparkles className="w-[18px] h-[18px] text-primary shrink-0 mt-0.5 animate-pulse" />
-        <div className="space-y-2 flex-1">
-          <div className="h-4 w-full rounded-md bg-muted animate-pulse" />
-          <div className="h-4 w-5/6 rounded-md bg-muted animate-pulse" />
+      <div className={`${CARD} overflow-hidden w-full`}>
+        <div className={CARD_HEADER}>
+          <Sparkles className="w-[15px] h-[15px] text-primary shrink-0" />
+          <span className={`${CARD_LABEL_M} lg:hidden`}>Rezumatul săptămânii</span>
+          <span className={`${CARD_LABEL} hidden lg:block`}>Rezumatul săptămânii</span>
+        </div>
+        <div className="px-4 py-3 space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
         </div>
       </div>
     );
@@ -69,23 +49,16 @@ const WeeklySummaryCard = () => {
   const textContent = data ? data.text : "Rezumatul nu este disponibil momentan.";
 
   return (
-    <div className="rounded-xl bg-primary-light p-3.5 flex gap-2.5 items-start">
-      <Sparkles className="w-[18px] h-[18px] text-primary shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p
-          ref={textRef}
-          className={`text-sm leading-relaxed text-foreground ${!isExpanded ? "line-clamp-2" : ""}`}
-        >
+    <div className={`${CARD} overflow-hidden w-full`}>
+      <div className={CARD_HEADER}>
+        <Sparkles className="w-[15px] h-[15px] text-primary shrink-0" />
+        <span className={`${CARD_LABEL_M} lg:hidden`}>Rezumatul săptămânii</span>
+        <span className={`${CARD_LABEL} hidden lg:block`}>Rezumatul săptămânii</span>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-[13px] leading-relaxed text-foreground">
           {textContent}
         </p>
-        {data && isOverflowing && (
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-[13px] text-primary mt-1 hover:text-primary-hover font-medium block cursor-pointer transition-colors"
-          >
-            {isExpanded ? "Mai puțin" : "Mai mult"}
-          </button>
-        )}
       </div>
     </div>
   );

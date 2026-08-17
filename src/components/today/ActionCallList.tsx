@@ -6,7 +6,7 @@ import { normalizeRoPhone } from "@/utils/phone";
 import { Phone } from "lucide-react";
 import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import { roCount } from "@/lib/plural";
-import { CARD, CARD_HEADER, CARD_LABEL, CARD_COUNT } from "./cardRecipe";
+import { CARD, CARD_HEADER, CARD_LABEL, CARD_LABEL_M, CARD_COUNT } from "./cardRecipe";
 
 interface Message {
   id: string;
@@ -116,7 +116,8 @@ export default function ActionCallList() {
   return (
     <div className={`${CARD} overflow-hidden w-full`}>
       <div className={CARD_HEADER}>
-        <span className={CARD_LABEL}>Persoane de sunat</span>
+        <span className={`${CARD_LABEL_M} lg:hidden`}>Persoane de sunat</span>
+        <span className={`${CARD_LABEL} hidden lg:block`}>Persoane de sunat</span>
         <span className={CARD_COUNT}>{distinctCount}</span>
       </div>
       <div>
