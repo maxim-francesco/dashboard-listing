@@ -41,6 +41,8 @@ import GenerateContractModal, { ContractFormData } from "@/components/modals/Gen
 import { PrintableContract } from "@/components/contracts/PrintableContract";
 import ReserveModal from "@/components/modals/ReserveModal";
 import ListingCard from "@/components/listings/ListingCard";
+import ListingsHeader, { SortOption } from "@/components/listings/ListingsHeader";
+import GenerateCatalogModal from "@/components/modals/GenerateCatalogModal";
 import { waLink } from "@/utils/phone";
 
 interface Listing {
@@ -115,14 +117,6 @@ const ListingCardSkeleton = () => (
   </>
 );
 
-type SortOption =
-  | "age_desc"
-  | "age_asc"
-  | "views_desc"
-  | "views_asc"
-  | "price_asc"
-  | "price_desc";
-
 interface ListingsProps {
   initialSegment?: "instoc" | "vandute";
 }
@@ -158,6 +152,7 @@ const Listings = ({ initialSegment }: ListingsProps) => {
 
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrListing, setQrListing] = useState<{ id: string; slug: string } | null>(null);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [businessSettings, setBusinessSettings] = useState<Business | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
@@ -794,207 +789,33 @@ const Listings = ({ initialSegment }: ListingsProps) => {
 
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full">
-      {/* Desktop Header (1 row) */}
-      <div className="hidden lg:flex items-center gap-3 w-full">
-        {/* 1. Back button (icon, square) */}
-        <Link
-          to="/listings"
-          aria-label="Înapoi la categorii"
-          className="w-9 h-9 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-
-        {/* 2 & 3. Title & count (baseline-aligned) */}
-        <div className="flex items-baseline gap-2 shrink-0">
-          <h1 className="text-[17px] font-semibold text-foreground leading-none">
-            {activeSegment === "instoc" ? "În stoc" : "Vândute"}
-          </h1>
-          <span className="text-[13px] text-muted-foreground tabular-nums">
-            {countText}
-          </span>
-        </div>
-
-        {/* 4. Search (flexes to fill) */}
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            id="listings-search-desktop"
-            name="listings-search-desktop"
-            placeholder="Caută marcă, model, an"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-card border-border rounded-lg w-full h-9 text-[13px] focus-visible:ring-0 focus-visible:border-border"
-          />
-        </div>
-
-        {/* 5. Sort control (icon, square) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              aria-label="Sortează lista"
-              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
-            >
-              <ArrowUpDown className="h-4 w-4 text-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-popover border-border min-w-[200px]">
-            <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Sortare
-            </DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-              <DropdownMenuRadioItem value="age_desc" className="cursor-pointer text-[13px]">
-                Vechime: cele mai vechi
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="age_asc" className="cursor-pointer text-[13px]">
-                Vechime: cele mai noi
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="views_desc" className="cursor-pointer text-[13px]">
-                Vizualizări: cele mai multe
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="views_asc" className="cursor-pointer text-[13px]">
-                Vizualizări: cele mai puține
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="price_asc" className="cursor-pointer text-[13px]">
-                Preț: crescător
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="price_desc" className="cursor-pointer text-[13px]">
-                Preț: descrescător
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* 6. Primary action (labelled) */}
-        <Button
-          asChild
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[13px] h-9 px-3 rounded-lg flex items-center gap-1.5 shrink-0"
-        >
-          <Link to="/listings/new">
-            <Plus className="w-4 h-4" />
-            <span>Adaugă mașină</span>
-          </Link>
-        </Button>
-
-        {/* 7. Overflow menu (icon, square) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              aria-label="Mai multe opțiuni"
-              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
-            >
-              <MoreVertical className="h-4 w-4 text-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-popover border-border min-w-[160px]">
+      <ListingsHeader
+        title={activeSegment === "instoc" ? "În stoc" : "Vândute"}
+        countText={countText}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        primaryActionHref="/listings/new"
+        primaryActionLabel="Adaugă mașină"
+        overflowMenuItems={
+          <>
             <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-[13px]">
               Exportă Excel
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
               Link-uri pentru Facebook și Google
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Mobile Header (2 bands) */}
-      <div className="flex flex-col gap-2.5 lg:hidden px-1">
-        {/* Band 1: back button · title over count on two lines · sort control · overflow menu */}
-        <div className="flex items-center gap-2">
-          {/* Back button (clears 44px) */}
-          <Link
-            to="/listings"
-            aria-label="Înapoi la categorii"
-            className="w-11 h-11 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-
-          {/* Title over count on two lines */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[17px] font-medium text-foreground leading-tight truncate">
-              {activeSegment === "instoc" ? "În stoc" : "Vândute"}
-            </h1>
-            <p className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5 tabular-nums">
-              {countText}
-            </p>
-          </div>
-
-          {/* Sort control (replaces removed duplicate add button, clears 44px) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                aria-label="Sortează lista"
-                className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
-              >
-                <ArrowUpDown className="w-5 h-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover border-border min-w-[220px]">
-              <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Sortare
-              </DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-                <DropdownMenuRadioItem value="age_desc" className="cursor-pointer text-[13px]">
-                  Vechime: cele mai vechi
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="age_asc" className="cursor-pointer text-[13px]">
-                  Vechime: cele mai noi
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="views_desc" className="cursor-pointer text-[13px]">
-                  Vizualizări: cele mai multe
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="views_asc" className="cursor-pointer text-[13px]">
-                  Vizualizări: cele mai puține
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="price_asc" className="cursor-pointer text-[13px]">
-                  Preț: crescător
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="price_desc" className="cursor-pointer text-[13px]">
-                  Preț: descrescător
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Overflow menu (icon, square, clears 44px) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                aria-label="Mai multe opțiuni"
-                className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover border-border min-w-[160px]">
-              <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-[13px]">
-                Exportă Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
-                Link-uri pentru Facebook și Google
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Band 2: search full width */}
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            id="listings-search-mobile"
-            name="listings-search-mobile"
-            placeholder="Caută marcă, model, an"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-card border-border rounded-lg w-full h-11 text-[15px] focus-visible:ring-0 focus-visible:border-border"
-          />
-        </div>
-      </div>
+            <DropdownMenuItem
+              onSelect={() => setIsCatalogModalOpen(true)}
+              onClick={() => setIsCatalogModalOpen(true)}
+              className="cursor-pointer text-[13px]"
+            >
+              Generează catalog PDF
+            </DropdownMenuItem>
+          </>
+        }
+      />
 
 
 
@@ -1139,6 +960,12 @@ const Listings = ({ initialSegment }: ListingsProps) => {
         }}
         listing={reserveModalListing}
         onSubmit={handleReserveSubmit}
+      />
+
+      <GenerateCatalogModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
+        fixedSegment={activeSegment === "instoc" ? "stock" : "sold"}
       />
 
       {/* Hidden container for PDF generation */}

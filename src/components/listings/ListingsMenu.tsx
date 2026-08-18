@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Car, Truck, Coins, CalendarCheck, Tag, FileText, ChevronRight } from "lucide-react";
+import { Plus, Car, Truck, Coins, CalendarCheck, Tag, FileText, ChevronRight, FileDown } from "lucide-react";
 import { getStockCounts } from "@/services/api";
+import GenerateCatalogModal from "@/components/modals/GenerateCatalogModal";
 
 interface MenuItem {
   key: string;
@@ -46,26 +48,20 @@ function DesktopMenuCard({
   description,
   icon: Icon,
   to,
+  onClick,
   total,
   isPrimaryAction = false,
 }: {
   title: string;
   description: string;
   icon: any;
-  to: string;
+  to?: string;
+  onClick?: () => void;
   total?: number;
   isPrimaryAction?: boolean;
 }) {
-  return (
-    <Link
-      to={to}
-      className={
-        "flex items-center justify-between h-[64px] px-4 bg-card border rounded-xl transition-colors select-none " +
-        (isPrimaryAction
-          ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
-          : "border-border hover:bg-accent/50")
-      }
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-3">
         <div
           className={
@@ -91,11 +87,33 @@ function DesktopMenuCard({
           <ChevronRight className={"w-4 h-4 " + (isPrimaryAction ? "text-primary" : "text-muted-foreground")} />
         )}
       </div>
+    </>
+  );
+
+  const className =
+    "flex items-center justify-between h-[64px] px-4 bg-card border rounded-xl transition-colors select-none " +
+    (isPrimaryAction
+      ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
+      : "border-border hover:bg-accent/50");
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className + " w-full text-left cursor-pointer"}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={to!} className={className}>
+      {content}
     </Link>
   );
 }
 
 export default function ListingsMenu() {
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+
   const { data: counts } = useQuery({
     queryKey: ["stock-counts"],
     queryFn: getStockCounts,
@@ -202,6 +220,22 @@ export default function ListingsMenu() {
             {stockItems.map((item) => (
               <MenuRow key={item.key} item={item} />
             ))}
+            <button
+              type="button"
+              onClick={() => setIsCatalogModalOpen(true)}
+              className="flex items-center justify-between min-h-[64px] py-4 px-4 bg-card border border-border rounded-xl hover:bg-accent/50 transition-colors text-left w-full cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-muted text-foreground">
+                  <FileDown className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-[16px] font-semibold text-foreground leading-snug">Generează catalog</h3>
+                  <p className="text-[13px] text-muted-foreground leading-none mt-0.5">Catalog PDF cu mașini</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
           </div>
         </div>
 
@@ -233,6 +267,12 @@ export default function ListingsMenu() {
               icon={Plus}
               to="/listings/new"
               isPrimaryAction
+            />
+            <DesktopMenuCard
+              title="Generează catalog"
+              description="Catalog PDF cu mașini"
+              icon={FileDown}
+              onClick={() => setIsCatalogModalOpen(true)}
             />
           </div>
         </div>
@@ -273,6 +313,12 @@ export default function ListingsMenu() {
           </div>
         </div>
       </div>
+
+      <GenerateCatalogModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
+        stockCounts={counts}
+      />
     </>
   );
 }
