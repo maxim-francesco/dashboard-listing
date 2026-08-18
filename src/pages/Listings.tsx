@@ -893,7 +893,7 @@ const Listings = ({ initialSegment }: ListingsProps) => {
               Exportă Excel
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
-              Previzualizează feed
+              Link-uri pentru Facebook și Google
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -976,7 +976,7 @@ const Listings = ({ initialSegment }: ListingsProps) => {
                 Exportă Excel
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
-                Previzualizează feed
+                Link-uri pentru Facebook și Google
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
