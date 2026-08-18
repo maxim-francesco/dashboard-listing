@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { MoreVertical, Search, Plus, Car, Loader2, FileText, ChevronRight } from "lucide-react";
+import { MoreVertical, Search, Plus, Car, Loader2, FileText, ChevronRight, ArrowLeft, ArrowUpDown } from "lucide-react";
 import { roCount } from "@/lib/plural";
 import { formatEur } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
@@ -112,12 +115,21 @@ const ListingCardSkeleton = () => (
   </>
 );
 
+type SortOption =
+  | "age_desc"
+  | "age_asc"
+  | "views_desc"
+  | "views_asc"
+  | "price_asc"
+  | "price_desc";
+
 interface ListingsProps {
   initialSegment?: "instoc" | "vandute";
 }
 
 const Listings = ({ initialSegment }: ListingsProps) => {
   const [activeSegment, setActiveSegment] = useState<"instoc" | "vandute">(initialSegment ?? "instoc");
+  const [sortBy, setSortBy] = useState<SortOption>("age_desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSoldModalOpen, setIsSoldModalOpen] = useState(false);
   const [isDiagnoseModalOpen, setIsDiagnoseModalOpen] = useState(false);
@@ -735,7 +747,31 @@ const Listings = ({ initialSegment }: ListingsProps) => {
     .filter((listing) =>
       listing.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "age_asc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "views_desc":
+          return (b._count?.views ?? 0) - (a._count?.views ?? 0) || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "views_asc":
+          return (a._count?.views ?? 0) - (b._count?.views ?? 0) || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "price_asc": {
+          const priceA = activeSegment === "vandute" ? (a.sellingPrice ?? a.price ?? 0) : (a.price ?? 0);
+          const priceB = activeSegment === "vandute" ? (b.sellingPrice ?? b.price ?? 0) : (b.price ?? 0);
+          return priceA - priceB || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        case "price_desc": {
+          const priceA = activeSegment === "vandute" ? (a.sellingPrice ?? a.price ?? 0) : (a.price ?? 0);
+          const priceB = activeSegment === "vandute" ? (b.sellingPrice ?? b.price ?? 0) : (b.price ?? 0);
+          return priceB - priceA || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        case "age_desc":
+        default:
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+    });
+
+  const countText = roCount(filteredListings.length, "mașină", "mașini");
 
   const renderEmptyState = () => {
     if (activeSegment === "instoc") {
@@ -758,45 +794,206 @@ const Listings = ({ initialSegment }: ListingsProps) => {
 
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full">
-      {/* Back to hub */}
-      <div className="px-1 pt-1">
-        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline">
-          ← Toate categoriile
+      {/* Desktop Header (1 row) */}
+      <div className="hidden lg:flex items-center gap-3 w-full">
+        {/* 1. Back button (icon, square) */}
+        <Link
+          to="/listings"
+          aria-label="Înapoi la categorii"
+          className="w-9 h-9 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
         </Link>
-      </div>
-      {/* (a) Header row */}
-      <div className="flex justify-between items-center py-2 px-1">
-        <h1 className="text-[20px] font-semibold text-foreground">{activeSegment === "instoc" ? "În stoc" : "Vândute"}</h1>
-        
+
+        {/* 2 & 3. Title & count (baseline-aligned) */}
+        <div className="flex items-baseline gap-2 shrink-0">
+          <h1 className="text-[17px] font-semibold text-foreground leading-none">
+            {activeSegment === "instoc" ? "În stoc" : "Vândute"}
+          </h1>
+          <span className="text-[13px] text-muted-foreground tabular-nums">
+            {countText}
+          </span>
+        </div>
+
+        {/* 4. Search (flexes to fill) */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            id="listings-search-desktop"
+            name="listings-search-desktop"
+            placeholder="Caută marcă, model, an"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-card border-border rounded-lg w-full h-9 text-[13px] focus-visible:ring-0 focus-visible:border-border"
+          />
+        </div>
+
+        {/* 5. Sort control (icon, square) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0"
+            <Button
+              variant="ghost"
+              aria-label="Sortează lista"
+              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
             >
-              <MoreVertical className="h-5 w-5 text-foreground" />
+              <ArrowUpDown className="h-4 w-4 text-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border min-w-[200px]">
+            <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Sortare
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+              <DropdownMenuRadioItem value="age_desc" className="cursor-pointer text-[13px]">
+                Vechime: cele mai vechi
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="age_asc" className="cursor-pointer text-[13px]">
+                Vechime: cele mai noi
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="views_desc" className="cursor-pointer text-[13px]">
+                Vizualizări: cele mai multe
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="views_asc" className="cursor-pointer text-[13px]">
+                Vizualizări: cele mai puține
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="price_asc" className="cursor-pointer text-[13px]">
+                Preț: crescător
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="price_desc" className="cursor-pointer text-[13px]">
+                Preț: descrescător
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* 6. Primary action (labelled) */}
+        <Button
+          asChild
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[13px] h-9 px-3 rounded-lg flex items-center gap-1.5 shrink-0"
+        >
+          <Link to="/listings/new">
+            <Plus className="w-4 h-4" />
+            <span>Adaugă mașină</span>
+          </Link>
+        </Button>
+
+        {/* 7. Overflow menu (icon, square) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              aria-label="Mai multe opțiuni"
+              className="w-9 h-9 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
+            >
+              <MoreVertical className="h-4 w-4 text-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover border-border min-w-[160px]">
-            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-[13px]">
               Exportă Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer">
+            <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
               Previzualizează feed
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* (b) Search input */}
-      <div className="relative w-full px-1">
-        <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Caută marcă, model, an"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 bg-card border-border rounded-[var(--radius)] w-full py-6 focus:ring-0 focus:border-border text-[15px]"
-        />
+      {/* Mobile Header (2 bands) */}
+      <div className="flex flex-col gap-2.5 lg:hidden px-1">
+        {/* Band 1: back button · title over count on two lines · sort control · overflow menu */}
+        <div className="flex items-center gap-2">
+          {/* Back button (clears 44px) */}
+          <Link
+            to="/listings"
+            aria-label="Înapoi la categorii"
+            className="w-11 h-11 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+
+          {/* Title over count on two lines */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[17px] font-medium text-foreground leading-tight truncate">
+              {activeSegment === "instoc" ? "În stoc" : "Vândute"}
+            </h1>
+            <p className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5 tabular-nums">
+              {countText}
+            </p>
+          </div>
+
+          {/* Sort control (replaces removed duplicate add button, clears 44px) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                aria-label="Sortează lista"
+                className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
+              >
+                <ArrowUpDown className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover border-border min-w-[220px]">
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Sortare
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                <DropdownMenuRadioItem value="age_desc" className="cursor-pointer text-[13px]">
+                  Vechime: cele mai vechi
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="age_asc" className="cursor-pointer text-[13px]">
+                  Vechime: cele mai noi
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="views_desc" className="cursor-pointer text-[13px]">
+                  Vizualizări: cele mai multe
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="views_asc" className="cursor-pointer text-[13px]">
+                  Vizualizări: cele mai puține
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="price_asc" className="cursor-pointer text-[13px]">
+                  Preț: crescător
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="price_desc" className="cursor-pointer text-[13px]">
+                  Preț: descrescător
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Overflow menu (icon, square, clears 44px) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                aria-label="Mai multe opțiuni"
+                className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover border-border min-w-[160px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-[13px]">
+                Exportă Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsPreviewModalOpen(true)} className="cursor-pointer text-[13px]">
+                Previzualizează feed
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Band 2: search full width */}
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            id="listings-search-mobile"
+            name="listings-search-mobile"
+            placeholder="Caută marcă, model, an"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-card border-border rounded-lg w-full h-11 text-[15px] focus-visible:ring-0 focus-visible:border-border"
+          />
+        </div>
       </div>
 
 
