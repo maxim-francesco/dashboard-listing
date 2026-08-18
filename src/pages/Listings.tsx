@@ -813,6 +813,11 @@ const Listings = ({ initialSegment }: ListingsProps) => {
             >
               Generează catalog PDF
             </DropdownMenuItem>
+            {activeSegment === "vandute" && (
+              <DropdownMenuItem onClick={() => navigate("/reports")} className="cursor-pointer text-[13px]">
+                Rapoarte financiare
+              </DropdownMenuItem>
+            )}
           </>
         }
       />
