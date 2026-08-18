@@ -93,9 +93,7 @@ export default function StatsStrip() {
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className={`p-3.5 flex-1 min-w-0 flex flex-col justify-between ${
-                i % 2 === 0 ? "border-r border-border" : ""
-              } ${i < 4 ? "border-b border-border" : ""} lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`}
+              className="p-3.5 flex-1 min-w-0 flex flex-col justify-between lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0"
             >
               <Skeleton className="h-3 w-16 mb-2" />
               <Skeleton className="h-5 w-10" />
@@ -205,9 +203,7 @@ export default function StatsStrip() {
       <div className={`${CARD} hidden lg:flex overflow-hidden w-full`}>
         {desktopStats.map((stat, i) => {
           const colorClass = getValueColor(stat.key, stat.value);
-          const borderClasses = `${i % 2 === 0 ? "border-r border-border" : ""} ${
-            i < 4 ? "border-b border-border" : ""
-          } lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0`;
+          const borderClasses = "lg:border-r lg:border-border lg:last:border-r-0 lg:border-b-0";
 
           if (stat.href) {
             return (
