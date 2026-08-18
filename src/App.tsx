@@ -17,6 +17,7 @@ import BusinessSettings from "./pages/BusinessSettings";
 import AdminPrivacyPolicy from "./pages/AdminPrivacyPolicy";
 import AdminTerms from "./pages/AdminTerms";
 import CookieBanner from "./components/CookieBanner";
+import ScrollToTop from "./components/ScrollToTop";
 import NotFound from "./pages/NotFound";
 import AdminReviewsPage from "./pages/AdminReviewsPage";
 import ContractsPage from "./pages/ContractsPage";
@@ -66,6 +67,7 @@ const App = () => (
         }}
       />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* --- GROUP 1: Public, Standalone Pages (No Layout) --- */}
           <Route path="/login" element={<Login />} />
