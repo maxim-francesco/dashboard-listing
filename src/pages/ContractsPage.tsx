@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, FileText, Plus, User, Download, ClipboardCheck } from "lucide-react";
+import { Loader2, FileText, Plus, User, Download, ClipboardCheck, ArrowLeft, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 import { toast } from "react-hot-toast";
@@ -9,9 +9,17 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import api, { getContracts, createContract, getContract, updateHandover, ContractListItem } from "@/services/api";
 import { roCount } from "@/lib/plural";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import PickCarSheet from "@/components/modals/PickCarSheet";
 import GenerateContractModal, { ContractFormData } from "@/components/modals/GenerateContractModal";
 import HandoverModal from "@/components/modals/HandoverModal";
+import ContractDetailSheet from "@/components/modals/ContractDetailSheet";
 import { PrintableContract } from "@/components/contracts/PrintableContract";
 import { PrintablePV } from "@/components/contracts/PrintablePV";
 
@@ -33,6 +41,7 @@ async function elementToPdf(elementId: string, filename: string, okMsg: string) 
 }
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [businessSettings, setBusinessSettings] = useState<any | null>(null);
 
@@ -50,6 +59,49 @@ export default function ContractsPage() {
   const [pvModal, setPvModal] = useState<null | { id: string; contractNumber: number }>(null);
   const [pvOpen, setPvOpen] = useState(false);
   const [pvPdf, setPvPdf] = useState<null | { contract: any; handover: any }>(null);
+
+  const [detailRow, setDetailRow] = useState<ContractListItem | null>(null);
+
+  // Filter state
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Set<"DE_PREDAT" | "PREDAT">>(new Set());
+  const [carFilter, setCarFilter] = useState<string>("all");
+
+  const hasActiveFilter = statusFilter.size > 0 || carFilter !== "all";
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/listings");
+    }
+  };
+
+  const distinctCars = useMemo(() => {
+    const set = new Set<string>();
+    contracts.forEach((c) => {
+      const t = c.vehicleSnapshot?.title || "Mașină";
+      set.add(t);
+    });
+    return Array.from(set).map((title) => ({ id: title, title }));
+  }, [contracts]);
+
+  const filteredContracts = useMemo(() => {
+    return contracts.filter((c) => {
+      const isDone = !!c.handoverDate;
+      let statusMatch = true;
+      if (statusFilter.size > 0) {
+        statusMatch =
+          (statusFilter.has("DE_PREDAT") && !isDone) ||
+          (statusFilter.has("PREDAT") && isDone);
+      }
+
+      const carTitle = c.vehicleSnapshot?.title || "Mașină";
+      const carMatch = carFilter === "all" || carTitle === carFilter;
+
+      return statusMatch && carMatch;
+    });
+  }, [contracts, statusFilter, carFilter]);
 
   useEffect(() => {
     api.get("/business/me").then((r) => setBusinessSettings(r.data)).catch(() => {});
@@ -73,8 +125,8 @@ export default function ContractsPage() {
     })();
   }, [pvPdf]);
 
-  const dePredat = contracts.filter((c) => !c.handoverDate);
-  const finalizate = contracts.filter((c) => c.handoverDate);
+  const dePredat = filteredContracts.filter((c) => !c.handoverDate);
+  const finalizate = filteredContracts.filter((c) => c.handoverDate);
 
   const handlePick = (listing: any) => {
     setPickOpen(false);
@@ -215,7 +267,11 @@ export default function ContractsPage() {
   const renderCard = (c: ContractListItem, done: boolean) => {
     const v: any = c.vehicleSnapshot || {};
     return (
-      <div key={c.id} className="bg-card border border-border rounded-xl p-3.5">
+      <div
+        key={c.id}
+        onClick={() => setDetailRow(c)}
+        className="bg-card border border-border rounded-xl p-3.5 cursor-pointer hover:border-border/80 transition-colors"
+      >
         <div className="flex justify-between items-start gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[13px] font-medium text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 shrink-0">#{c.contractNumber}</span>
@@ -239,15 +295,36 @@ export default function ContractsPage() {
           <span className="text-[12px] text-muted-foreground ml-auto">{format(new Date(c.saleDate), "dd MMM yyyy", { locale: ro })}</span>
         </div>
         <div className="flex gap-2 mt-3">
-          <button onClick={() => handleReprint(c)} className="flex-1 h-10 rounded-lg border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50 inline-flex items-center justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReprint(c);
+            }}
+            className="flex-1 h-11 min-h-[44px] rounded-lg border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50 inline-flex items-center justify-center gap-1.5"
+          >
             <Download className="w-4 h-4" /> Contract
           </button>
           {done ? (
-            <button onClick={() => handleViewPv(c)} className="flex-1 h-10 rounded-lg border border-border bg-card text-muted-foreground text-[14px] font-medium hover:bg-accent/50 inline-flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewPv(c);
+              }}
+              className="flex-1 h-11 min-h-[44px] rounded-lg border border-border bg-card text-muted-foreground text-[14px] font-medium hover:bg-accent/50 inline-flex items-center justify-center gap-1.5"
+            >
               <ClipboardCheck className="w-4 h-4" /> Vezi PV
             </button>
           ) : (
-            <button onClick={() => openHandover(c)} className="flex-1 h-10 rounded-lg border border-primary/40 bg-primary/5 text-primary text-[14px] font-medium hover:bg-primary/10 inline-flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openHandover(c);
+              }}
+              className="flex-1 h-11 min-h-[44px] rounded-lg border border-primary/40 bg-primary/5 text-primary text-[14px] font-medium hover:bg-primary/10 inline-flex items-center justify-center gap-1.5"
+            >
               <ClipboardCheck className="w-4 h-4" /> Predare
             </button>
           )}
@@ -258,18 +335,43 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full pb-24">
-      <div className="px-1 pt-1">
-        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1">
-          ← Toate categoriile
-        </Link>
-        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Contracte</h1>
-        <p className="text-[13px] text-muted-foreground mt-0.5">
-          {dePredat.length > 0 ? roCount(dePredat.length, "de predat", "de predat") : "Contracte și procese-verbale"}
-        </p>
+      {/* HEADER BAR */}
+      <div className="flex items-center gap-2.5 px-1 py-1">
+        <button
+          type="button"
+          onClick={handleBack}
+          aria-label="Înapoi"
+          className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-accent/50 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-[17px] font-medium text-foreground leading-tight">Contracte</h1>
+          <p className="text-[12px] text-muted-foreground leading-snug">
+            {dePredat.length > 0 ? roCount(dePredat.length, "de predat", "de predat") : "Contracte și procese-verbale"}
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-label="Filtrează"
+          onClick={() => setFilterOpen(true)}
+          className={cn(
+            "w-9 h-9 min-h-[44px] min-w-[44px] border rounded-lg flex items-center justify-center shrink-0 transition-colors ml-auto",
+            hasActiveFilter
+              ? "border-primary bg-primary/15 text-primary"
+              : "border-border text-foreground hover:bg-accent/50"
+          )}
+        >
+          <Filter className="w-4 h-4" />
+        </button>
       </div>
 
       <div className="px-1">
-        <button onClick={() => setPickOpen(true)} className="flex items-center gap-3 w-full min-h-[60px] py-4 px-4 bg-primary/5 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors">
+        <button
+          type="button"
+          onClick={() => setPickOpen(true)}
+          className="flex items-center gap-3 w-full min-h-[60px] py-4 px-4 bg-primary/5 border border-primary/30 rounded-xl hover:bg-primary/10 transition-colors"
+        >
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-primary bg-primary/10">
             <Plus className="w-5 h-5" />
           </div>
@@ -288,6 +390,12 @@ export default function ContractsPage() {
           <h3 className="text-[15px] font-medium text-foreground">Niciun contract încă</h3>
           <p className="text-xs text-muted-foreground mt-1">Apasă „Contract nou" ca să generezi primul contract.</p>
         </div>
+      ) : filteredContracts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center px-1">
+          <FileText className="w-12 h-12 text-muted-foreground mb-3 opacity-60" />
+          <h3 className="text-[15px] font-medium text-foreground">Niciun contract pentru acest filtru</h3>
+          <p className="text-xs text-muted-foreground mt-1">Încearcă să schimbi starea sau mașina selectată.</p>
+        </div>
       ) : (
         <>
           {dePredat.length > 0 && (
@@ -305,6 +413,92 @@ export default function ContractsPage() {
         </>
       )}
 
+      {/* FILTER BOTTOM SHEET */}
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="bottom" className="bg-card border-border rounded-t-xl p-4 space-y-4 max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="text-left pb-2 border-b border-border">
+            <SheetTitle className="text-[17px] font-semibold text-foreground">
+              Filtrează
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-2">Stare</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { value: "DE_PREDAT", label: "De predat" },
+                    { value: "PREDAT", label: "Predate" },
+                  ] as const
+                ).map((item) => {
+                  const isSelected = statusFilter.has(item.value);
+                  return (
+                    <button
+                      type="button"
+                      key={item.value}
+                      onClick={() => {
+                        setStatusFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(item.value)) {
+                            next.delete(item.value);
+                          } else {
+                            next.add(item.value);
+                          }
+                          return next;
+                        });
+                      }}
+                      className={`min-h-[44px] px-3.5 py-2 rounded-full border text-[13px] font-medium transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border text-muted-foreground hover:border-border/80"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-2">Mașină</p>
+              <select
+                value={carFilter}
+                onChange={(e) => setCarFilter(e.target.value)}
+                className="w-full h-11 min-h-[44px] px-3 bg-card border border-border rounded-xl text-foreground text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Toate mașinile</option>
+                {distinctCars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {car.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(new Set());
+                setCarFilter("all");
+              }}
+              className="flex-1 h-11 min-h-[44px] rounded-xl border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50 transition-colors"
+            >
+              Resetează
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(false)}
+              className="flex-1 h-11 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90 transition-colors"
+            >
+              Aplică
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <PickCarSheet isOpen={pickOpen} onClose={() => setPickOpen(false)} onPick={handlePick} statuses={["AVAILABLE", "RESERVED"]} />
 
       <GenerateContractModal
@@ -319,6 +513,24 @@ export default function ContractsPage() {
         onClose={() => { setPvOpen(false); setPvModal(null); }}
         contract={pvModal}
         onSubmit={handlePvSubmit}
+      />
+
+      <ContractDetailSheet
+        row={detailRow}
+        open={!!detailRow}
+        onClose={() => setDetailRow(null)}
+        onContract={(r) => {
+          setDetailRow(null);
+          handleReprint(r);
+        }}
+        onHandover={(r) => {
+          setDetailRow(null);
+          openHandover(r);
+        }}
+        onViewPv={(r) => {
+          setDetailRow(null);
+          handleViewPv(r);
+        }}
       />
 
       <div style={{ position: "absolute", left: "-9999px", top: 0, zIndex: -1 }}>
@@ -336,3 +548,4 @@ export default function ContractsPage() {
     </div>
   );
 }
+
