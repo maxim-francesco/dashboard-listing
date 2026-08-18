@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CalendarClock, Plus, User, Phone, Coins } from "lucide-react";
+import { Loader2, CalendarClock, Plus, User, Phone, Coins, ArrowLeft, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 import { toast } from "react-hot-toast";
@@ -15,17 +15,45 @@ import {
 import { roCount } from "@/lib/plural";
 import { formatEur } from "@/lib/format";
 import { telLink, formatRoPhone, hasUsablePhone } from "@/utils/phone";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import ReserveModal from "@/components/modals/ReserveModal";
 import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import PickCarSheet from "@/components/modals/PickCarSheet";
 import ExtendReservationSheet from "@/components/modals/ExtendReservationSheet";
+import ReservationDetailSheet from "@/components/modals/ReservationDetailSheet";
 
 function daysLeft(expiresAt: string): number {
   const diff = new Date(expiresAt).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+function getBadgeProps(dl: number) {
+  if (dl <= 0) {
+    return {
+      className: "bg-destructive/10 text-destructive",
+      label: "Expiră azi",
+    };
+  }
+  if (dl <= 2) {
+    return {
+      className: "bg-warning-light text-warning",
+      label: "Expiră în " + roCount(dl, "zi", "zile"),
+    };
+  }
+  return {
+    className: "bg-muted text-muted-foreground",
+    label: "Expiră în " + roCount(dl, "zi", "zile"),
+  };
+}
+
 export default function ReservationsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: reservations = [], isLoading } = useQuery<ReservationItem[]>({
     queryKey: ["reservations"],
@@ -38,6 +66,25 @@ export default function ReservationsPage() {
   const [reserveOpen, setReserveOpen] = useState(false);
   const [extendRow, setExtendRow] = useState<ReservationItem | null>(null);
   const [soldRow, setSoldRow] = useState<ReservationItem | null>(null);
+  const [detailRow, setDetailRow] = useState<ReservationItem | null>(null);
+
+  // Filter state
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Set<ReservationItem["status"]>>(new Set());
+  const [carFilter, setCarFilter] = useState<string>("all");
+  const hasActiveFilter = statusFilter.size > 0 || carFilter !== "all";
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/listings");
+    }
+  };
+
+  const openDetails = (row: ReservationItem) => {
+    setDetailRow(row);
+  };
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["reservations"] });
@@ -45,10 +92,28 @@ export default function ReservationsPage() {
     queryClient.invalidateQueries({ queryKey: ["stock-counts"] });
   };
 
-  const active = reservations
+  const distinctCars = useMemo(() => {
+    const map = new Map<string, string>();
+    reservations.forEach((r) => {
+      if (r.listingId && !map.has(r.listingId)) {
+        map.set(r.listingId, r.listing?.title || "Mașină");
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [reservations]);
+
+  const filteredReservations = useMemo(() => {
+    return reservations.filter((r) => {
+      const statusOk = statusFilter.size === 0 || statusFilter.has(r.status);
+      const carOk = carFilter === "all" || r.listingId === carFilter;
+      return statusOk && carOk;
+    });
+  }, [reservations, statusFilter, carFilter]);
+
+  const active = filteredReservations
     .filter((r) => r.status === "ACTIVE")
     .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
-  const history = reservations.filter((r) => r.status !== "ACTIVE");
+  const history = filteredReservations.filter((r) => r.status !== "ACTIVE");
 
   const handlePick = (listing: any) => {
     setPickOpen(false);
@@ -100,14 +165,34 @@ export default function ReservationsPage() {
 
   return (
     <div className="space-y-4 max-w-[390px] mx-auto md:max-w-full pb-24">
-      <div className="px-1 pt-1">
-        <Link to="/listings" className="inline-flex items-center text-[13px] text-primary hover:underline mb-1">
-          ← Toate categoriile
-        </Link>
-        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Rezervări</h1>
-        <p className="text-[13px] text-muted-foreground mt-0.5">
-          {active.length > 0 ? roCount(active.length, "activă", "active") : "Mașini ținute cu avans"}
-        </p>
+      <div className="flex items-center gap-2.5 px-1 py-1">
+        <button
+          type="button"
+          onClick={handleBack}
+          aria-label="Înapoi"
+          className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-accent/50 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-[17px] font-medium text-foreground leading-tight">Rezervări</h1>
+          <p className="text-[12px] text-muted-foreground leading-snug">
+            {active.length > 0 ? roCount(active.length, "activă", "active") : "Mașini ținute cu avans"}
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-label="Filtrează"
+          onClick={() => setFilterOpen(true)}
+          className={cn(
+            "w-9 h-9 min-h-[44px] min-w-[44px] border rounded-lg flex items-center justify-center shrink-0 transition-colors ml-auto",
+            hasActiveFilter
+              ? "border-primary bg-primary/15 text-primary"
+              : "border-border text-foreground hover:bg-accent/50"
+          )}
+        >
+          <Filter className="w-4 h-4" />
+        </button>
       </div>
 
       <div className="px-1">
@@ -135,6 +220,12 @@ export default function ReservationsPage() {
           <h3 className="text-[15px] font-medium text-foreground">Nicio rezervare încă</h3>
           <p className="text-xs text-muted-foreground mt-1">Apasă „Adaugă rezervare" ca să ții o mașină cu avans.</p>
         </div>
+      ) : filteredReservations.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center px-1">
+          <CalendarClock className="w-12 h-12 text-muted-foreground mb-3 opacity-60" />
+          <h3 className="text-[15px] font-medium text-foreground">Nicio rezervare pentru acest filtru</h3>
+          <p className="text-xs text-muted-foreground mt-1">Încearcă să schimbi statusul sau mașina selectată.</p>
+        </div>
       ) : (
         <>
           {active.length > 0 && (
@@ -143,22 +234,40 @@ export default function ReservationsPage() {
               <div className="flex flex-col gap-2.5">
                 {active.map((row) => {
                   const dl = daysLeft(row.expiresAt);
-                  const urgent = dl <= 2;
+                  const badge = getBadgeProps(dl);
                   return (
-                    <div key={row.id} className="bg-card border border-border rounded-xl p-3.5">
+                    <div
+                      key={row.id}
+                      onClick={() => openDetails(row)}
+                      className="bg-card border border-border rounded-xl p-3.5 cursor-pointer hover:border-border/80 transition-colors"
+                    >
                       <div className="flex justify-between items-start gap-2">
                         <h3 className="text-[16px] font-semibold text-foreground leading-snug flex-1 min-w-0">
-                          {row.listing?.title || "Mașină"}
+                          {row.listingId ? (
+                            <Link
+                              to={`/listings/${row.listingId}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:underline"
+                            >
+                              {row.listing?.title || "Mașină"}
+                            </Link>
+                          ) : (
+                            row.listing?.title || "Mașină"
+                          )}
                         </h3>
-                        <span className={"text-[12px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap " + (urgent ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
-                          {dl <= 0 ? "Expiră azi" : "Expiră în " + roCount(dl, "zi", "zile")}
+                        <span className={`text-[12px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${badge.className}`}>
+                          {badge.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-2 text-[14px] text-muted-foreground">
                         <User className="w-4 h-4 shrink-0" />
                         <span className="text-foreground">{row.clientName}</span>
                         {hasUsablePhone(row.clientPhone) && (
-                          <a href={telLink(row.clientPhone)} className="text-primary ml-auto inline-flex items-center gap-1">
+                          <a
+                            href={telLink(row.clientPhone)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary ml-auto inline-flex items-center gap-1 hover:underline"
+                          >
                             <Phone className="w-4 h-4" /> {formatRoPhone(row.clientPhone)}
                           </a>
                         )}
@@ -170,20 +279,32 @@ export default function ReservationsPage() {
                       </div>
                       <div className="flex gap-2 mt-3">
                         <button
-                          onClick={() => setExtendRow(row)}
-                          className="flex-1 h-10 rounded-lg border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExtendRow(row);
+                          }}
+                          className="flex-1 h-11 min-h-[44px] rounded-lg border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50"
                         >
                           Prelungește
                         </button>
                         <button
-                          onClick={() => handleCancel(row)}
-                          className="flex-1 h-10 rounded-lg border border-destructive/40 bg-card text-destructive text-[14px] font-medium hover:bg-destructive/10"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancel(row);
+                          }}
+                          className="flex-1 h-11 min-h-[44px] rounded-lg border border-destructive/40 bg-card text-destructive text-[14px] font-medium hover:bg-destructive/10"
                         >
                           Anulează
                         </button>
                         <button
-                          onClick={() => setSoldRow(row)}
-                          className="flex-1 h-10 rounded-lg border border-success/40 bg-success/10 text-success text-[14px] font-medium hover:bg-success/20"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSoldRow(row);
+                          }}
+                          className="flex-1 h-11 min-h-[44px] rounded-lg border border-success/40 bg-success/10 text-success text-[14px] font-medium hover:bg-success/20"
                         >
                           Vândut
                         </button>
@@ -220,6 +341,94 @@ export default function ReservationsPage() {
         </>
       )}
 
+      {/* FILTER BOTTOM SHEET */}
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="bottom" className="bg-card border-border rounded-t-xl p-4 space-y-4 max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="text-left pb-2 border-b border-border">
+            <SheetTitle className="text-[17px] font-semibold text-foreground">
+              Filtrează
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-2">Status</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { value: "ACTIVE", label: "Active" },
+                    { value: "COMPLETED", label: "Finalizate" },
+                    { value: "CANCELLED", label: "Anulate" },
+                    { value: "EXPIRED", label: "Expirate" },
+                  ] as const
+                ).map((item) => {
+                  const isSelected = statusFilter.has(item.value);
+                  return (
+                    <button
+                      type="button"
+                      key={item.value}
+                      onClick={() => {
+                        setStatusFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(item.value)) {
+                            next.delete(item.value);
+                          } else {
+                            next.add(item.value);
+                          }
+                          return next;
+                        });
+                      }}
+                      className={`min-h-[44px] px-3.5 py-2 rounded-full border text-[13px] font-medium transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border text-muted-foreground hover:border-border/80"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-2">Mașină</p>
+              <select
+                value={carFilter}
+                onChange={(e) => setCarFilter(e.target.value)}
+                className="w-full h-11 min-h-[44px] px-3 bg-card border border-border rounded-xl text-foreground text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Toate mașinile</option>
+                {distinctCars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {car.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(new Set());
+                setCarFilter("all");
+              }}
+              className="flex-1 h-11 min-h-[44px] rounded-xl border border-border bg-card text-foreground text-[14px] font-medium hover:bg-accent/50 transition-colors"
+            >
+              Resetează
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(false)}
+              className="flex-1 h-11 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90 transition-colors"
+            >
+              Aplică
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <PickCarSheet isOpen={pickOpen} onClose={() => setPickOpen(false)} onPick={handlePick} />
 
       <ReserveModal
@@ -244,6 +453,26 @@ export default function ReservationsPage() {
           listingTitle={soldRow.listing?.title || "Mașină"}
         />
       )}
+
+      <ReservationDetailSheet
+        row={detailRow}
+        open={!!detailRow}
+        onClose={() => setDetailRow(null)}
+        onExtend={(r) => {
+          setDetailRow(null);
+          setExtendRow(r);
+        }}
+        onCancel={(r) => {
+          setDetailRow(null);
+          handleCancel(r);
+        }}
+        onSold={(r) => {
+          setDetailRow(null);
+          setSoldRow(r);
+        }}
+      />
     </div>
   );
 }
+
+
