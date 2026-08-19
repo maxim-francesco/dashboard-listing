@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, PenTool, Star, Network, LogOut, ChevronRight } from "lucide-react";
+import { Settings, PenTool, Star, Network, LogOut, ChevronRight, ArrowLeft } from "lucide-react";
 import api from "@/services/api";
 
 const FirmaPage = () => {
   const navigate = useNavigate();
 
-  const { data: business } = useQuery({
+  const { data: business, isLoading } = useQuery({
     queryKey: ['businessMe'],
     queryFn: async () => {
       const { data } = await api.get('/business/me');
@@ -19,6 +19,14 @@ const FirmaPage = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userEmail');
     navigate('/login');
+  };
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
   };
 
   const rows = [
@@ -50,13 +58,25 @@ const FirmaPage = () => {
 
   return (
     <div className="space-y-4 pb-24">
-      <div>
-        <h1 className="text-[20px] font-semibold text-foreground leading-tight">Firma</h1>
-        {business?.name && (
-          <p className="text-[13px] text-muted-foreground mt-0.5">
-            {business.name}
-          </p>
-        )}
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={handleBack}
+          aria-label="Înapoi"
+          className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-accent/50 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-[17px] font-medium text-foreground leading-tight">Firma</h1>
+          {isLoading ? (
+            <div className="h-3 w-24 rounded bg-muted animate-pulse mt-0.5" />
+          ) : business?.name ? (
+            <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
+              {business.name}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden select-none">
@@ -75,7 +95,7 @@ const FirmaPage = () => {
                 <span className="text-[15px] font-medium text-foreground leading-snug">
                   {row.label}
                 </span>
-                <span className="text-[12px] text-muted-foreground truncate leading-normal">
+                <span className="text-[13px] text-muted-foreground truncate leading-normal">
                   {row.subtitle}
                 </span>
               </div>
