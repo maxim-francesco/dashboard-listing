@@ -1,5 +1,5 @@
 export const TYPE_LABELS: Record<string, string> = {
-  GENERAL: "General",
+  GENERAL: "Contact",
   STOCK: "Stoc",
   ORDER: "Comandă",
   BUYBACK: "Buyback",
@@ -39,3 +39,4 @@ export const STATUS_COLORS: Record<string, string> = {
   WON: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   LOST: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
 };
+
