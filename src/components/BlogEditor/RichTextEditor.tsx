@@ -38,7 +38,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-1 p-2 border-b border-border bg-muted">
+      <div className="flex gap-1 p-2 border-b border-border bg-muted overflow-x-auto">
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive('bold')}
@@ -53,7 +53,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         >
           <em>I</em>
         </ToolbarBtn>
-        <div className="w-px bg-border mx-1" />
+        <div className="w-px bg-border mx-1 shrink-0" />
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive('heading', { level: 2 })}
@@ -68,7 +68,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         >
           H3
         </ToolbarBtn>
-        <div className="w-px bg-border mx-1" />
+        <div className="w-px bg-border mx-1 shrink-0" />
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive('bulletList')}
@@ -83,7 +83,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         >
           1.
         </ToolbarBtn>
-        <div className="w-px bg-border mx-1" />
+        <div className="w-px bg-border mx-1 shrink-0" />
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           active={editor.isActive('blockquote')}
@@ -98,7 +98,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         >
           —
         </ToolbarBtn>
-        <div className="w-px bg-border mx-1" />
+        <div className="w-px bg-border mx-1 shrink-0" />
         <ToolbarBtn
           onClick={() => editor.chain().focus().undo().run()}
           active={false}
@@ -144,7 +144,7 @@ function ToolbarBtn({
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${
+      className={`min-h-[40px] min-w-[40px] px-2.5 py-1 rounded text-sm font-medium transition-colors shrink-0 flex items-center justify-center ${
         active
           ? 'bg-primary text-primary-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground'

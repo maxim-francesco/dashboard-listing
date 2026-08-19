@@ -10,6 +10,15 @@ export default function BottomNav() {
   const { pathname } = useLocation();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
 
+  // Fetch counts for badges (unconditional hook calls)
+  const { inLucru } = useInLucruCount();
+  const { count: reteaCount } = useNetworkActionCount();
+
+  // Hide on blog editor routes (focus mode) - after all hooks
+  if (pathname === '/blog/new' || /^\/blog\/[^/]+\/edit$/.test(pathname)) {
+    return null;
+  }
+
   // Active state calculations
   const isAziActive = pathname === "/";
   const isMasiniActive = pathname === "/listings" || pathname.startsWith("/listings/");
@@ -19,10 +28,6 @@ export default function BottomNav() {
     pathname.startsWith("/contracts") ||
     pathname.startsWith("/reservations");
   const isReteaActive = pathname.startsWith("/network");
-
-  // Fetch counts for badges
-  const { inLucru } = useInLucruCount();
-  const { count: reteaCount } = useNetworkActionCount();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border lg:hidden pb-[env(safe-area-inset-bottom)]">
