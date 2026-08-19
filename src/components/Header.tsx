@@ -4,9 +4,7 @@ import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/services/api";
 import { useInLucruCount } from "@/hooks/useInLucruCount";
-import { useConversationsUnreadCount } from "@/hooks/useConversationsUnreadCount";
-import { usePendingProposalsCount } from "@/hooks/usePendingProposalsCount";
-import { useTransportInterestsCount } from "@/hooks/useTransportInterestsCount";
+import { useNetworkActionCount } from "@/hooks/useNetworkActionCount";
 
 const navigation = [
   { name: "Azi", href: "/" },
@@ -41,11 +39,7 @@ const Header = () => {
 
   // Badge counts
   const { inLucru } = useInLucruCount();
-  const { count: conversationsCount } = useConversationsUnreadCount();
-  const { count: pendingProposalsCount } = usePendingProposalsCount();
-  const { count: transportInterestsCount } = useTransportInterestsCount();
-
-  const reteaCount = (conversationsCount ?? 0) + (pendingProposalsCount ?? 0) + (transportInterestsCount ?? 0);
+  const { count: reteaCount } = useNetworkActionCount();
 
   const isFirmaActive = pathname.startsWith("/firma");
 

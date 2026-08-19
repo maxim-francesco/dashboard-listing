@@ -1,42 +1,66 @@
+import { Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { Car, Truck, Building2, MessageSquare, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
-import { ro } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import {
+  Car,
+  Truck,
+  Building2,
+  MessageSquare,
+  ChevronRight,
+  Settings,
+  Handshake,
+} from "lucide-react";
 import { getNetworkSummary, NetworkSummary, NetworkActionItem } from "@/services/api";
 import { formatEur } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { relativeTime, relativeDay } from "@/lib/relativeTime";
 import { roCount } from "@/lib/plural";
 import { isForbidden } from "@/lib/isForbidden";
 import NetworkOffline from "@/components/network/NetworkOffline";
-
-const capitalizeFirst = (str: string) => {
-  if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
-};
+import NetworkHeader from "@/components/network/NetworkHeader";
+import { CARD } from "@/components/today/cardRecipe";
+import { cn } from "@/lib/utils";
 
 export default function NetworkHome() {
-  const navigate = useNavigate();
-
   const { data, isLoading, isError, error } = useQuery<NetworkSummary>({
     queryKey: ["network-summary"],
     queryFn: getNetworkSummary,
   });
 
-  const dateLabel = capitalizeFirst(format(new Date(), "EEEE, d MMMM", { locale: ro }));
+  const actionItems = data?.actionItems ?? [];
+  const counts = data?.counts ?? {
+    pendingNegotiations: 0,
+    unreadMessages: 0,
+    newTransportInterests: 0,
+    browseCars: 0,
+    myExposedCars: 0,
+    browseRuns: 0,
+    myRuns: 0,
+    dealers: 0,
+    conversations: 0,
+  };
+
+  const countText = roCount(actionItems.length, "solicitare de răspuns", "solicitări de răspuns");
+
+  const settingsAction = (
+    <Link
+      to="/network/setari"
+      aria-label="Setări rețea"
+      className="w-11 h-11 lg:w-9 lg:h-9 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0"
+    >
+      <Settings className="w-5 h-5 lg:w-4 lg:h-4 text-foreground" />
+    </Link>
+  );
 
   if (isLoading) {
     return (
       <div className="space-y-6 box-border w-full pb-24">
-        <div>
-          <h1 className="text-[20px] font-semibold leading-tight">Rețea</h1>
-          <p className="text-[13px] text-muted-foreground mt-0.5">
-            {dateLabel}
-          </p>
-        </div>
+        <NetworkHeader
+          title="Rețea"
+          countText="Se încarcă..."
+          actions={settingsAction}
+        />
         <div className="flex items-center justify-center py-12">
-          <span className="text-[15px] text-muted-foreground">Se încarcă...</span>
+          <span className="text-[13px] text-muted-foreground">Se încarcă...</span>
         </div>
       </div>
     );
@@ -45,16 +69,15 @@ export default function NetworkHome() {
   if (isError) {
     return (
       <div className="space-y-6 box-border w-full pb-24">
-        <div>
-          <h1 className="text-[20px] font-semibold leading-tight">Rețea</h1>
-          <p className="text-[13px] text-muted-foreground mt-0.5">
-            {dateLabel}
-          </p>
-        </div>
+        <NetworkHeader
+          title="Rețea"
+          countText="Eroare"
+          actions={settingsAction}
+        />
         {isForbidden(error) ? (
           <NetworkOffline />
         ) : (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm text-center">
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[13px] text-center">
             A apărut o eroare la încărcarea datelor de rețea. Vă rugăm să încercați din nou.
           </div>
         )}
@@ -62,200 +85,326 @@ export default function NetworkHome() {
     );
   }
 
-  const { counts, actionItems } = data || {
-    counts: {
-      pendingNegotiations: 0,
-      unreadMessages: 0,
-      newTransportInterests: 0,
-      browseCars: 0,
-      myExposedCars: 0,
-      browseRuns: 0,
-      myRuns: 0,
-      dealers: 0,
-      conversations: 0,
-    },
-    actionItems: [],
-  };
+  const negotiations = actionItems
+    .filter((i): i is Extract<NetworkActionItem, { type: "NEGOTIATION" }> => i.type === "NEGOTIATION")
+    .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
 
-  const sortedActionItems = actionItems
-    ? [...actionItems].sort((a, b) => {
-        const typeOrder = { NEGOTIATION: 0, TRANSPORT_INTEREST: 1, MESSAGE: 2 };
-        const orderA = typeOrder[a.type] ?? 99;
-        const orderB = typeOrder[b.type] ?? 99;
-        if (orderA !== orderB) {
-          return orderA - orderB;
-        }
-        return new Date(b.when).getTime() - new Date(a.when).getTime();
-      })
-    : [];
+  const messages = actionItems
+    .filter((i): i is Extract<NetworkActionItem, { type: "MESSAGE" }> => i.type === "MESSAGE")
+    .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
 
-  const getRowData = (item: NetworkActionItem) => {
-    let l1 = "";
-    let l2 = "";
-    let targetPath = "";
+  const transports = actionItems
+    .filter((i): i is Extract<NetworkActionItem, { type: "TRANSPORT_INTEREST" }> => i.type === "TRANSPORT_INTEREST")
+    .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
 
-    if (item.type === "NEGOTIATION") {
-      targetPath = "/network/cars";
-      if (item.amount === null) {
-        l1 = `${item.dealerName} a trimis o propunere`;
-      } else {
-        const formattedAmount = formatEur(item.amount);
-        if (item.role === "SELLER") {
-          l1 = `${item.dealerName} oferă ${formattedAmount}`;
-        } else {
-          l1 = `${item.dealerName} cere ${formattedAmount}`;
-        }
-      }
-      if (item.proposalKind === "EXCHANGE") {
-        l1 += " (schimb)";
-      }
-
-      if (item.carTitle) {
-        l2 = `${relativeTime(item.when)} · ${item.carTitle}`;
-      } else {
-        l2 = relativeTime(item.when);
-      }
-    } else if (item.type === "MESSAGE") {
-      targetPath = "/network/messages";
-      l1 = `${item.dealerName} ți-a scris`;
-      l2 = `${relativeTime(item.when)} · ${item.preview}`;
-    } else if (item.type === "TRANSPORT_INTEREST") {
-      targetPath = "/network/transport";
-      l1 = item.interestedCount === 1 ? "1 dealer interesat" : `${item.interestedCount} dealeri interesați`;
-      l2 = `${item.fromCity} → ${item.toCity} · pleacă ${relativeDay(item.departureDate)}`;
-    }
-
-    return { l1, l2, targetPath };
-  };
+  const hasActionItems = actionItems.length > 0;
 
   return (
     <div className="space-y-6 box-border w-full pb-24">
-      {/* HEADING */}
-      <div>
-        <h1 className="text-[20px] font-semibold leading-tight">Rețea</h1>
-        <p className="text-[13px] text-muted-foreground mt-0.5">
-          {dateLabel}
-        </p>
-      </div>
+      {/* HEADER */}
+      <NetworkHeader
+        title="Rețea"
+        countText={countText}
+        actions={settingsAction}
+      />
 
-      {/* ACTION CARD */}
-      {sortedActionItems && sortedActionItems.length > 0 && (
-        <div className="bg-card border border-border rounded-xl shadow-sm">
-          <div className="p-4 pb-3">
-            <h2 className="text-[17px] font-semibold text-foreground">De răspuns</h2>
+      {/* SECTION ONE: ACTION QUEUE */}
+      {!hasActionItems ? (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              De răspuns
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+              0
+            </span>
           </div>
-          <div>
-            {sortedActionItems.map((item, idx) => {
-              const { l1, l2, targetPath } = getRowData(item);
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => navigate(targetPath)}
-                  className={cn(
-                    "flex items-center justify-between px-4 py-3 gap-3 cursor-pointer hover:bg-muted/50 transition-colors min-h-[64px]",
-                    idx > 0 ? "border-t border-border" : ""
-                  )}
-                >
-                  <div className="flex-1 min-w-0">
-                    {item.type === "MESSAGE" ? (
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[15px] font-medium text-foreground truncate">
-                          {item.dealerName} ți-a scris
-                        </span>
-                        {item.unreadCount > 1 && (
-                          <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center shrink-0">
-                            {item.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-[15px] font-medium text-foreground truncate">
-                        {l1}
-                      </div>
-                    )}
-                    <div className="text-[13px] text-muted-foreground truncate">
-                      {l2}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className={cn(CARD, "p-4 text-center")}>
+            <p className="text-[13px] text-muted-foreground">
+              Nicio solicitare de răspuns în acest moment. Aici vor apărea propunerile de negociere, mesajele și cererile de transport primite de la alți dealeri.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* 1. NEGOTIATIONS (Money on the table) */}
+          {negotiations.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Handshake className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+                    Negocieri
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+                <span className="text-[11px] font-medium text-muted-foreground tabular-nums shrink-0">
+                  {negotiations.length}
+                </span>
+              </div>
+              <div className={cn(CARD, "overflow-hidden")}>
+                {negotiations.map((item, index) => {
+                  const trimmedCarTitle = item.carTitle?.trim() || "";
+                  let verdictText = "";
+                  if (item.amount !== null) {
+                    verdictText = formatEur(item.amount);
+                  } else if (item.proposalKind === "EXCHANGE") {
+                    verdictText = "Schimb";
+                  } else {
+                    verdictText = "Propunere";
+                  }
+
+                  let roleVerb = "";
+                  if (item.role === "SELLER") {
+                    roleVerb = "oferă";
+                  } else if (item.role === "BUYER") {
+                    roleVerb = "cere";
+                  }
+
+                  return (
+                    <Fragment key={item.id}>
+                      {index > 0 && <div className="border-t border-border/40 ml-4" />}
+                      <Link
+                        to="/network/cars"
+                        className="flex items-center justify-between px-4 py-2.5 hover:bg-accent/50 transition-colors min-h-[48px] w-full text-left select-none"
+                      >
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[15px] font-medium text-foreground truncate">
+                              {item.dealerName} {roleVerb ? <span className="text-muted-foreground font-normal text-[13px]">{roleVerb}</span> : null}
+                            </span>
+                            <span className="text-[15px] font-semibold text-foreground tabular-nums text-right shrink-0">
+                              {verdictText}
+                            </span>
+                          </div>
+                          <div className="text-[12px] text-muted-foreground truncate mt-0.5">
+                            {relativeTime(item.when)}
+                            {trimmedCarTitle ? ` · ${trimmedCarTitle}` : ""}
+                            {item.proposalKind === "EXCHANGE" && item.amount !== null ? " · Schimb" : ""}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </Link>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 2. MESSAGES */}
+          {messages.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <MessageSquare className="w-4 h-4 text-success shrink-0" />
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+                    Mesaje dealeri
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground tabular-nums shrink-0">
+                  {messages.length}
+                </span>
+              </div>
+              <div className={cn(CARD, "overflow-hidden")}>
+                {messages.map((item, index) => (
+                  <Fragment key={item.id}>
+                    {index > 0 && <div className="border-t border-border/40 ml-4" />}
+                    <Link
+                      to="/network/messages"
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-accent/50 transition-colors min-h-[48px] w-full text-left select-none"
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[15px] font-medium text-foreground truncate">
+                              {item.dealerName}
+                            </span>
+                            {item.unreadCount > 1 && (
+                              <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center shrink-0 tabular-nums">
+                                {item.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[12px] text-muted-foreground text-right shrink-0 tabular-nums">
+                            {relativeTime(item.when)}
+                          </span>
+                        </div>
+                        <div className="text-[12px] text-muted-foreground truncate mt-0.5">
+                          {item.preview.trim()}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. TRANSPORT INTERESTS */}
+          {transports.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Truck className="w-4 h-4 text-warning shrink-0" />
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+                    Cereri transport
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground tabular-nums shrink-0">
+                  {transports.length}
+                </span>
+              </div>
+              <div className={cn(CARD, "overflow-hidden")}>
+                {transports.map((item, index) => (
+                  <Fragment key={item.id}>
+                    {index > 0 && <div className="border-t border-border/40 ml-4" />}
+                    <Link
+                      to="/network/transport"
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-accent/50 transition-colors min-h-[48px] w-full text-left select-none"
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[15px] font-medium text-foreground truncate">
+                            {item.fromCity} → {item.toCity}
+                          </span>
+                          <span className="text-[13px] font-medium text-foreground text-right shrink-0 tabular-nums">
+                            {roCount(item.interestedCount, "dealer interesat", "dealeri interesați")}
+                          </span>
+                        </div>
+                        <div className="text-[12px] text-muted-foreground truncate mt-0.5">
+                          Plecare {relativeDay(item.departureDate)} · {relativeTime(item.when)}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* NAVIGATION ROWS */}
-      <div className="flex flex-col gap-[10px]">
-        {/* Row 1 */}
+      {/* SECTION TWO: THE FOUR AREA LINKS */}
+      <div className={cn(CARD, "overflow-hidden")}>
+        {/* 1. Mașini */}
         <Link
           to="/network/cars"
-          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl min-h-[64px] hover:bg-muted/50 transition-colors w-full"
+          className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors min-h-[52px] w-full text-left select-none"
         >
-          <Car className="w-5 h-5 text-muted-foreground shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-medium text-foreground truncate">Mașini</div>
-            <div className="text-[13px] text-muted-foreground truncate">
-              {counts.browseCars} de la colegi · {counts.myExposedCars} ale tale
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Car className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[15px] font-medium text-foreground leading-snug truncate">
+                Mașini
+              </div>
+              <div className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5">
+                {counts.browseCars} de la colegi · {counts.myExposedCars} expuse
+              </div>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            <span className="text-[13px] text-muted-foreground tabular-nums font-medium">
+              {counts.browseCars}
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
         </Link>
 
-        {/* Row 2 */}
+        {/* Separator */}
+        <div className="border-t border-border/40 ml-12" />
+
+        {/* 2. Transport */}
         <Link
           to="/network/transport"
-          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl min-h-[64px] hover:bg-muted/50 transition-colors w-full"
+          className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors min-h-[52px] w-full text-left select-none"
         >
-          <Truck className="w-5 h-5 text-muted-foreground shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-medium text-foreground truncate">Transport</div>
-            <div className="text-[13px] text-muted-foreground truncate">
-              {counts.browseRuns} curse · {counts.myRuns} ale tale
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Truck className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[15px] font-medium text-foreground leading-snug truncate">
+                Transport
+              </div>
+              <div className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5">
+                {counts.browseRuns} curse colegi · {counts.myRuns} ale tale
+              </div>
             </div>
           </div>
-          {counts.newTransportInterests > 0 && (
-            <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 mr-1">
-              {counts.newTransportInterests}
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {counts.newTransportInterests > 0 && (
+              <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 tabular-nums">
+                {counts.newTransportInterests}
+              </span>
+            )}
+            <span className="text-[13px] text-muted-foreground tabular-nums font-medium">
+              {counts.browseRuns}
             </span>
-          )}
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
         </Link>
 
-        {/* Row 3 */}
+        {/* Separator */}
+        <div className="border-t border-border/40 ml-12" />
+
+        {/* 3. Dealeri */}
         <Link
           to="/network/dealers"
-          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl min-h-[64px] hover:bg-muted/50 transition-colors w-full"
+          className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors min-h-[52px] w-full text-left select-none"
         >
-          <Building2 className="w-5 h-5 text-muted-foreground shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-medium text-foreground truncate">Dealeri</div>
-            <div className="text-[13px] text-muted-foreground truncate">
-              {roCount(counts.dealers, "dealer", "dealeri")} în rețea
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Building2 className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[15px] font-medium text-foreground leading-snug truncate">
+                Dealeri
+              </div>
+              <div className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5">
+                {roCount(counts.dealers, "dealer partener", "dealeri parteneri")} în rețea
+              </div>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            <span className="text-[13px] text-muted-foreground tabular-nums font-medium">
+              {counts.dealers}
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
         </Link>
 
-        {/* Row 4 */}
+        {/* Separator */}
+        <div className="border-t border-border/40 ml-12" />
+
+        {/* 4. Mesaje dealeri */}
         <Link
           to="/network/messages"
-          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl min-h-[64px] hover:bg-muted/50 transition-colors w-full"
+          className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors min-h-[52px] w-full text-left select-none"
         >
-          <MessageSquare className="w-5 h-5 text-muted-foreground shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-medium text-foreground truncate">Mesaje dealeri</div>
-            <div className="text-[13px] text-muted-foreground truncate">
-              {counts.unreadMessages > 0
-                ? roCount(counts.unreadMessages, "necitit", "necitite")
-                : roCount(counts.conversations, "conversație", "conversații")}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <MessageSquare className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[15px] font-medium text-foreground leading-snug truncate">
+                Mesaje dealeri
+              </div>
+              <div className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5">
+                {counts.unreadMessages > 0
+                  ? `${roCount(counts.unreadMessages, "mesaj necitit", "mesaje necitite")} din ${counts.conversations} conversații`
+                  : `${roCount(counts.conversations, "conversație", "conversații")}`}
+              </div>
             </div>
           </div>
-
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {counts.unreadMessages > 0 && (
+              <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 tabular-nums">
+                {counts.unreadMessages}
+              </span>
+            )}
+            <span className="text-[13px] text-muted-foreground tabular-nums font-medium">
+              {counts.conversations}
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
         </Link>
       </div>
-
     </div>
   );
 }
