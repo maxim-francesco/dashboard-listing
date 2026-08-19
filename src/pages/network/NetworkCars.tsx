@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Phone, Car, Plus } from "lucide-react";
+import { Car, Plus, SlidersHorizontal, Check } from "lucide-react";
 import {
   browseTradeListings,
   getMyTradeListings,
@@ -13,13 +13,34 @@ import {
   getOrCreateConversation,
   TradeListing,
   SlowStockItem,
-  NegotiationSummary
+  NegotiationSummary,
 } from "@/services/api";
 import { roCount } from "@/lib/plural";
-import { formatEur } from "@/lib/format";
 import { toast } from "react-hot-toast";
 import { isForbidden } from "@/lib/isForbidden";
 import NetworkOffline from "@/components/network/NetworkOffline";
+import NetworkHeader from "@/components/network/NetworkHeader";
+import TradeCarRow from "@/components/network/TradeCarRow";
+import TradeCarDetailSheet from "@/components/network/TradeCarDetailSheet";
+import { CARD } from "@/components/today/cardRecipe";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Reusable modals
 import SelectCarToExposeModal from "@/components/modals/SelectCarToExposeModal";
@@ -36,6 +57,7 @@ export default function NetworkCars() {
 
   // Filter for Browse: false (all) | true (acceptsTrade = true)
   const [acceptsTradeFilter, setAcceptsTradeFilter] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   // Modals state
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
@@ -43,6 +65,10 @@ export default function NetworkCars() {
   const [exposeModalMode, setExposeModalMode] = useState<"create" | "edit">("create");
   const [makeOfferModalListing, setMakeOfferModalListing] = useState<TradeListing | null>(null);
   const [negotiationDetailId, setNegotiationDetailId] = useState<string | null>(null);
+
+  // Detail Sheet & Dialog state
+  const [selectedDetailListing, setSelectedDetailListing] = useState<TradeListing | null>(null);
+  const [listingToRetract, setListingToRetract] = useState<TradeListing | null>(null);
 
   // Helper to invalidate all related queries
   const invalidateAll = () => {
@@ -83,7 +109,7 @@ export default function NetworkCars() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || "Eroare la expunerea vehiculului.");
-    }
+    },
   });
 
   const updateExposeMutation = useMutation({
@@ -94,7 +120,7 @@ export default function NetworkCars() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || "Eroare la actualizarea expunerii.");
-    }
+    },
   });
 
   const unexposeMutation = useMutation({
@@ -105,7 +131,7 @@ export default function NetworkCars() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || "Eroare la retragerea vehiculului.");
-    }
+    },
   });
 
   const converseMutation = useMutation({
@@ -113,7 +139,7 @@ export default function NetworkCars() {
       getOrCreateConversation({
         otherBusinessId: counterpartyId,
         contextType: "TRADE",
-        contextId: tradeListingId
+        contextId: tradeListingId,
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -121,7 +147,7 @@ export default function NetworkCars() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || "Eroare la inițierea conversației.");
-    }
+    },
   });
 
   // Lookup negotiations keyed by tradeListingId
@@ -142,7 +168,7 @@ export default function NetworkCars() {
   const visibleListings = useMemo(() => {
     if (!browseListings) return [];
     const visible = acceptsTradeFilter
-      ? browseListings.filter(l => l.acceptsTrade)
+      ? browseListings.filter((l) => l.acceptsTrade)
       : browseListings;
     return [...visible].sort((a, b) => a.car.title.localeCompare(b.car.title));
   }, [browseListings, acceptsTradeFilter]);
@@ -161,15 +187,8 @@ export default function NetworkCars() {
   // Count unexposed slow-stock items
   const unexposedSlowStockCount = useMemo(() => {
     if (!slowStock) return 0;
-    return slowStock.filter(item => !(item.isExposed && item.tradeStatus === "ACTIVE")).length;
+    return slowStock.filter((item) => !(item.isExposed && item.tradeStatus === "ACTIVE")).length;
   }, [slowStock]);
-
-  // Handlers for my exposed actions
-  const handleRetrage = (id: string, title: string) => {
-    if (window.confirm(`Retragi ${title} din rețea?`)) {
-      unexposeMutation.mutate(id);
-    }
-  };
 
   const handleReExpose = (id: string) => {
     updateExposeMutation.mutate({ id, values: { status: "ACTIVE" } });
@@ -191,29 +210,108 @@ export default function NetworkCars() {
     }
   };
 
+  const totalBrowseCount = browseListings?.length ?? 0;
+  const totalMyCount = myTradeListings?.length ?? 0;
+
+  const countText =
+    activeSegment === "colegi"
+      ? acceptsTradeFilter
+        ? `${visibleListings.length} din ${totalBrowseCount} de la colegi`
+        : `${totalBrowseCount} de la colegi`
+      : `${totalMyCount} expuse de tine`;
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      {activeSegment === "colegi" && (
+        <button
+          type="button"
+          onClick={() => setIsFilterSheetOpen(true)}
+          aria-label="Filtrează mașinile"
+          className={cn(
+            "relative w-11 h-11 border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors min-h-[44px] min-w-[44px]",
+            acceptsTradeFilter ? "border-primary bg-primary/10 text-primary" : "border-border bg-card"
+          )}
+        >
+          <SlidersHorizontal className="w-5 h-5" />
+          {acceptsTradeFilter && (
+            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
+          )}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsSelectModalOpen(true)}
+        aria-label="Expune o mașină"
+        className="w-11 h-11 bg-primary text-primary-foreground rounded-lg flex items-center justify-center hover:bg-primary/90 shrink-0 transition-colors min-h-[44px] min-w-[44px]"
+      >
+        <Plus className="w-5 h-5" />
+      </button>
+    </div>
+  );
+
+  const segmentControl = (
+    <div className="grid grid-cols-2 p-1 bg-muted rounded-lg w-full gap-1">
+      <button
+        type="button"
+        onClick={() => setActiveSegment("colegi")}
+        className={cn(
+          "h-11 min-h-[44px] rounded-md text-[13px] font-medium transition-all flex items-center justify-center gap-1.5",
+          activeSegment === "colegi"
+            ? "bg-card text-foreground shadow-sm font-semibold"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <span>De la colegi</span>
+        <span className="text-[12px] tabular-nums text-muted-foreground">({totalBrowseCount})</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setActiveSegment("alemele")}
+        className={cn(
+          "h-11 min-h-[44px] rounded-md text-[13px] font-medium transition-all flex items-center justify-center gap-1.5",
+          activeSegment === "alemele"
+            ? "bg-card text-foreground shadow-sm font-semibold"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <span>Ale mele</span>
+        <span className="text-[12px] tabular-nums text-muted-foreground">({totalMyCount})</span>
+      </button>
+    </div>
+  );
+
+  if (isLoadingBrowse && isLoadingMy) {
+    return (
+      <div className="space-y-6 box-border w-full pb-24">
+        <NetworkHeader
+          title="Mașini"
+          countText="Se încarcă..."
+          backHref="/network"
+          backAriaLabel="Înapoi la rețea"
+          actions={headerActions}
+        >
+          {segmentControl}
+        </NetworkHeader>
+        <div className="flex items-center justify-center py-12">
+          <span className="text-[13px] text-muted-foreground">Se încarcă...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (isError) {
     return (
-      <div className="space-y-4 box-border w-full pb-24">
-        {/* 1) HEADER */}
-        <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/network")}
-              className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
-              aria-label="Înapoi"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h1 className="text-[20px] font-semibold">Mașini</h1>
-          </div>
-          <p className="text-[13px] text-muted-foreground mt-0.5">
-            Cumpără de la colegi sau expune-le pe ale tale.
-          </p>
-        </div>
+      <div className="space-y-6 box-border w-full pb-24">
+        <NetworkHeader
+          title="Mașini"
+          countText="Eroare"
+          backHref="/network"
+          backAriaLabel="Înapoi la rețea"
+        />
         {isForbidden(error) ? (
           <NetworkOffline />
         ) : (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-[15px] text-center">
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[13px] text-center">
             A apărut o eroare la încărcarea mașinilor. Vă rugăm să încercați din nou.
           </div>
         )}
@@ -222,231 +320,88 @@ export default function NetworkCars() {
   }
 
   return (
-    <div className="space-y-4 box-border w-full pb-24">
-      {/* 1) HEADER */}
-      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/network")}
-            className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
-            aria-label="Înapoi"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-[20px] font-semibold">Mașini</h1>
-        </div>
-        <p className="text-[13px] text-muted-foreground mt-0.5">
-          Cumpără de la colegi sau expune-le pe ale tale.
-        </p>
-      </div>
-
-      {/* 2) SEGMENTS */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveSegment("colegi")}
-          className={`flex-1 min-h-[44px] rounded-lg text-[15px] font-medium transition-colors ${
-            activeSegment === "colegi"
-              ? "bg-primary text-primary-foreground"
-              : "bg-card border border-border text-foreground"
-          }`}
-        >
-          De la colegi ({browseListings?.length ?? 0})
-        </button>
-        <button
-          onClick={() => setActiveSegment("alemele")}
-          className={`flex-1 min-h-[44px] rounded-lg text-[15px] font-medium transition-colors ${
-            activeSegment === "alemele"
-              ? "bg-primary text-primary-foreground"
-              : "bg-card border border-border text-foreground"
-          }`}
-        >
-          Ale mele ({myTradeListings?.length ?? 0})
-        </button>
-      </div>
-
-      <button
-        onClick={() => setIsSelectModalOpen(true)}
-        className="w-full min-h-[52px] rounded-xl bg-primary text-primary-foreground text-[16px] font-semibold flex items-center justify-center gap-2 mt-3 mb-1"
+    <div className="space-y-6 box-border w-full pb-24">
+      {/* 1) HEADER WITH COLLAPSED CHROME & SEGMENTED VIEW SWITCH */}
+      <NetworkHeader
+        title="Mașini"
+        countText={countText}
+        backHref="/network"
+        backAriaLabel="Înapoi la rețea"
+        actions={headerActions}
       >
-        <Plus className="w-5 h-5" />
-        Expune o mașină
-      </button>
+        {segmentControl}
+      </NetworkHeader>
 
-      {/* 3) SEGMENT "DE LA COLEGI" */}
+      {/* 2) SEGMENT "DE LA COLEGI" */}
       {activeSegment === "colegi" && (
-        <div className="space-y-4">
-          {/* a) Filter Chips */}
-          <div className="flex gap-2 pb-1">
-            <button
-              onClick={() => setAcceptsTradeFilter(prev => !prev)}
-              className={`min-h-[36px] px-4 rounded-full text-[13px] font-medium transition-colors border shrink-0 ${
-                acceptsTradeFilter
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card border-border text-foreground"
-              }`}
-            >
-              Doar cu schimb
-            </button>
+        <div className="space-y-1.5">
+          {/* Section Label */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Car className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+                {acceptsTradeFilter ? "Mașini cu schimb" : "Toate mașinile"}
+              </span>
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground tabular-nums shrink-0">
+              {visibleListings.length}
+            </span>
           </div>
 
+          {/* List or Empty State */}
           {isLoadingBrowse ? (
             <div className="flex items-center justify-center py-12">
-              <span className="text-[15px] text-muted-foreground">Se încarcă...</span>
+              <span className="text-[13px] text-muted-foreground">Se încarcă...</span>
             </div>
           ) : visibleListings.length === 0 ? (
-            /* c) Empty State */
-            <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-[15px] text-foreground">Nu sunt mașini expuse de colegi acum.</p>
+            <div className={cn(CARD, "p-6 text-center space-y-3")}>
+              <p className="text-[13px] text-muted-foreground">
+                {acceptsTradeFilter
+                  ? "Nicio mașină nu corespunde filtrului selectat."
+                  : "Nu sunt mașini expuse de colegi în acest moment."}
+              </p>
               {acceptsTradeFilter && (
-                <p className="text-[13px] text-muted-foreground mt-1 font-normal">
-                  Încearcă fără filtrul de schimb.
-                </p>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setAcceptsTradeFilter(false)}
+                    className="text-primary text-[13px] font-medium hover:underline min-h-[44px] px-3 flex items-center justify-center"
+                  >
+                    Resetează filtrul
+                  </button>
+                </div>
               )}
             </div>
           ) : (
-            /* b) Card List */
-            <div className="flex flex-col gap-4">
-              {visibleListings.map((listing) => {
-                const displayPrice = listing.b2bPrice !== null ? listing.b2bPrice : listing.car.price;
-                const hasDifferentB2bPrice = listing.b2bPrice !== null && listing.b2bPrice !== listing.car.price;
-
-                const buyerNegs = negotiationsByTradeListingId[listing.id] || [];
-                const negotiation = buyerNegs.find(n => n.role === "BUYER");
-
-                let statusButtonProps = null;
-                if (negotiation) {
-                  const latestAmount = negotiation.latestProposal?.offeredPrice ?? 0;
-                  if (negotiation.status === "ACCEPTED") {
-                    statusButtonProps = {
-                      label: "Acceptată",
-                      className: "bg-success-light text-success hover:bg-success-light/80",
-                    };
-                  } else if (negotiation.status === "DECLINED" || negotiation.status === "CANCELLED") {
-                    statusButtonProps = {
-                      label: "Închisă",
-                      className: "bg-muted text-muted-foreground hover:bg-muted/80",
-                    };
-                  } else {
-                    // status is OPEN
-                    if (negotiation.awaitingMyResponse) {
-                      statusButtonProps = {
-                        label: `Răspunde · ${formatEur(latestAmount)}`,
-                        className: "bg-primary text-primary-foreground hover:bg-primary/90",
-                      };
-                    } else {
-                      statusButtonProps = {
-                        label: `Ai oferit ${formatEur(latestAmount)}`,
-                        className: "bg-primary-light text-primary hover:bg-primary-light/80",
-                      };
-                    }
-                  }
-                }
-
-                return (
-                  <div
-                    key={listing.id}
-                    className="bg-card border border-border rounded-xl p-3 flex flex-col gap-3"
-                  >
-                    <div className="flex gap-3">
-                      {/* Thumbnail */}
-                      {listing.car.image ? (
-                        <img
-                          src={listing.car.image}
-                          alt={listing.car.title}
-                          className="w-20 h-16 rounded-lg object-cover shrink-0 bg-muted"
-                          style={{ width: "80px", height: "64px" }}
-                        />
-                      ) : (
-                        <div
-                          className="w-20 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0"
-                          style={{ width: "80px", height: "64px" }}
-                        >
-                          <Car className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      {/* Right column content */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                        {/* Line 1: Prices */}
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[17px] font-semibold text-foreground">
-                            {formatEur(displayPrice ?? 0)}
-                          </span>
-                          {hasDifferentB2bPrice && (
-                            <span className="text-[13px] text-muted-foreground line-through">
-                              {formatEur(listing.car.price ?? 0)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Line 2: Title */}
-                        <h3 className="text-[15px] font-medium truncate text-foreground leading-snug">
-                          {listing.car.title}
-                        </h3>
-
-                        {/* Line 3: Owner */}
-                        <p className="text-[13px] text-muted-foreground truncate leading-normal">
-                          {listing.owner?.name || "Dealer"}
-                          {listing.owner?.city ? ` · ${listing.owner.city}` : ""}
-                        </p>
-
-                        {/* Line 4: Accepts trade badge */}
-                        {listing.acceptsTrade && (
-                          <div className="mt-1">
-                            <span className="bg-primary-light text-primary text-[12px] font-medium rounded-full px-2 py-0.5 inline-block">
-                              Acceptă schimb
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions Row */}
-                    <div className="flex items-center gap-2">
-                      {statusButtonProps ? (
-                        <button
-                          onClick={() => setNegotiationDetailId(negotiation.id)}
-                          className={`flex-1 min-h-[44px] px-4 rounded-lg text-[13px] font-semibold transition-colors ${statusButtonProps.className}`}
-                        >
-                          {statusButtonProps.label}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setMakeOfferModalListing(listing)}
-                          className="flex-1 min-h-[44px] px-4 rounded-lg bg-primary text-primary-foreground text-[13px] font-semibold hover:bg-primary/90 transition-colors"
-                        >
-                          Fă ofertă
-                        </button>
-                      )}
-                      {listing.owner?.contactPhone && (
-                        <a
-                          href={`tel:${listing.owner.contactPhone}`}
-                          className="w-11 h-11 rounded-full bg-success-light text-success flex items-center justify-center hover:bg-success-light/80 shrink-0 transition-colors"
-                          aria-label={`Sună pe ${listing.owner.name}`}
-                        >
-                          <Phone className="w-5 h-5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className={cn(CARD, "overflow-hidden")}>
+              {visibleListings.map((listing, idx) => (
+                <Fragment key={listing.id}>
+                  {idx > 0 && <div className="border-t border-border/40 ml-4" />}
+                  <TradeCarRow
+                    listing={listing}
+                    segment="browse"
+                    negotiations={negotiationsByTradeListingId[listing.id]}
+                    onClick={() => setSelectedDetailListing(listing)}
+                  />
+                </Fragment>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* 4) SEGMENT "ALE MELE" */}
+      {/* 3) SEGMENT "ALE MELE" */}
       {activeSegment === "alemele" && (
         <div className="space-y-4">
           {/* a) Slow Stock Hint */}
           {unexposedSlowStockCount > 0 && (
-            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className={cn(CARD, "p-4 flex flex-col gap-3")}>
               <p className="text-[15px] text-foreground font-normal">
                 Ai {roCount(unexposedSlowStockCount, "mașină", "mașini")} de peste 60 de zile în stoc.
               </p>
               <div className="flex justify-start">
                 <button
+                  type="button"
                   onClick={() => setIsSelectModalOpen(true)}
                   className="min-h-[44px] px-4 rounded-lg bg-primary text-primary-foreground text-[13px] font-semibold hover:bg-primary/90 transition-colors"
                 >
@@ -456,163 +411,154 @@ export default function NetworkCars() {
             </div>
           )}
 
-
-
-          {isLoadingMy ? (
-            <div className="flex items-center justify-center py-12">
-              <span className="text-[15px] text-muted-foreground">Se încarcă...</span>
+          {/* b) Section Label */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Car className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+                  Mașinile mele expuse
+                </span>
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground tabular-nums shrink-0">
+                {sortedMyExposed.length}
+              </span>
             </div>
-          ) : sortedMyExposed.length === 0 ? (
-            /* d) Empty State */
-            <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-[15px] text-foreground font-normal">Nu ai nicio mașină expusă în rețea.</p>
-            </div>
-          ) : (
-            /* c) Card List */
-            <div className="flex flex-col gap-4">
-              {sortedMyExposed.map((listing) => {
-                const displayPrice = listing.b2bPrice !== null ? listing.b2bPrice : listing.car.price;
-                const hasDifferentB2bPrice = listing.b2bPrice !== null && listing.b2bPrice !== listing.car.price;
 
-                const myNegs = negotiationsByTradeListingId[listing.id] || [];
-                const activeNeg = myNegs.find((n) => n.awaitingMyResponse) || myNegs[0];
-
-                let line3Element = null;
-                if (myNegs.length === 0) {
-                  line3Element = (
-                    <p className="text-[13px] text-muted-foreground truncate leading-normal">
-                      Nicio ofertă încă
-                    </p>
-                  );
-                } else {
-                  const counterparty = activeNeg.counterparty?.name || "Dealer";
-                  const amount = activeNeg.latestProposal?.offeredPrice ?? 0;
-                  if (activeNeg.awaitingMyResponse) {
-                    line3Element = (
-                      <p className="text-[13px] text-warning font-medium truncate leading-normal">
-                        {counterparty} oferă {formatEur(amount)}
-                      </p>
-                    );
-                  } else {
-                    line3Element = (
-                      <p className="text-[13px] text-muted-foreground truncate leading-normal">
-                        Ai cerut {formatEur(amount)} · {counterparty}
-                      </p>
-                    );
-                  }
-                }
-
-                const isClosed = listing.status === "CLOSED";
-
-                return (
-                  <div
-                    key={listing.id}
-                    className={`bg-card border border-border rounded-xl p-3 flex flex-col gap-3 transition-opacity duration-200 ${
-                      isClosed ? "opacity-60" : ""
-                    }`}
+            {/* List or Empty State */}
+            {isLoadingMy ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="text-[13px] text-muted-foreground">Se încarcă...</span>
+              </div>
+            ) : sortedMyExposed.length === 0 ? (
+              <div className={cn(CARD, "p-6 text-center space-y-3")}>
+                <p className="text-[13px] text-muted-foreground">
+                  Nu ai nicio mașină expusă în rețea.
+                </p>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectModalOpen(true)}
+                    className="text-primary text-[13px] font-medium hover:underline min-h-[44px] px-3 flex items-center justify-center"
                   >
-                    <div className="flex gap-3">
-                      {/* Thumbnail */}
-                      {listing.car.image ? (
-                        <img
-                          src={listing.car.image}
-                          alt={listing.car.title}
-                          className="w-20 h-16 rounded-lg object-cover shrink-0 bg-muted"
-                          style={{ width: "80px", height: "64px" }}
-                        />
-                      ) : (
-                        <div
-                          className="w-20 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0"
-                          style={{ width: "80px", height: "64px" }}
-                        >
-                          <Car className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      {/* Right column content */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                        {/* Line 1: Prices */}
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[17px] font-semibold text-foreground">
-                            {formatEur(displayPrice ?? 0)}
-                          </span>
-                          {hasDifferentB2bPrice && (
-                            <span className="text-[13px] text-muted-foreground line-through">
-                              {formatEur(listing.car.price ?? 0)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Line 2: Title */}
-                        <h3 className="text-[15px] font-medium truncate text-foreground leading-snug">
-                          {listing.car.title}
-                          {isClosed && (
-                            <span className="text-muted-foreground font-normal"> · retrasă</span>
-                          )}
-                        </h3>
-
-                        {/* Line 3: Negotiation State */}
-                        {line3Element}
-
-                        {/* Line 4: Accepts trade badge */}
-                        {listing.acceptsTrade && (
-                          <div className="mt-1">
-                            <span className="bg-primary-light text-primary text-[12px] font-medium rounded-full px-2 py-0.5 inline-block">
-                              Acceptă schimb
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions Row */}
-                    <div className="flex items-center gap-2">
-                      {myNegs.length > 0 && (
-                        <button
-                          onClick={() => setNegotiationDetailId(activeNeg.id)}
-                          className={`min-h-[44px] px-4 rounded-lg text-[13px] font-semibold transition-colors ${
-                            activeNeg.awaitingMyResponse
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                              : "bg-primary-light text-primary hover:bg-primary-light/80"
-                          }`}
-                        >
-                          Vezi oferta
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setExposeModalListing(listing);
-                          setExposeModalMode("edit");
-                        }}
-                        className="min-h-[44px] px-4 rounded-lg bg-card border border-border text-foreground text-[13px] font-semibold hover:bg-muted/50 transition-colors"
-                      >
-                        Editează
-                      </button>
-
-                      {listing.status === "ACTIVE" ? (
-                        <button
-                          onClick={() => handleRetrage(listing.id, listing.car.title)}
-                          className="text-[13px] text-muted-foreground min-h-[44px] font-semibold hover:text-foreground transition-colors px-2"
-                        >
-                          Retrage
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleReExpose(listing.id)}
-                          className="text-[13px] text-muted-foreground min-h-[44px] font-semibold hover:text-foreground transition-colors px-2"
-                        >
-                          Expune din nou
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                    Expune o mașină
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={cn(CARD, "overflow-hidden")}>
+                {sortedMyExposed.map((listing, idx) => (
+                  <Fragment key={listing.id}>
+                    {idx > 0 && <div className="border-t border-border/40 ml-4" />}
+                    <TradeCarRow
+                      listing={listing}
+                      segment="mine"
+                      negotiations={negotiationsByTradeListingId[listing.id]}
+                      onClick={() => setSelectedDetailListing(listing)}
+                    />
+                  </Fragment>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* FILTER BOTTOM SHEET (FOR BROWSE) */}
+      <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+        <SheetContent side="bottom" className="bg-card border-border text-foreground rounded-t-2xl px-4 py-5 max-h-[80vh]">
+          <SheetHeader className="text-left pb-3 border-b border-border">
+            <SheetTitle className="text-[17px] font-semibold text-foreground">Filtrează mașinile</SheetTitle>
+            <SheetDescription className="text-[13px] text-muted-foreground">
+              Afișează doar vehiculele care acceptă schimb
+            </SheetDescription>
+          </SheetHeader>
+          <div className="py-3 flex flex-col gap-2">
+            {[
+              { id: false, label: "Toate mașinile" },
+              { id: true, label: "Doar cu schimb (acceptă schimb)" },
+            ].map((opt) => (
+              <button
+                key={String(opt.id)}
+                type="button"
+                onClick={() => {
+                  setAcceptsTradeFilter(opt.id);
+                  setIsFilterSheetOpen(false);
+                }}
+                className={cn(
+                  "flex items-center justify-between px-4 min-h-[48px] rounded-lg transition-colors text-left",
+                  acceptsTradeFilter === opt.id
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "bg-muted/50 hover:bg-muted text-foreground font-medium"
+                )}
+              >
+                <span className="text-[15px]">{opt.label}</span>
+                {acceptsTradeFilter === opt.id && <Check className="w-5 h-5 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* TRADE CAR DETAIL SHEET */}
+      <TradeCarDetailSheet
+        listing={selectedDetailListing}
+        segment={activeSegment === "colegi" ? "browse" : "mine"}
+        negotiations={selectedDetailListing ? negotiationsByTradeListingId[selectedDetailListing.id] : undefined}
+        open={!!selectedDetailListing}
+        onOpenChange={(open) => !open && setSelectedDetailListing(null)}
+        onMakeOffer={(listing) => {
+          setSelectedDetailListing(null);
+          setMakeOfferModalListing(listing);
+        }}
+        onOpenNegotiation={(negotiationId) => {
+          setSelectedDetailListing(null);
+          setNegotiationDetailId(negotiationId);
+        }}
+        onEdit={(listing) => {
+          setSelectedDetailListing(null);
+          setExposeModalListing(listing);
+          setExposeModalMode("edit");
+        }}
+        onRequestRetrage={(listing) => {
+          setSelectedDetailListing(null);
+          setListingToRetract(listing);
+        }}
+        onReExpose={(listingId) => {
+          handleReExpose(listingId);
+          setSelectedDetailListing(null);
+        }}
+      />
+
+      {/* RETRACT CONFIRMATION ALERT DIALOG */}
+      <AlertDialog open={!!listingToRetract} onOpenChange={(open) => !open && setListingToRetract(null)}>
+        <AlertDialogContent className="bg-card border-border text-foreground max-w-sm rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-semibold text-foreground">
+              Retragi vehiculul din rețea?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-muted-foreground">
+              {listingToRetract?.car.title} nu va mai fi vizibilă pentru ceilalți dealeri. O poți reactiva oricând.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2 justify-end mt-2">
+            <AlertDialogCancel className="min-h-[44px] mt-0 bg-card border-border text-foreground">
+              Anulează
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (listingToRetract) {
+                  unexposeMutation.mutate(listingToRetract.id);
+                  setListingToRetract(null);
+                }
+              }}
+              className="min-h-[44px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Retrage
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Select Car to Expose Modal */}
       <SelectCarToExposeModal
