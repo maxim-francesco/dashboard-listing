@@ -7,6 +7,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -34,9 +50,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MailOpen,
   Sparkles,
-  Send
+  Send,
+  MoreVertical,
+  Calendar as CalendarIcon,
+  Car,
 } from "lucide-react";
 import {
   getMessageDetail,
@@ -57,48 +77,26 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { normalizeRoPhone, waLink, telLink } from "@/utils/phone";
+import { cn } from "@/lib/utils";
+import { LeadStatusSheet, LeadStatus } from "./LeadStatusSheet";
+import { LeadCarSheet } from "./LeadCarSheet";
+import { LeadInteresSheet, LeadType } from "./LeadInteresSheet";
+import { LeadReminderSheet } from "./LeadReminderSheet";
 
-export const TYPE_LABELS: Record<string, string> = {
-  GENERAL: "General",
-  STOCK: "Stoc",
-  ORDER: "Comandă",
-  BUYBACK: "Buyback",
-  FINANCING: "Finanțare",
-};
-
-export const STATUS_LABELS: Record<string, string> = {
-  NEW: "Nou",
-  CONTACTED: "Contactat",
-  VIEWING: "Vizionare",
-  OFFER: "Ofertă",
-  WON: "Câștigat",
-  LOST: "Pierdut",
-};
-
-export const LOST_REASON_LABELS: Record<string, string> = {
-  PRICE: "Preț",
-  BOUGHT_ELSEWHERE: "A cumpărat din altă parte",
-  UNREACHABLE: "Nu răspunde",
-  NOT_SERIOUS: "Neserios",
-  OTHER: "Alt motiv",
-};
-
-export const TYPE_COLORS: Record<string, string> = {
-  GENERAL: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  STOCK: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  ORDER: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  BUYBACK: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  FINANCING: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-};
-
-export const STATUS_COLORS: Record<string, string> = {
-  NEW: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
-  CONTACTED: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  VIEWING: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
-  OFFER: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  WON: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-  LOST: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
-};
+export {
+  TYPE_LABELS,
+  STATUS_LABELS,
+  LOST_REASON_LABELS,
+  TYPE_COLORS,
+  STATUS_COLORS,
+} from "./leadConstants";
+import {
+  TYPE_LABELS,
+  STATUS_LABELS,
+  LOST_REASON_LABELS,
+  TYPE_COLORS,
+  STATUS_COLORS,
+} from "./leadConstants";
 
 interface LeadDetailPanelProps {
   messageId: string | null;
@@ -122,12 +120,28 @@ export const LeadDetailPanel = ({
   const [listings, setListings] = useState<any[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+
+  // Mobile Bottom Sheets
+  const [statusSheetOpen, setStatusSheetOpen] = useState(false);
+  const [carSheetOpen, setCarSheetOpen] = useState(false);
+  const [interesSheetOpen, setInteresSheetOpen] = useState(false);
+  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+
+  // Mobile Collapsibles (both closed on open)
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // AlertDialogs for replacing window.confirm
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
+  const [pendingType, setPendingType] = useState<LeadType | null>(null);
   
   // Note state
   const [newNote, setNewNote] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
-  // Lost Reason state
+  // Lost Reason state for desktop fallback
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [tempLostReason, setTempLostReason] = useState<string>("");
 
@@ -143,6 +157,8 @@ export const LeadDetailPanel = ({
 
   useEffect(() => {
     setAiReply("");
+    setNotesOpen(false);
+    setHistoryOpen(false);
     if (messageId) {
       loadLeadDetail();
       loadActiveListings();
@@ -188,12 +204,24 @@ export const LeadDetailPanel = ({
     }
   };
 
-  const handleStatusChange = async (newStatus: 'NEW' | 'CONTACTED' | 'VIEWING' | 'OFFER' | 'WON' | 'LOST') => {
+  const handleStatusChange = async (
+    newStatus: LeadStatus,
+    lostReason?: string
+  ) => {
     if (!lead) return;
     
     if (newStatus === "LOST") {
-      setTempLostReason("PRICE"); // default selection
-      setLostReasonOpen(true);
+      try {
+        await updateMessageStatus(lead.id, {
+          status: "LOST",
+          lostReason: (lostReason || "PRICE") as any,
+        });
+        toast.success("Marcat ca Pierdut.");
+        if (onMessageUpdated) onMessageUpdated();
+        loadLeadDetail();
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || "Eroare la salvarea statusului Pierdut.");
+      }
       return;
     }
 
@@ -227,7 +255,6 @@ export const LeadDetailPanel = ({
     }
   };
 
-
   const handleLinkListing = async (listingId: string | null) => {
     if (!lead) return;
     try {
@@ -241,26 +268,32 @@ export const LeadDetailPanel = ({
     }
   };
 
-  const handleTypeChange = async (newType: 'GENERAL' | 'STOCK' | 'ORDER' | 'BUYBACK' | 'FINANCING') => {
+  const handleTypeChange = async (newType: LeadType) => {
     if (!lead) return;
 
     const hasLinkedListing = !!(lead.listingId || lead.listing?.id);
     const shouldUnlink = newType !== "STOCK" && hasLinkedListing;
 
     if (shouldUnlink) {
-      const confirmed = window.confirm("Schimbi interesul — dezleg anunțul asociat?");
-      if (!confirmed) return;
+      setPendingType(newType);
+      setUnlinkDialogOpen(true);
+      return;
     }
 
+    executeTypeChange(newType, false);
+  };
+
+  const executeTypeChange = async (newType: LeadType, unlinkCar: boolean) => {
+    if (!lead) return;
     try {
       const payload: any = { type: newType };
-      if (shouldUnlink) {
+      if (unlinkCar) {
         payload.listingId = null;
       }
 
       await updateMessage(lead.id, payload);
 
-      if (shouldUnlink) {
+      if (unlinkCar) {
         toast.success("Interes modificat și autovehiculul a fost dezlegat.");
       } else {
         toast.success(`Interes modificat în ${TYPE_LABELS[newType]}`);
@@ -273,6 +306,13 @@ export const LeadDetailPanel = ({
     }
   };
 
+  const handleConfirmUnlinkAndTypeChange = async () => {
+    if (pendingType) {
+      await executeTypeChange(pendingType, true);
+      setPendingType(null);
+    }
+    setUnlinkDialogOpen(false);
+  };
 
   const handleReminderChange = async (val: string) => {
     if (!lead) return;
@@ -330,26 +370,27 @@ export const LeadDetailPanel = ({
     }
   };
 
-  // Delete message from details panel
-  const handleDeleteLocal = async () => {
-    if (!lead) return;
-    if (!window.confirm(`Ești sigur că vrei să ștergi mesajul de la ${lead.name}? Această acțiune nu poate fi anulată.`)) {
-      return;
-    }
+  // Delete message from details panel with AlertDialog
+  const handleConfirmDelete = async () => {
+    if (!lead || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteMessage(lead.id);
       toast.success("Mesajul a fost șters.");
       if (onMessageUpdated) onMessageUpdated();
+      setDeleteDialogOpen(false);
       onClose();
     } catch (error) {
       toast.error("Nu s-a putut șterge mesajul.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // Navigation handlers
   const currentIndex = orderedIds && messageId ? orderedIds.indexOf(messageId) : -1;
   const hasPrev = orderedIds && currentIndex > 0;
-  const hasNext = orderedIds && currentIndex < orderedIds.length - 1;
+  const hasNext = orderedIds && currentIndex >= 0 && currentIndex < orderedIds.length - 1;
 
   const handlePrev = () => {
     if (hasPrev && onNavigate && orderedIds) {
@@ -371,8 +412,7 @@ export const LeadDetailPanel = ({
   const waText = aiReply.trim() ? aiReply : waMessage;
   const waUrlFinal = lead?.phone ? waLink(lead.phone, waText) : "";
 
-
-  // Date utilities
+  // Date utilities for desktop input
   const formatInputDateTime = (isoString: string | null) => {
     if (!isoString) return "";
     const d = new Date(isoString);
@@ -440,7 +480,7 @@ export const LeadDetailPanel = ({
       <div className="space-y-3 mt-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-primary" />
-          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Răspuns rapid AI</h3>
+          <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Răspuns rapid AI</h3>
         </div>
 
         {!aiReply && (
@@ -448,7 +488,7 @@ export const LeadDetailPanel = ({
             type="button"
             variant="outline"
             size="sm"
-            className="w-full flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary/5"
+            className="w-full min-h-[44px] flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary/5 text-[13px]"
             onClick={() => replyMutation.mutate()}
             disabled={replyMutation.isPending}
           >
@@ -468,19 +508,21 @@ export const LeadDetailPanel = ({
 
         {aiReply && (
           <div className="space-y-2 rounded-xl border border-border bg-background p-3">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+            <label htmlFor="lead-ai-reply-textarea" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">
               Răspuns propus (editează dacă vrei)
             </label>
             <Textarea
+              id="lead-ai-reply-textarea"
+              name="lead-ai-reply-textarea"
               value={aiReply}
               onChange={(e) => setAiReply(e.target.value)}
-              className="text-sm min-h-[110px] border-border bg-background"
+              className="text-[13px] min-h-[110px] border-border bg-background"
               rows={5}
             />
             <div className="flex gap-2">
               <Button
                 type="button"
-                className="flex-[2] h-11 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-semibold rounded-lg border-none disabled:opacity-50"
+                className="flex-[2] min-h-[44px] flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-semibold text-[13px] rounded-lg border-none disabled:opacity-50"
                 disabled={!lead.phone || !replyText}
                 onClick={() => replyWaUrl && window.open(replyWaUrl, "_blank")}
               >
@@ -491,7 +533,7 @@ export const LeadDetailPanel = ({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-11 flex items-center justify-center gap-2 border-border text-muted-foreground hover:bg-secondary"
+                className="min-h-[44px] px-3 flex items-center justify-center gap-2 border-border text-muted-foreground hover:bg-secondary text-[13px] rounded-lg"
                 onClick={() => replyMutation.mutate()}
                 disabled={replyMutation.isPending}
                 title="Regenerează"
@@ -501,11 +543,11 @@ export const LeadDetailPanel = ({
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                <span className="text-xs">Regenerează</span>
+                <span className="text-[12px]">Regenerează</span>
               </Button>
             </div>
             {!lead.phone && (
-              <p className="text-[10px] text-muted-foreground">Acest lead nu are număr de telefon salvat.</p>
+              <p className="text-[11px] text-muted-foreground">Acest lead nu are număr de telefon salvat.</p>
             )}
           </div>
         )}
@@ -513,7 +555,7 @@ export const LeadDetailPanel = ({
     );
   };
 
-  // Local renderers for layout sections
+  // Local renderers for Desktop layout sections
   const renderCarSection = () => {
     if (!lead) return null;
 
@@ -534,7 +576,7 @@ export const LeadDetailPanel = ({
     }
 
     return lead.listing ? (
-      <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-card-border bg-card">
+      <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-card">
         <div className="flex gap-3">
           {lead.listing.images && lead.listing.images.length > 0 ? (
             <img
@@ -649,7 +691,7 @@ export const LeadDetailPanel = ({
     if (!lead) return null;
     return (
       <div className="space-y-2">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Interes</h3>
+        <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Interes</h3>
         <Select
           value={lead.type}
           onValueChange={(val) => handleTypeChange(val as any)}
@@ -669,7 +711,6 @@ export const LeadDetailPanel = ({
     );
   };
 
-
   const renderPipelineSection = () => {
     if (!lead) return null;
     return (
@@ -682,7 +723,14 @@ export const LeadDetailPanel = ({
                 key={k}
                 type="button"
                 variant={isActive ? "default" : "outline"}
-                onClick={() => handleStatusChange(k as any)}
+                onClick={() => {
+                  if (k === "LOST") {
+                    setTempLostReason("PRICE");
+                    setLostReasonOpen(true);
+                  } else {
+                    handleStatusChange(k as any);
+                  }
+                }}
                 className={`h-11 md:h-8 text-sm md:text-xs font-semibold px-4 md:px-3 rounded-xl md:rounded-full w-full md:w-auto ${
                   isActive
                     ? ""
@@ -753,6 +801,8 @@ export const LeadDetailPanel = ({
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Input
+            id="desktop-reminder-input"
+            name="desktop-reminder-input"
             type="datetime-local"
             value={formatInputDateTime(lead.reminderAt)}
             onChange={(e) => handleReminderChange(e.target.value)}
@@ -763,7 +813,7 @@ export const LeadDetailPanel = ({
           <Button
             variant="outline"
             size="sm"
-            className="border-destructive text-destructive hover:bg-destructive-light h-11 md:h-9 text-base md:text-xs px-4 md:px-3 flex items-center justify-center"
+            className="border-destructive text-destructive hover:bg-destructive/10 h-11 md:h-9 text-base md:text-xs px-4 md:px-3 flex items-center justify-center"
             onClick={handleClearReminder}
           >
             <Trash2 className="w-3.5 h-3.5 mr-1" />
@@ -779,6 +829,8 @@ export const LeadDetailPanel = ({
       <div className="space-y-4">
         <form onSubmit={handleAddNote} className="space-y-2">
           <Textarea
+            id="lead-note-input"
+            name="lead-note-input"
             placeholder="Scrie o notă nouă..."
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
@@ -846,300 +898,793 @@ export const LeadDetailPanel = ({
     : "sm:max-w-3xl w-[92vw] max-h-[88vh] h-[88vh] flex flex-col p-0 gap-0 border border-border bg-background shadow-2xl z-50 [&>button]:hidden sm:rounded-2xl overflow-hidden";
 
   return (
-    <Dialog open={!!messageId} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className={contentClass}>
-        
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border p-4 flex flex-col gap-2 flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            
-            {/* Name / Avatar / Phone details */}
-            <div className="flex items-center gap-3 min-w-0">
-              {lead && (
-                <InitialsAvatar name={lead.name} className="w-10 h-10" />
-              )}
-              <div className="min-w-0">
-                <DialogTitle className="text-base font-bold text-foreground truncate max-w-[180px] sm:max-w-[240px]">
-                  {isLoading ? "Se încarcă..." : lead?.name || "Detalii Lead"}
-                </DialogTitle>
-                <DialogDescription className="sr-only">Detalii și acțiuni pentru lead</DialogDescription>
-                {lead?.phone && (
-                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    <span>{lead.phone}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Prev/Next and Actions Toolbars */}
-            <div className="flex items-center gap-1">
-              {/* Navigation chevrons */}
-              <div className="flex items-center gap-0.5 mr-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
-                  disabled={!hasPrev}
-                  onClick={handlePrev}
-                  title="Precedentul lead"
-                >
-                  <ChevronLeft className="w-4.5 h-4.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
-                  disabled={!hasNext}
-                  onClick={handleNext}
-                  title="Următorul lead"
-                >
-                  <ChevronRight className="w-4.5 h-4.5" />
-                </Button>
-              </div>
-
-              {/* Status and operations */}
-              {!isLoading && lead && (
-                <>
-                  <div className="hidden sm:flex items-center gap-2 mr-2">
-                    <Badge className={`${STATUS_COLORS[lead.status] || "bg-muted text-foreground"} px-2.5 py-0.5 text-[11px] font-semibold border-none`}>
-                      {STATUS_LABELS[lead.status]}
-                    </Badge>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
-                    onClick={handleToggleReadLocal}
-                    title={lead.isRead ? "Marchează necitit" : "Marchează citit"}
-                  >
-                    {lead.isRead ? (
-                      <MailOpen className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Mail className="w-4 h-4 text-primary fill-current" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-11 h-11 md:w-9 md:h-9 border-destructive text-destructive hover:bg-destructive-light flex items-center justify-center"
-                    onClick={handleDeleteLocal}
-                    title="Șterge mesaj"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </>
-              )}
-
-              {/* Tappable close area (w-11 h-11 is exactly 44px) */}
+    <>
+      <Dialog open={!!messageId} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent className={contentClass}>
+          
+          {/* Header */}
+          {isMobile ? (
+            /* Mobile Header: Close on left, Name over phone in middle, Overflow on right */
+            <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2.5 flex items-center justify-between gap-3 flex-shrink-0">
+              {/* 1. Close button on the left */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-secondary text-foreground ml-1"
+                className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-muted text-foreground shrink-0"
                 aria-label="Închide"
               >
                 <X className="w-5 h-5" />
               </Button>
+
+              {/* 2. Name over phone in the middle */}
+              <div className="flex-1 min-w-0 text-center">
+                <DialogTitle className="text-[17px] font-semibold text-foreground truncate leading-tight">
+                  {isLoading ? "Se încarcă..." : lead?.name || "Detalii Lead"}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Detalii și acțiuni pentru lead
+                </DialogDescription>
+                {lead?.phone && (
+                  <p className="text-[13px] text-muted-foreground truncate leading-tight mt-0.5 tabular-nums">
+                    {lead.phone}
+                  </p>
+                )}
+              </div>
+
+              {/* 3. Overflow menu on the right */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-muted text-foreground shrink-0"
+                    aria-label="Mai multe opțiuni"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-popover border-border min-w-[200px]">
+                  {lead?.email && (
+                    <DropdownMenuItem
+                      onClick={() => window.open(`mailto:${lead.email}`, "_self")}
+                      className="cursor-pointer text-[13px] flex items-center gap-2.5 py-2.5"
+                    >
+                      <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span>Trimite email</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={handleToggleReadLocal}
+                    className="cursor-pointer text-[13px] flex items-center gap-2.5 py-2.5"
+                  >
+                    {lead?.isRead ? (
+                      <>
+                        <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span>Marchează necitit</span>
+                      </>
+                    ) : (
+                      <>
+                        <MailOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span>Marchează citit</span>
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="cursor-pointer text-[13px] flex items-center gap-2.5 py-2.5 text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 shrink-0" />
+                    <span>Șterge lead</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-
-          </div>
-        </div>
-
-        {/* Scrollable Body */}
-        {isLoading ? (
-          <div className="flex-1 flex items-center justify-center bg-background">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : !lead ? (
-          <div className="flex-1 flex items-center justify-center p-6 text-center text-muted-foreground bg-background">
-            Nu s-au putut încărca detaliile lead-ului.
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto bg-background">
-            {isMobile ? (
-              /* Mobile stacked view */
-              <div className="p-6 space-y-6">
-                {/* Initial contact message */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Mesaj inițial</h3>
-                  <div className="p-4 bg-muted rounded-xl border border-border">
-                    <p className="text-sm text-foreground whitespace-pre-wrap break-words">{lead.message}</p>
-                    <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>
-                        Trimis {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true, locale: ro })}
-                      </span>
-                    </p>
-                  </div>
-                  {renderAiReplySection()}
-                </div>
-
-                {/* Interes section (Mobile) */}
-                {renderInteresSection()}
-
-                {/* Car card section */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Autovehicul asociat</h3>
-                  {renderCarSection()}
-                </div>
-
-                {/* Pipeline Status section */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pipeline Status</h3>
-                  </div>
-                  {renderPipelineSection()}
-                </div>
-                {/* Reminder section */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recontactare (Reminder)</h3>
-                  {renderReminderSection()}
-                </div>
-
-                {/* Notes section */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Note</h3>
-                  {renderNotesSection()}
-                </div>
-
-                {/* Activity timeline section */}
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Istoric Activitate</h3>
-                  {renderTimelineSection()}
-                </div>
-              </div>
-            ) : (
-              /* Desktop: Two-column grid with divider */
-              <div className="grid grid-cols-2 divide-x divide-border min-h-full">
+          ) : (
+            /* Desktop Sticky Header - preserved exactly */
+            <div className="sticky top-0 z-10 bg-background border-b border-border p-4 flex flex-col gap-2 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2">
                 
-                {/* LEFT Column */}
-                <div className="p-6 space-y-6">
-                  {/* Quick Actions Row */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Acțiuni rapide</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button
-                        variant="outline"
-                        className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
-                        disabled={!lead.phone}
-                        onClick={() => window.open(telLink(lead.phone), "_self")}
-                      >
-                        <Phone className="w-4 h-4" />
-                        <span className="text-xs">Sună</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
-                        disabled={!lead.phone}
-                        onClick={() => window.open(waUrlFinal, "_blank")}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="text-xs">WhatsApp</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
-                        disabled={!lead.email}
-                        onClick={() => window.open(`mailto:${lead.email}`, "_self")}
-                      >
-                        <Mail className="w-4 h-4" />
-                        <span className="text-xs">Email</span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Pipeline Status */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pipeline</h3>
-                    {renderPipelineSection()}
-                  </div>
-
-                  {/* Initial message */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Mesaj inițial</h3>
-                    <div className="p-4 bg-muted rounded-xl border border-border">
-                      <p className="text-sm text-foreground whitespace-pre-wrap break-words">{lead.message}</p>
-                      <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>
-                          Trimis {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true, locale: ro })}
-                        </span>
+                {/* Name / Avatar / Phone details */}
+                <div className="flex items-center gap-3 min-w-0">
+                  {lead && (
+                    <InitialsAvatar name={lead.name} className="w-10 h-10" />
+                  )}
+                  <div className="min-w-0">
+                    <DialogTitle className="text-base font-bold text-foreground truncate max-w-[180px] sm:max-w-[240px]">
+                      {isLoading ? "Se încarcă..." : lead?.name || "Detalii Lead"}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">Detalii și acțiuni pentru lead</DialogDescription>
+                    {lead?.phone && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        <span>{lead.phone}</span>
                       </p>
-                    </div>
-                    {renderAiReplySection()}
-                  </div>
-
-                  {/* Reminder */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recontactare</h3>
-                    {renderReminderSection()}
+                    )}
                   </div>
                 </div>
 
-                {/* RIGHT Column */}
-                <div className="p-6 space-y-6">
-                  {/* Interes */}
-                  {renderInteresSection()}
-
-                  {/* Car Card */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Mașină</h3>
-                    {renderCarSection()}
+                {/* Prev/Next and Actions Toolbars */}
+                <div className="flex items-center gap-1">
+                  {/* Navigation chevrons */}
+                  <div className="flex items-center gap-0.5 mr-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
+                      disabled={!hasPrev}
+                      onClick={handlePrev}
+                      title="Precedentul lead"
+                    >
+                      <ChevronLeft className="w-4.5 h-4.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
+                      disabled={!hasNext}
+                      onClick={handleNext}
+                      title="Următorul lead"
+                    >
+                      <ChevronRight className="w-4.5 h-4.5" />
+                    </Button>
                   </div>
 
-                  {/* Notes */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Note</h3>
-                    {renderNotesSection()}
-                  </div>
+                  {/* Status and operations */}
+                  {!isLoading && lead && (
+                    <>
+                      <div className="hidden sm:flex items-center gap-2 mr-2">
+                        <Badge className={`${STATUS_COLORS[lead.status] || "bg-muted text-foreground"} px-2.5 py-0.5 text-[11px] font-semibold border-none`}>
+                          {STATUS_LABELS[lead.status]}
+                        </Badge>
+                      </div>
 
-                  {/* Timeline */}
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Istoric</h3>
-                    {renderTimelineSection()}
-                  </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="w-11 h-11 md:w-9 md:h-9 border-border flex items-center justify-center"
+                        onClick={handleToggleReadLocal}
+                        title={lead.isRead ? "Marchează necitit" : "Marchează citit"}
+                      >
+                        {lead.isRead ? (
+                          <MailOpen className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <Mail className="w-4 h-4 text-primary fill-current" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="w-11 h-11 md:w-9 md:h-9 border-destructive text-destructive hover:bg-destructive/10 flex items-center justify-center"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        title="Șterge mesaj"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Tappable close area */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-secondary text-foreground ml-1"
+                    aria-label="Închide"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
 
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Sticky Mobile Actions Bar (only on mobile) */}
-        {isMobile && lead && !isLoading && (
-          <div className="sticky bottom-0 z-10 bg-background border-t border-border p-4 flex gap-3 flex-shrink-0">
-            <Button
-              variant="outline"
-              className="flex-1 h-12 flex items-center justify-center gap-2 border-border text-foreground text-sm font-semibold rounded-lg"
-              disabled={!lead.phone}
-              onClick={() => window.open(telLink(lead.phone), "_self")}
-            >
-              <Phone className="w-4 h-4" />
-              <span>Sună</span>
-            </Button>
-            <Button
-              className="flex-[2] h-12 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white text-sm font-semibold rounded-lg border-none"
-              disabled={!lead.phone}
-              onClick={() => window.open(waUrlFinal, "_blank")}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>WhatsApp</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 h-12 flex items-center justify-center gap-2 border-border text-foreground text-sm font-semibold rounded-lg"
-              disabled={!lead.email}
-              onClick={() => window.open(`mailto:${lead.email}`, "_self")}
-            >
-              <Mail className="w-4 h-4" />
-              <span>Email</span>
-            </Button>
-          </div>
-        )}
+          {/* Scrollable Body */}
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center bg-background">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : !lead ? (
+            <div className="flex-1 flex items-center justify-center p-6 text-center text-muted-foreground bg-background">
+              Nu s-au putut încărca detaliile lead-ului.
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto bg-background">
+              {isMobile ? (
+                /* NEW REBUILT Mobile Layout */
+                <div className="p-4 space-y-3.5">
+                  
+                  {/* 1. Status Row: single row showing status pill, opens bottom sheet */}
+                  <button
+                    type="button"
+                    data-action="open-status-sheet"
+                    onClick={() => setStatusSheetOpen(true)}
+                    className="w-full min-h-[52px] px-4 py-2.5 bg-card border border-border rounded-xl flex items-center justify-between gap-3 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                  >
+                    <span className="text-[13px] font-medium text-foreground">
+                      Status
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={cn(
+                          "px-2.5 py-0.5 text-[11px] font-semibold border-none shrink-0",
+                          STATUS_COLORS[lead.status] || "bg-muted text-foreground"
+                        )}
+                      >
+                        {STATUS_LABELS[lead.status]}
+                      </Badge>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </button>
 
-      </DialogContent>
-    </Dialog>
+                  {/* 2. Message Card: type pill, relative time, message body, AI reply affordance */}
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    {/* Top row: Type pill and relative time */}
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge
+                        className={cn(
+                          "px-2.5 py-0.5 text-[11px] font-semibold border-none shrink-0",
+                          TYPE_COLORS[lead.type] || "bg-muted text-foreground"
+                        )}
+                      >
+                        {TYPE_LABELS[lead.type] || lead.type}
+                      </Badge>
+                      <span className="text-[12px] text-muted-foreground flex items-center gap-1 tabular-nums">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {formatDistanceToNow(new Date(lead.createdAt), {
+                            addSuffix: true,
+                            locale: ro,
+                          })}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Message Body */}
+                    <p className="text-[14px] text-foreground whitespace-pre-wrap break-words leading-relaxed">
+                      {lead.message}
+                    </p>
+
+                    {/* AI Reply single line / in-place expansion */}
+                    <div className="pt-2 border-t border-border">
+                      {!aiReply ? (
+                        <button
+                          type="button"
+                          onClick={() => replyMutation.mutate()}
+                          disabled={replyMutation.isPending}
+                          className="w-full min-h-[44px] px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted/50 text-[13px] text-primary font-medium flex items-center justify-between transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            {replyMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                            )}
+                            <span>
+                              {replyMutation.isPending ? "Se generează răspunsul AI..." : "Răspuns rapid AI"}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground">Propune</span>
+                        </button>
+                      ) : (
+                        <div className="space-y-2 pt-1">
+                          <label htmlFor="lead-mobile-ai-reply" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">
+                            Răspuns AI generat
+                          </label>
+                          <Textarea
+                            id="lead-mobile-ai-reply"
+                            name="lead-mobile-ai-reply"
+                            value={aiReply}
+                            onChange={(e) => setAiReply(e.target.value)}
+                            className="text-[13px] min-h-[100px] border-border bg-background"
+                            rows={4}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              className="flex-[2] min-h-[44px] flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-semibold text-[13px] rounded-lg border-none disabled:opacity-50"
+                              disabled={!lead.phone || !aiReply.trim()}
+                              onClick={() => {
+                                const url = waLink(lead.phone, aiReply.trim());
+                                if (url) window.open(url, "_blank");
+                              }}
+                            >
+                              <Send className="w-4 h-4" />
+                              <span>Trimite pe WhatsApp</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-[44px] px-3 flex items-center justify-center gap-1.5 border-border text-muted-foreground hover:bg-secondary text-[12px] rounded-lg"
+                              onClick={() => replyMutation.mutate()}
+                              disabled={replyMutation.isPending}
+                            >
+                              {replyMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-4 h-4" />
+                              )}
+                              <span>Regenerează</span>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. One Settings-style Card holding 3 rows (Car, Interes, Reminder) */}
+                  <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
+                    {/* Row 1: Linked Car */}
+                    <button
+                      type="button"
+                      data-action="open-car-sheet"
+                      onClick={() => setCarSheetOpen(true)}
+                      className="w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                    >
+                      <span className="text-[13px] font-medium text-foreground">
+                        Autovehicul
+                      </span>
+                      <div className="flex items-center gap-2 min-w-0 max-w-[220px]">
+                        {lead.listing ? (
+                          <>
+                            {lead.listing.images && lead.listing.images.length > 0 ? (
+                              <img
+                                src={lead.listing.images[0].url}
+                                alt={lead.listing.title}
+                                className="w-7 h-7 object-cover rounded shrink-0"
+                              />
+                            ) : (
+                              <div className="w-7 h-7 bg-muted rounded flex items-center justify-center shrink-0">
+                                <Car className="w-3.5 h-3.5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <span className="text-[13px] text-muted-foreground truncate">
+                              {lead.listing.title}
+                            </span>
+                            {lead.listing.price ? (
+                              <span className="text-[13px] font-semibold text-primary tabular-nums shrink-0">
+                                {new Intl.NumberFormat("ro-RO", {
+                                  style: "currency",
+                                  currency: "EUR",
+                                  maximumFractionDigits: 0,
+                                }).format(lead.listing.price)}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-[13px] text-muted-foreground">
+                            Fără mașină
+                          </span>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </div>
+                    </button>
+
+                    {/* Row 2: Interes */}
+                    <button
+                      type="button"
+                      data-action="open-interes-sheet"
+                      onClick={() => setInteresSheetOpen(true)}
+                      className="w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                    >
+                      <span className="text-[13px] font-medium text-foreground">
+                        Interes
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={cn(
+                            "px-2.5 py-0.5 text-[11px] font-semibold border-none shrink-0",
+                            TYPE_COLORS[lead.type] || "bg-muted text-foreground"
+                          )}
+                        >
+                          {TYPE_LABELS[lead.type] || lead.type}
+                        </Badge>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </div>
+                    </button>
+
+                    {/* Row 3: Recontactare */}
+                    <button
+                      type="button"
+                      data-action="open-reminder-sheet"
+                      onClick={() => setReminderSheetOpen(true)}
+                      className="w-full min-h-[52px] px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                    >
+                      <span className="text-[13px] font-medium text-foreground">
+                        Recontactare
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-muted-foreground tabular-nums">
+                          {lead.reminderAt
+                            ? format(new Date(lead.reminderAt), "d MMM, HH:mm", { locale: ro })
+                            : "Fără reminder"}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* 4. Note collapsible card (closed on open) */}
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      data-action="toggle-notes"
+                      onClick={() => setNotesOpen((v) => !v)}
+                      className="w-full min-h-[44px] px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                          Note
+                        </span>
+                        <span className="text-[13px] text-muted-foreground tabular-nums">
+                          {notes.length}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 text-muted-foreground transition-transform",
+                          notesOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {notesOpen && (
+                      <div className="p-4 border-t border-border space-y-3">
+                        <form onSubmit={handleAddNote} className="space-y-2">
+                          <Textarea
+                            id="mobile-lead-new-note"
+                            name="mobile-lead-new-note"
+                            placeholder="Scrie o notă nouă..."
+                            value={newNote}
+                            onChange={(e) => setNewNote(e.target.value)}
+                            className="text-[13px] min-h-[72px] border-border bg-background"
+                            rows={3}
+                          />
+                          <div className="flex justify-end">
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={isSubmittingNote || !newNote.trim()}
+                              className="min-h-[44px] text-[13px] px-4 flex items-center font-medium"
+                            >
+                              {isSubmittingNote ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <Plus className="w-4 h-4 mr-1.5" />
+                              )}
+                              Adaugă notă
+                            </Button>
+                          </div>
+                        </form>
+
+                        {notes.length > 0 ? (
+                          <div className="space-y-2.5 pt-1">
+                            {notes.map((n) => (
+                              <div
+                                key={n.id}
+                                className="p-3 bg-secondary/50 rounded-lg border border-border text-[13px]"
+                              >
+                                <p className="text-secondary-foreground break-words whitespace-pre-wrap">
+                                  {n.body}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground mt-2 text-right">
+                                  {formatDistanceToNow(new Date(n.createdAt), {
+                                    addSuffix: true,
+                                    locale: ro,
+                                  })}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[13px] text-muted-foreground italic">
+                            Nicio notă adăugată încă.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 5. Istoric collapsible card (closed on open) */}
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      data-action="toggle-history"
+                      onClick={() => setHistoryOpen((v) => !v)}
+                      className="w-full min-h-[44px] px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-muted/50 transition-colors cursor-pointer select-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                          Istoric activitate
+                        </span>
+                        <span className="text-[13px] text-muted-foreground tabular-nums">
+                          {lead.activities?.length || 0}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 text-muted-foreground transition-transform",
+                          historyOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {historyOpen && (
+                      <div className="p-4 border-t border-border">
+                        {lead.activities && lead.activities.length > 0 ? (
+                          <div className="relative pl-4 border-l border-border space-y-3 text-[13px]">
+                            {lead.activities.map((act) => (
+                              <div key={act.id} className="relative text-left">
+                                <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-border border border-background flex-shrink-0" />
+                                <div className="text-muted-foreground">
+                                  {renderActivityContent(act)}
+                                </div>
+                                <p className="text-[11px] text-muted-foreground mt-1">
+                                  {format(new Date(act.createdAt), "dd MMM yyyy, HH:mm", {
+                                    locale: ro,
+                                  })}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[13px] text-muted-foreground italic">
+                            Nicio activitate înregistrată.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 6. Pagination row: Prev, "N din M", Next */}
+                  {orderedIds.length > 0 && (
+                    <div className="flex items-center justify-between gap-3 pt-2 pb-2">
+                      <Button
+                        variant="outline"
+                        onClick={handlePrev}
+                        disabled={!hasPrev}
+                        className="min-h-[44px] px-3.5 border-border flex items-center gap-1.5 text-[13px] font-medium text-foreground rounded-lg"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>Precedent</span>
+                      </Button>
+
+                      <span className="text-[13px] text-muted-foreground tabular-nums font-medium">
+                        {currentIndex >= 0 ? `${currentIndex + 1} din ${orderedIds.length}` : ""}
+                      </span>
+
+                      <Button
+                        variant="outline"
+                        onClick={handleNext}
+                        disabled={!hasNext}
+                        className="min-h-[44px] px-3.5 border-border flex items-center gap-1.5 text-[13px] font-medium text-foreground rounded-lg"
+                      >
+                        <span>Următor</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                </div>
+              ) : (
+                /* Desktop: Two-column grid with divider (unchanged) */
+                <div className="grid grid-cols-2 divide-x divide-border min-h-full">
+                  
+                  {/* LEFT Column */}
+                  <div className="p-6 space-y-6">
+                    {/* Quick Actions Row */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Acțiuni rapide</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
+                          disabled={!lead.phone}
+                          onClick={() => window.open(telLink(lead.phone), "_self")}
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span className="text-xs">Sună</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
+                          disabled={!lead.phone}
+                          onClick={() => window.open(waUrlFinal, "_blank")}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span className="text-xs">WhatsApp</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-16 py-2 gap-1 border-border hover:bg-secondary"
+                          disabled={!lead.email}
+                          onClick={() => window.open(`mailto:${lead.email}`, "_self")}
+                        >
+                          <Mail className="w-4 h-4" />
+                          <span className="text-xs">Email</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Pipeline Status */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Pipeline</h3>
+                      {renderPipelineSection()}
+                    </div>
+
+                    {/* Initial message */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Mesaj inițial</h3>
+                      <div className="p-4 bg-muted rounded-xl border border-border">
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">{lead.message}</p>
+                        <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>
+                            Trimis {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true, locale: ro })}
+                          </span>
+                        </p>
+                      </div>
+                      {renderAiReplySection()}
+                    </div>
+
+                    {/* Reminder */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Recontactare</h3>
+                      {renderReminderSection()}
+                    </div>
+                  </div>
+
+                  {/* RIGHT Column */}
+                  <div className="p-6 space-y-6">
+                    {/* Interes */}
+                    {renderInteresSection()}
+
+                    {/* Car Card */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Mașină</h3>
+                      {renderCarSection()}
+                    </div>
+
+                    {/* Notes */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Note</h3>
+                      {renderNotesSection()}
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="space-y-2">
+                      <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Istoric</h3>
+                      {renderTimelineSection()}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sticky Mobile Actions Bar (only on mobile): Sună and WhatsApp (WhatsApp wider) */}
+          {isMobile && lead && !isLoading && (
+            <div className="sticky bottom-0 z-10 bg-background border-t border-border p-4 flex gap-3 flex-shrink-0">
+              <Button
+                variant="outline"
+                className="flex-1 min-h-[44px] h-12 flex items-center justify-center gap-2 border-border text-foreground text-[14px] font-semibold rounded-lg"
+                disabled={!lead.phone}
+                onClick={() => window.open(telLink(lead.phone), "_self")}
+              >
+                <Phone className="w-4 h-4" />
+                <span>Sună</span>
+              </Button>
+              <Button
+                className="flex-[2] min-h-[44px] h-12 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white text-[14px] font-semibold rounded-lg border-none disabled:opacity-50"
+                disabled={!lead.phone}
+                onClick={() => window.open(waUrlFinal, "_blank")}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </Button>
+            </div>
+          )}
+
+        </DialogContent>
+      </Dialog>
+
+      {/* Sub-Sheets for Mobile */}
+      {lead && (
+        <>
+          <LeadStatusSheet
+            isOpen={statusSheetOpen}
+            onClose={() => setStatusSheetOpen(false)}
+            currentStatus={lead.status as LeadStatus}
+            currentLostReason={lead.lostReason}
+            onSelectStatus={handleStatusChange}
+          />
+
+          <LeadCarSheet
+            isOpen={carSheetOpen}
+            onClose={() => setCarSheetOpen(false)}
+            currentListingId={lead.listingId}
+            currentListing={lead.listing}
+            listings={listings}
+            listingsLoading={listingsLoading}
+            onSelectListing={handleLinkListing}
+          />
+
+          <LeadInteresSheet
+            isOpen={interesSheetOpen}
+            onClose={() => setInteresSheetOpen(false)}
+            currentType={lead.type as LeadType}
+            onSelectType={handleTypeChange}
+          />
+
+          <LeadReminderSheet
+            isOpen={reminderSheetOpen}
+            onClose={() => setReminderSheetOpen(false)}
+            currentReminderAt={lead.reminderAt}
+            onSaveReminder={handleReminderChange}
+            onClearReminder={handleClearReminder}
+          />
+        </>
+      )}
+
+      {/* Alert Dialog for Delete Confirmation (replacing window.confirm) */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border rounded-xl max-w-[90vw] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-semibold text-foreground text-left">
+              Ștergi acest lead?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-muted-foreground text-left">
+              Ești sigur că vrei să ștergi mesajul de la {lead?.name}? Această acțiune nu poate fi anulată.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2 mt-4">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="flex-1 min-h-[44px] mt-0 border-border text-[13px]"
+            >
+              Anulează
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="flex-1 min-h-[44px] bg-destructive text-destructive-foreground hover:bg-destructive/90 text-[13px] font-semibold"
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Șterge"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog for Unlinking Car on Type Change (replacing window.confirm) */}
+      <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
+        <AlertDialogContent className="bg-card border-border rounded-xl max-w-[90vw] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-semibold text-foreground text-left">
+              Dezleagă anunțul asociat?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-muted-foreground text-left">
+              Schimbi interesul — dorești să dezlegi autovehiculul asociat de acest lead?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2 mt-4">
+            <AlertDialogCancel
+              onClick={() => setPendingType(null)}
+              className="flex-1 min-h-[44px] mt-0 border-border text-[13px]"
+            >
+              Anulează
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnlinkAndTypeChange}
+              className="flex-1 min-h-[44px] bg-primary text-primary-foreground hover:bg-primary/90 text-[13px] font-semibold"
+            >
+              Dezleagă și schimbă
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

@@ -1,21 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Mail, Loader2 } from "lucide-react";
 import api, { toggleMessageRead } from "@/services/api";
 import { formatDistanceToNow } from "date-fns";
@@ -23,6 +8,8 @@ import { ro } from "date-fns/locale";
 import { toast } from "react-hot-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { getLeadAgeBand } from "@/lib/date";
+import { roCount } from "@/lib/plural";
 import {
   LeadDetailPanel,
   STATUS_LABELS,
@@ -31,7 +18,11 @@ import {
   TYPE_COLORS,
 } from "@/components/leads/LeadDetailPanel";
 import { NewLeadDialog } from "@/components/leads/NewLeadDialog";
-
+import MessagesHeader, {
+  MessagesSortOption,
+  LeadTypeFilter,
+  LeadStatusFilter,
+} from "@/components/messages/MessagesHeader";
 
 interface Message {
   id: string;
@@ -41,8 +32,8 @@ interface Message {
   message: string;
   isRead: boolean;
   createdAt: string;
-  type: "GENERAL" | "STOCK" | "ORDER" | "BUYBACK" | "FINANCING";
-  status: "NEW" | "CONTACTED" | "VIEWING" | "OFFER" | "WON" | "LOST";
+  type: LeadTypeFilter;
+  status: LeadStatusFilter;
   lostReason: string | null;
   reminderAt: string | null;
   listingId: string | null;
@@ -59,6 +50,12 @@ interface MessageCounts {
   byType: Record<string, number>;
 }
 
+export function isDeFacut(m: Message): boolean {
+  if (m.status === "WON" || m.status === "LOST") return false;
+  const band = getLeadAgeBand(m.createdAt);
+  return band === "noi" || band === "neatinse";
+}
+
 const MessagesPage = () => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -69,22 +66,17 @@ const MessagesPage = () => {
   const activeLeadId = searchParams.get("lead");
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
 
-  // Filter states
-  const VALID_TABS = ["action", "all", "FINANCING", "NEW", "CONTACTED", "VIEWING", "OFFER", "WON", "LOST"] as const;
-  type TabType = typeof VALID_TABS[number];
-
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    const tabParam = searchParams.get("tab");
-    return tabParam && (VALID_TABS as readonly string[]).includes(tabParam)
-      ? (tabParam as TabType)
-      : "action";
+  // Tab state: "action" (De făcut) or "all" (Toate)
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"action" | "all">(() => {
+    return tabParam === "all" ? "all" : "action";
   });
+
+  // Filter & sort states
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>(() => {
-    const t = searchParams.get("type");
-    return t ? t.toUpperCase() : "ALL";
-  });
-
+  const [selectedTypes, setSelectedTypes] = useState<LeadTypeFilter[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<LeadStatusFilter[]>([]);
+  const [sortBy, setSortBy] = useState<MessagesSortOption>("newest");
 
   const fetchCounts = async () => {
     try {
@@ -134,7 +126,7 @@ const MessagesPage = () => {
         setMessages((prev) =>
           prev.map((m) => (m.id === message.id ? { ...m, isRead: true } : m))
         );
-        fetchCounts(); // update counts
+        fetchCounts();
         queryClient.invalidateQueries({ queryKey: ["message-counts"] });
       } catch (error) {
         // Eroare silențioasă
@@ -154,41 +146,64 @@ const MessagesPage = () => {
     setSearchParams(params);
   };
 
-  // Helper check for actionNeeded logic
-  const isActionNeeded = (m: Message) => {
-    if (m.status === "NEW") return true;
-    if (m.reminderAt && m.status !== "WON" && m.status !== "LOST") {
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-      return new Date(m.reminderAt) <= endOfToday;
+  const handleTabChange = (newTab: "action" | "all") => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(searchParams);
+    if (newTab === "all") {
+      params.set("tab", "all");
+    } else {
+      params.delete("tab");
     }
-    return false;
+    setSearchParams(params);
   };
 
-  // Client-side filtering logic
-  const filteredByTab = messages.filter((m) => {
-    if (activeTab === "action") return isActionNeeded(m);
-    if (activeTab === "all") return true;
-    if (activeTab === "FINANCING") return m.type === "FINANCING";
-    return m.status === activeTab;
-  });
+  // Base list per active tab
+  const deFacutMessages = useMemo(() => {
+    return messages.filter(isDeFacut);
+  }, [messages]);
 
-  const filteredMessages = filteredByTab.filter((m) => {
-    // Search query filtering
+  const baseTabMessages = useMemo(() => {
+    return activeTab === "action" ? deFacutMessages : messages;
+  }, [activeTab, deFacutMessages, messages]);
+
+  // Base messages for filter sheet counts (relative to active tab and search query)
+  const baseMessagesForSheet = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (query) {
+    if (!query) return baseTabMessages;
+    return baseTabMessages.filter((m) => {
       const nameMatch = m.name?.toLowerCase().includes(query);
       const phoneMatch = m.phone?.toLowerCase().includes(query);
       const messageMatch = m.message?.toLowerCase().includes(query);
-      if (!nameMatch && !phoneMatch && !messageMatch) return false;
-    }
-    // Type dropdown filtering
-    if (typeFilter !== "ALL") {
-      if (m.type !== typeFilter) return false;
-    }
-    return true;
-  });
+      const listingMatch = m.listing?.title?.toLowerCase().includes(query);
+      return nameMatch || phoneMatch || messageMatch || listingMatch;
+    });
+  }, [baseTabMessages, searchQuery]);
 
+  // Messages matching filters
+  const filteredMessages = useMemo(() => {
+    return baseMessagesForSheet.filter((m) => {
+      if (selectedTypes.length > 0 && !selectedTypes.includes(m.type)) {
+        return false;
+      }
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(m.status)) {
+        return false;
+      }
+      return true;
+    });
+  }, [baseMessagesForSheet, selectedTypes, selectedStatuses]);
+
+  // Sorted messages
+  const sortedMessages = useMemo(() => {
+    return [...filteredMessages].sort((a, b) => {
+      if (sortBy === "oldest") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (sortBy === "name_asc") {
+        return (a.name || "").localeCompare(b.name || "", "ro", { sensitivity: "base" });
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [filteredMessages, sortBy]);
 
   const isOlderThan2Hours = (createdAtString: string) => {
     const date = new Date(createdAtString);
@@ -213,112 +228,84 @@ const MessagesPage = () => {
   };
 
   const getEmptyStateMessage = () => {
-    switch (activeTab) {
-      case "action":
-        return "Niciun lead care necesită acțiune.";
-      case "all":
-        return "Niciun lead înregistrat în sistem.";
-      case "FINANCING":
-        return "Niciun lead de finanțare.";
-      case "NEW":
-        return "Niciun lead nou.";
-      case "CONTACTED":
-        return "Niciun lead contactat.";
-      case "VIEWING":
-        return "Niciun lead în vizionare.";
-      case "OFFER":
-        return "Niciun lead cu ofertă propusă.";
-      case "WON":
-        return "Niciun lead câștigat încă.";
-      case "LOST":
-        return "Niciun lead pierdut.";
-      default:
-        return "Niciun lead găsit.";
+    if (searchQuery.trim()) {
+      return `Niciun lead găsit pentru „${searchQuery.trim()}”.`;
     }
+    if (selectedTypes.length > 0 || selectedStatuses.length > 0) {
+      return "Niciun lead nu corespunde filtrelor selectate.";
+    }
+    if (activeTab === "action") {
+      return "Niciun lead de făcut în acest moment.";
+    }
+    return "Niciun lead înregistrat în sistem.";
   };
 
-  const tabs = [
-    { id: "action", label: "Necesită acțiune", count: counts?.actionNeeded ?? 0 },
-    { id: "all", label: "Toate", count: messages.length },
-    { id: "FINANCING", label: "Finanțare", count: counts?.byType?.FINANCING ?? messages.filter((m) => m.type === "FINANCING").length },
-    { id: "NEW", label: "Noi", count: counts?.byStatus?.NEW ?? 0 },
-    { id: "CONTACTED", label: "Contactate", count: counts?.byStatus?.CONTACTED ?? 0 },
-    { id: "VIEWING", label: "Vizionare", count: counts?.byStatus?.VIEWING ?? 0 },
-    { id: "OFFER", label: "Ofertă", count: counts?.byStatus?.OFFER ?? 0 },
-    { id: "WON", label: "Câștigate", count: counts?.byStatus?.WON ?? 0 },
-    { id: "LOST", label: "Pierdute", count: counts?.byStatus?.LOST ?? 0 },
-  ];
+  const countText = `${deFacutMessages.length} de făcut · ${roCount(messages.length, "lead", "lead-uri")}`;
 
   return (
-    <div className="space-y-6 min-w-0 w-full overflow-hidden">
+    <div className="space-y-4 min-w-0 w-full overflow-hidden pb-24">
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Lead-uri</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            {messages.length} lead-uri, {messages.filter((m) => !m.isRead).length} necitite
-          </p>
-        </div>
-        <Button onClick={() => setIsNewLeadOpen(true)} className="hidden md:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex-shrink-0">
-          + Lead nou
-        </Button>
-      </div>
+      <MessagesHeader
+        title="Lead-uri"
+        countText={countText}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        selectedTypes={selectedTypes}
+        onSelectedTypesChange={setSelectedTypes}
+        selectedStatuses={selectedStatuses}
+        onSelectedStatusesChange={setSelectedStatuses}
+        baseMessages={baseMessagesForSheet}
+      />
 
-      {/* Tabs */}
-      <div className="flex overflow-x-auto border-b border-border gap-2 mt-4 scrollbar-none pb-px whitespace-nowrap">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+      {/* Segmented Control Tabs */}
+      <div className="grid grid-cols-2 p-1 bg-muted/60 border border-border rounded-lg">
+        <button
+          type="button"
+          onClick={() => handleTabChange("action")}
+          className={cn(
+            "min-h-[44px] lg:min-h-[36px] flex items-center justify-center gap-2 rounded-md text-[13px] font-medium transition-all cursor-pointer select-none",
+            activeTab === "action"
+              ? "bg-card text-foreground shadow-sm font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <span>De făcut</span>
+          <span
             className={cn(
-              "pb-3 pt-2 px-3 text-sm font-medium border-b-2 transition-all relative flex items-center gap-1.5 whitespace-nowrap flex-shrink-0",
-              activeTab === tab.id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-              tab.id === "WON" && "md:ml-auto"
+              "text-[11px] px-1.5 py-0.5 rounded-full font-medium tabular-nums",
+              activeTab === "action"
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
             )}
           >
-            <span>{tab.label}</span>
-            <span className={cn(
-              "text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors",
-              activeTab === tab.id
-                ? "bg-primary text-primary-foreground"
-                : tab.id === "WON"
-                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
-                  : tab.id === "LOST"
-                    ? "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300"
-                    : "bg-secondary text-muted-foreground"
-            )}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
-      </div>
+            {deFacutMessages.length}
+          </span>
+        </button>
 
-      {/* Filters row */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-        <div className="relative flex-1">
-          <Input
-            placeholder="Caută după nume, telefon sau text..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 md:h-10 text-base md:text-sm pl-9"
-          />
-          <span className="absolute left-3 top-3 text-muted-foreground text-xs">🔍</span>
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full md:w-[180px] h-11 md:h-10 text-base md:text-sm bg-background border-border">
-            <SelectValue placeholder="Filtrează după tip" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Toate tipurile</SelectItem>
-            {Object.entries(TYPE_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <button
+          type="button"
+          onClick={() => handleTabChange("all")}
+          className={cn(
+            "min-h-[44px] lg:min-h-[36px] flex items-center justify-center gap-2 rounded-md text-[13px] font-medium transition-all cursor-pointer select-none",
+            activeTab === "all"
+              ? "bg-card text-foreground shadow-sm font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <span>Toate</span>
+          <span
+            className={cn(
+              "text-[11px] px-1.5 py-0.5 rounded-full font-medium tabular-nums",
+              activeTab === "all"
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {messages.length}
+          </span>
+        </button>
       </div>
 
       {/* Main content area */}
@@ -326,78 +313,93 @@ const MessagesPage = () => {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : filteredMessages.length === 0 ? (
+      ) : sortedMessages.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground border-2 border-dashed border-border rounded-xl">
           <Mail className="w-12 h-12 mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold">Niciun lead găsit</h3>
-          <p className="text-sm mt-1">{getEmptyStateMessage()}</p>
+          <h3 className="text-[17px] font-semibold text-foreground">Niciun lead găsit</h3>
+          <p className="text-[13px] text-muted-foreground mt-1">{getEmptyStateMessage()}</p>
         </div>
       ) : isMobile ? (
-        /* Mobile stacked layout */
-        <div className="space-y-3 pb-24">
-          {filteredMessages.map((message) => {
+        /* Mobile list: One bordered container, rows separated by hairline */
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {sortedMessages.map((message, index) => {
             const isSelected = activeLeadId === message.id;
-            const isRed = !message.isRead && isOlderThan2Hours(message.createdAt) && message.status !== "LOST";
-            
-            let itemBg = "bg-card border border-border rounded-xl p-4 cursor-pointer transition-colors ";
-            if (isSelected) {
-              itemBg += "border-primary bg-primary-light/20 ";
-            } else if (isRed) {
-              itemBg += "bg-rose-50/50 dark:bg-rose-950/10 border-rose-100 dark:border-rose-950/30 ";
-            } else if (message.status === "LOST") {
-              itemBg += "opacity-60 ";
-            }
+            const ageBand = getLeadAgeBand(message.createdAt);
+            const isVechi = ageBand === "vechi";
 
             return (
               <div
                 key={message.id}
                 onClick={() => handleSelectMessage(message)}
-                className={itemBg}
+                className={cn(
+                  "min-h-[48px] px-3.5 py-2.5 flex flex-col justify-center gap-1 cursor-pointer transition-colors select-none hover:bg-muted/50",
+                  index > 0 && "border-t border-border",
+                  isSelected && "bg-primary/10"
+                )}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {!message.isRead ? (
-                      isRed ? (
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-600 dark:bg-rose-500 flex-shrink-0 animate-pulse" />
-                      ) : (
-                        <span className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />
-                      )
-                    ) : null}
-                    <div className="font-semibold text-foreground text-sm">{message.name}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
-                      TYPE_COLORS[message.type] || "bg-muted text-foreground"
-                    )}>
-                      {TYPE_LABELS[message.type]}
-                    </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusPillClass(message.status)}`}>
-                      {STATUS_LABELS[message.status]}
+                {/* Line 1: unread dot, name, relative time */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {!message.isRead && (
+                      <span
+                        className={cn(
+                          "w-2 h-2 rounded-full shrink-0",
+                          isVechi
+                            ? "bg-destructive animate-pulse"
+                            : "bg-primary"
+                        )}
+                      />
+                    )}
+                    <span className="text-[15px] font-medium text-foreground truncate">
+                      {message.name || "Fără nume"}
                     </span>
                   </div>
-                </div>
 
-                <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                  {message.phone && <div>📞 {message.phone}</div>}
-                  {message.listing && <div>🚗 {message.listing.title}</div>}
-                </div>
-
-                <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
-                  <span />
-                  <span className={isRed ? "text-rose-600 dark:text-rose-400 font-semibold" : ""}>
+                  <span
+                    className={cn(
+                      "text-[12px] tabular-nums shrink-0 ml-2",
+                      isVechi ? "text-destructive font-medium" : "text-muted-foreground"
+                    )}
+                  >
                     {formatDistanceToNow(new Date(message.createdAt), {
                       addSuffix: true,
                       locale: ro,
                     })}
                   </span>
                 </div>
+
+                {/* Line 2: type pill, linked car title or phrase, status pill (if not NEW) */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                      TYPE_COLORS[message.type] || "bg-muted text-foreground"
+                    )}
+                  >
+                    {TYPE_LABELS[message.type] || message.type}
+                  </span>
+
+                  <span className="text-[13px] text-muted-foreground truncate flex-1 min-w-0">
+                    {message.listing?.title || "Fără mașină"}
+                  </span>
+
+                  {message.status !== "NEW" && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ml-auto",
+                        getStatusPillClass(message.status)
+                      )}
+                    >
+                      {STATUS_LABELS[message.status] || message.status}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
       ) : (
-        /* Desktop dense table layout */
+        /* Desktop dense table layout (preserved intact) */
         <div className="overflow-x-auto border border-border rounded-xl bg-card">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -417,7 +419,7 @@ const MessagesPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMessages.map((message) => {
+              {sortedMessages.map((message) => {
                 const isSelected = activeLeadId === message.id;
                 const rowClass = getRowClass(message) + (isSelected ? "bg-primary-light/40 " : "");
                 const isRed = !message.isRead && isOlderThan2Hours(message.createdAt) && message.status !== "LOST";
@@ -495,7 +497,7 @@ const MessagesPage = () => {
         messageId={activeLeadId}
         onClose={handleClosePanel}
         onMessageUpdated={handleMessageUpdated}
-        orderedIds={filteredMessages.map((m) => m.id)}
+        orderedIds={sortedMessages.map((m) => m.id)}
         onNavigate={handleNavigateLead}
       />
 
@@ -509,19 +511,7 @@ const MessagesPage = () => {
           setSearchParams(params);
         }}
       />
-
-      {/* Mobile Floating Action Button (FAB) */}
-      {isMobile && (
-        <Button
-          onClick={() => setIsNewLeadOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground shadow-lg flex items-center justify-center z-40 border-none"
-          title="Adaugă lead nou"
-        >
-          <span className="text-2xl font-bold">+</span>
-        </Button>
-      )}
     </div>
-
   );
 };
 
