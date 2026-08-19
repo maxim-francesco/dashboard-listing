@@ -4,20 +4,45 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getNetworkSettings, updateNetworkSettings, NetworkSettings as NetworkSettingsType } from "@/services/api";
+import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
   networkDisplayName: z.string().max(200, "Maxim 200 de caractere").optional().or(z.literal("")),
   city: z.string().max(200, "Maxim 200 de caractere").optional().or(z.literal("")),
-  networkContactPhone: z.string().max(200, "Maxim 200 de caractere").optional().or(z.literal("")),
-  networkContactEmail: z.string().max(200, "Maxim 200 de caractere").optional().or(z.literal("")),
+  networkContactPhone: z
+    .string()
+    .max(200, "Maxim 200 de caractere")
+    .refine((val) => !val || /^(?:\+40|0040|0)[\s-]*7(?:\s*\d){8}$/.test(val.trim()), {
+      message: "Telefon invalid",
+    })
+    .optional()
+    .or(z.literal("")),
+  networkContactEmail: z
+    .string()
+    .max(200, "Maxim 200 de caractere")
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim()), {
+      message: "Email invalid",
+    })
+    .optional()
+    .or(z.literal("")),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -26,6 +51,15 @@ export default function NetworkSettings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [localEnabled, setLocalEnabled] = useState(false);
+  const [confirmOffOpen, setConfirmOffOpen] = useState(false);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/network");
+    }
+  };
 
   const { data: settings, isLoading, isError } = useQuery<NetworkSettingsType>({
     queryKey: ["network-settings"],
@@ -74,13 +108,17 @@ export default function NetworkSettings() {
 
   const handleToggle = (checked: boolean) => {
     if (!checked) {
-      const ok = window.confirm("Ieși din rețea? Nu vei mai vedea mașinile și mesajele altor dealeri.");
-      if (!ok) {
-        return;
-      }
+      setConfirmOffOpen(true);
+      return;
     }
-    setLocalEnabled(checked);
-    switchMutation.mutate(checked);
+    setLocalEnabled(true);
+    switchMutation.mutate(true);
+  };
+
+  const handleConfirmOptOut = () => {
+    setConfirmOffOpen(false);
+    setLocalEnabled(false);
+    switchMutation.mutate(false);
   };
 
   const formMutation = useMutation({
@@ -107,15 +145,19 @@ export default function NetworkSettings() {
   if (isLoading) {
     return (
       <div className="space-y-4 box-border w-full pb-24">
-        <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2">
+        <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2.5">
           <button
-            onClick={() => navigate("/network")}
-            className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
+            onClick={handleBack}
+            className="w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-muted/50 shrink-0"
             aria-label="Înapoi"
+            type="button"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-[20px] font-semibold">Setări rețea</h1>
+          <div>
+            <h1 className="text-[17px] font-medium text-foreground leading-tight">Setări rețea</h1>
+            <div className="text-[12px] text-muted-foreground leading-tight">Cum te văd ceilalți dealeri</div>
+          </div>
         </div>
         <div className="flex items-center justify-center py-12">
           <span className="text-[15px] text-muted-foreground">Se încarcă...</span>
@@ -127,15 +169,19 @@ export default function NetworkSettings() {
   if (isError) {
     return (
       <div className="space-y-4 box-border w-full pb-24">
-        <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2">
+        <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2.5">
           <button
-            onClick={() => navigate("/network")}
-            className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
+            onClick={handleBack}
+            className="w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-muted/50 shrink-0"
             aria-label="Înapoi"
+            type="button"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-[20px] font-semibold">Setări rețea</h1>
+          <div>
+            <h1 className="text-[17px] font-medium text-foreground leading-tight">Setări rețea</h1>
+            <div className="text-[12px] text-muted-foreground leading-tight">Cum te văd ceilalți dealeri</div>
+          </div>
         </div>
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-[15px] text-center">
           A apărut o eroare la încărcarea setărilor. Vă rugăm să încercați din nou.
@@ -147,16 +193,19 @@ export default function NetworkSettings() {
   return (
     <div className="space-y-4 box-border w-full pb-24">
       {/* HEADER */}
-      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2">
+      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-2.5">
         <button
-          onClick={() => navigate("/network")}
-          className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
+          onClick={handleBack}
+          className="w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center border border-border rounded-lg text-foreground hover:bg-muted/50 shrink-0"
           aria-label="Înapoi"
           type="button"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-[20px] font-semibold">Setări rețea</h1>
+        <div>
+          <h1 className="text-[17px] font-medium text-foreground leading-tight">Setări rețea</h1>
+          <div className="text-[12px] text-muted-foreground leading-tight">Cum te văd ceilalți dealeri</div>
+        </div>
       </div>
 
       {/* MEMBERSHIP PANEL */}
@@ -185,6 +234,29 @@ export default function NetworkSettings() {
           Ești în afara rețelei. Pornește comutatorul de mai sus ca să revii.
         </div>
       )}
+
+      {/* OPT-OUT CONFIRMATION DIALOG */}
+      <AlertDialog open={confirmOffOpen} onOpenChange={setConfirmOffOpen}>
+        <AlertDialogContent className="bg-card border-border rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-medium text-foreground">
+              Ieși din rețea?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[14px] text-muted-foreground">
+              Nu vei mai vedea mașinile și mesajele altor dealeri, iar firma ta nu va mai apărea în rețea. Poți reveni oricând pornind comutatorul.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="min-h-[44px]">Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmOptOut}
+              className={cn(buttonVariants({ variant: "destructive" }), "min-h-[44px]")}
+            >
+              Ieși din rețea
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* PROFILE FORM */}
       <Form {...form}>
@@ -289,3 +361,4 @@ export default function NetworkSettings() {
     </div>
   );
 }
+
