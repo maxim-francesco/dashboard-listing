@@ -77,6 +77,7 @@ export default function NetworkCars() {
     queryClient.invalidateQueries({ queryKey: ["slow-stock"] });
     queryClient.invalidateQueries({ queryKey: ["negotiations"] });
     queryClient.invalidateQueries({ queryKey: ["network-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["exposable-cars"] });
   };
 
   // Queries

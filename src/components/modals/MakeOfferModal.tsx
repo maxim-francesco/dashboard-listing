@@ -154,6 +154,9 @@ const MakeOfferModal = ({ isOpen, onClose, listing, onCreated, onExisting }: Mak
       <DialogContent className="bg-popover border-border max-w-md">
         <DialogHeader>
           <DialogTitle className="text-[17px] font-semibold text-foreground text-left">Fă o ofertă</DialogTitle>
+          <DialogDescription>
+            Trimite o ofertă de cumpărare sau schimb pentru această mașină.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Target Car Context Panel */}
