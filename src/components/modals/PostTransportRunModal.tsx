@@ -158,6 +158,12 @@ const PostTransportRunModal = ({ isOpen, onClose, onSubmit }: PostTransportRunMo
     return "Detalii cursă";
   };
 
+  const getDescription = () => {
+    if (step === 1) return "Alege dacă oferi loc de transport sau cauți pe cineva să-ți ducă mașinile.";
+    if (step === 2) return "Completează orașele de plecare și sosire și data plecării.";
+    return "Completează locurile disponibile, tariful și detaliile opționale.";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
@@ -167,12 +173,10 @@ const PostTransportRunModal = ({ isOpen, onClose, onSubmit }: PostTransportRunMo
     }}>
       <DialogContent className="bg-popover border-border text-foreground max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground">{getTitle()}</DialogTitle>
-          {step === 1 && (
-            <DialogDescription>
-              Adaugă o nouă cursă de transport disponibilă pentru ceilalți dealeri din rețea.
-            </DialogDescription>
-          )}
+          <DialogTitle className="text-[17px] font-semibold text-foreground text-left">{getTitle()}</DialogTitle>
+          <DialogDescription className="text-[13px] text-muted-foreground text-left">
+            {getDescription()}
+          </DialogDescription>
         </DialogHeader>
 
         {/* STEP INDICATOR */}

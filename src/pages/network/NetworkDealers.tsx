@@ -20,15 +20,9 @@ import { cn } from "@/lib/utils";
 import { isForbidden } from "@/lib/isForbidden";
 import NetworkOffline from "@/components/network/NetworkOffline";
 import NetworkHeader from "@/components/network/NetworkHeader";
+import DealerDetailSheet from "@/components/network/DealerDetailSheet";
 import { Input } from "@/components/ui/input";
 import { CARD } from "@/components/today/cardRecipe";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 export default function NetworkDealers() {
   const navigate = useNavigate();
@@ -195,111 +189,13 @@ export default function NetworkDealers() {
       )}
 
       {/* DEALER DETAIL SHEET */}
-      <Sheet
-        open={!!selectedDealer}
-        onOpenChange={(open) => {
-          if (!open) setSelectedDealer(null);
-        }}
-      >
-        <SheetContent
-          side="bottom"
-          className="bg-card border-border rounded-t-xl p-4 space-y-4 max-h-[85vh] overflow-y-auto"
-        >
-          {selectedDealer && (
-            <>
-              <SheetHeader className="pb-2 border-b border-border text-left">
-                <SheetTitle className="text-[17px] font-semibold text-foreground truncate">
-                  {selectedDealer.name}
-                </SheetTitle>
-                <SheetDescription className="text-[12px] text-muted-foreground truncate">
-                  {selectedDealer.city || "Dealer partener în rețea"}
-                </SheetDescription>
-              </SheetHeader>
-
-              {/* DETAILS BLOCK */}
-              <div className="space-y-2.5 text-[13px] bg-background/50 p-3 rounded-xl border border-border">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Building2 className="w-4 h-4 shrink-0" />
-                    <span>Companie</span>
-                  </div>
-                  <span className="font-medium text-foreground text-right truncate">
-                    {selectedDealer.name}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4 shrink-0" />
-                    <span>Oraș</span>
-                  </div>
-                  <span className="text-foreground text-right truncate">
-                    {selectedDealer.city || "—"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="w-4 h-4 shrink-0" />
-                    <span>Telefon</span>
-                  </div>
-                  {selectedDealer.contactPhone ? (
-                    <a
-                      href={`tel:${selectedDealer.contactPhone}`}
-                      className="font-medium text-primary hover:underline text-right tabular-nums"
-                    >
-                      {selectedDealer.contactPhone}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </div>
-
-                {selectedDealer.contactEmail && (
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="w-4 h-4 shrink-0" />
-                      <span>Email</span>
-                    </div>
-                    <a
-                      href={`mailto:${selectedDealer.contactEmail}`}
-                      className="font-medium text-primary hover:underline text-right truncate max-w-[200px]"
-                    >
-                      {selectedDealer.contactEmail}
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* ACTIONS */}
-              <div className="flex gap-2 pt-2 border-t border-border">
-                {selectedDealer.contactPhone && (
-                  <a
-                    href={`tel:${selectedDealer.contactPhone}`}
-                    className="flex-1 min-h-[44px] h-11 rounded-lg border border-border bg-card hover:bg-muted text-foreground font-medium text-[14px] flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span>Sună</span>
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => mutation.mutate(selectedDealer.id)}
-                  disabled={mutation.isPending}
-                  className="flex-1 min-h-[44px] h-11 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[14px] flex items-center justify-center gap-2 transition-colors"
-                >
-                  {mutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <MessageSquare className="w-4 h-4" />
-                  )}
-                  <span>Scrie mesaj</span>
-                </button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <DealerDetailSheet
+        dealer={selectedDealer}
+        isOpen={!!selectedDealer}
+        onClose={() => setSelectedDealer(null)}
+        onMessage={(dealerId) => mutation.mutate(dealerId)}
+        isMessaging={mutation.isPending}
+      />
     </div>
   );
 }

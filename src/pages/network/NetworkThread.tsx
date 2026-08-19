@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Send, Phone } from "lucide-react";
+import { ChevronLeft, ChevronRight, Send, Phone } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ro } from "date-fns/locale";
 import { toast } from "react-hot-toast";
@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { isForbidden } from "@/lib/isForbidden";
 import NetworkOffline from "@/components/network/NetworkOffline";
+import DealerDetailSheet from "@/components/network/DealerDetailSheet";
 
 const isDifferentDay = (d1: Date, d2: Date) => {
   return (
@@ -36,6 +37,7 @@ export default function NetworkThread() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState("");
+  const [isDealerSheetOpen, setIsDealerSheetOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +101,7 @@ export default function NetworkThread() {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+      textarea.style.height = `${Math.max(44, Math.min(textarea.scrollHeight, 120))}px`;
     }
   };
 
@@ -178,28 +180,42 @@ export default function NetworkThread() {
   return (
     <div className="flex flex-col w-full min-h-[calc(100dvh-10rem)] min-h-0 relative">
       {/* HEADER */}
-      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-3 flex items-center gap-3 border-b border-border/40">
         <button
+          type="button"
           onClick={() => navigate("/network/messages")}
-          className="w-11 h-11 flex items-center justify-center text-foreground hover:bg-muted/50 rounded-full shrink-0"
-          aria-label="Înapoi"
+          className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-muted/50 shrink-0 min-h-[44px] min-w-[44px] transition-colors"
+          aria-label="Înapoi la mesaje"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[17px] font-semibold truncate leading-tight">
-            {conversation.otherDealer?.name}
-          </h1>
-          {subtitle && (
-            <p className="text-[13px] text-muted-foreground truncate mt-0.5">
-              {subtitle}
-            </p>
-          )}
-        </div>
+
+        {/* Dealer name as pressable button */}
+        <button
+          type="button"
+          onClick={() => setIsDealerSheetOpen(true)}
+          className="flex-1 min-w-0 min-h-[44px] py-1 text-left flex items-center gap-2 text-foreground hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-lg"
+          aria-label={`Vezi profilul dealerului ${conversation.otherDealer?.name}`}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[17px] font-semibold text-foreground truncate leading-tight">
+                {conversation.otherDealer?.name}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </div>
+            {subtitle && (
+              <p className="text-[12px] text-muted-foreground truncate mt-0.5">
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </button>
+
         {conversation.otherDealer?.contactPhone && (
           <a
             href={`tel:${conversation.otherDealer.contactPhone}`}
-            className="w-11 h-11 rounded-full bg-success-light text-success flex items-center justify-center shrink-0"
+            className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-muted shrink-0 min-h-[44px] min-w-[44px] transition-colors"
             aria-label={`Sună pe ${conversation.otherDealer.name}`}
           >
             <Phone className="w-5 h-5" />
@@ -275,22 +291,33 @@ export default function NetworkThread() {
       <div className="sticky bottom-16 lg:bottom-0 -mx-4 px-4 py-3 bg-admin-bg border-t border-border flex items-end gap-2 z-20 mt-auto">
         <textarea
           ref={textareaRef}
+          id="network-thread-message-input"
+          name="message"
           rows={1}
           value={messageText}
           onChange={(e) => setMessageText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Scrie un mesaj…"
-          className="flex-1 text-[15px] bg-card border border-border rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary min-h-[42px] max-h-[120px] overflow-y-auto"
+          className="flex-1 text-[15px] text-foreground placeholder:text-muted-foreground bg-card border border-border rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px] max-h-[120px] overflow-y-auto"
         />
         <button
+          type="button"
           disabled={!messageText.trim() || isSending}
           onClick={handleSend}
-          className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Trimite"
         >
           <Send className="w-5 h-5" />
         </button>
       </div>
+
+      {/* DEALER DETAIL SHEET */}
+      <DealerDetailSheet
+        dealer={conversation.otherDealer}
+        isOpen={isDealerSheetOpen}
+        onClose={() => setIsDealerSheetOpen(false)}
+        hideMessageAction={true}
+      />
     </div>
   );
 }
