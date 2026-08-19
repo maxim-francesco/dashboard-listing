@@ -1,11 +1,24 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay } from "date-fns";
 import { ro } from "date-fns/locale";
-import { Loader2, ArrowLeft, Phone, Car, CalendarOff, CalendarClock, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Phone,
+  Car,
+  CalendarOff,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+} from "lucide-react";
 import { getAppointments, Appointment, AppointmentType } from "@/services/api";
+import { Button } from "@/components/ui/button";
 import AppointmentEditSheet from "@/components/modals/AppointmentEditSheet";
+import AppointmentWizard from "@/components/modals/AppointmentWizard";
+import { roCount } from "@/lib/plural";
+import { cn } from "@/lib/utils";
 
 const VISIBLE_DAYS = 5;
 
@@ -50,12 +63,12 @@ const dayLabel = (date: Date) => {
 };
 
 const SchedulePage = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [expanded, setExpanded] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalInitial, setModalInitial] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editInitial, setEditInitial] = useState<any>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const changeTab = (t: "upcoming" | "past") => {
     setTab(t);
@@ -103,7 +116,7 @@ const SchedulePage = () => {
   const hiddenApptCount = groups.slice(VISIBLE_DAYS).reduce((n, g) => n + g.items.length, 0);
 
   const openEdit = (a: Appointment) => {
-    setModalInitial({
+    setEditInitial({
       id: a.id,
       title: a.title,
       type: a.type,
@@ -115,51 +128,123 @@ const SchedulePage = () => {
       notes: a.notes,
       status: a.status,
     });
-    setModalOpen(true);
+    setEditOpen(true);
   };
 
   const activeList = tab === "upcoming" ? upcoming : past;
+  const countText = `${upcoming.length} viitoare · ${roCount(data.length, "programare", "programări")}`;
 
   return (
-    <div className="space-y-4 pb-24">
-      <button
-        onClick={() => navigate("/customers")}
-        className="flex items-center gap-2 text-[14px] text-muted-foreground h-11"
-      >
-        <ArrowLeft className="w-4 h-4" /> Înapoi la clienți
-      </button>
+    <div className="space-y-4 pb-20 min-w-0 w-full">
+      {/* Desktop Header */}
+      <div className="hidden lg:flex items-center justify-between gap-3 w-full">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/customers"
+            aria-label="Înapoi la clienți"
+            className="w-9 h-9 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
 
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <CalendarClock className="w-5 h-5 text-primary" />
+          <div className="flex items-baseline gap-2 shrink-0">
+            <h1 className="text-[17px] font-semibold text-foreground leading-none">
+              Programări
+            </h1>
+            <span className="text-[13px] text-muted-foreground tabular-nums">
+              {countText}
+            </span>
+          </div>
         </div>
-        <div>
-          <h1 className="text-[20px] font-semibold text-foreground leading-tight">Calendar</h1>
-          <p className="text-[13px] text-muted-foreground">Ce ai programat</p>
-        </div>
+
+        <Button
+          onClick={() => setWizardOpen(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[13px] h-9 px-3 rounded-lg flex items-center gap-1.5 shrink-0 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Programare nouă</span>
+        </Button>
       </div>
 
-      <div className="flex gap-1.5 p-1 bg-muted rounded-xl">
+      {/* Mobile Header (Band 1: back button · title over count · square action button) */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <Link
+          to="/customers"
+          aria-label="Înapoi la clienți"
+          className="w-11 h-11 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[17px] font-medium text-foreground leading-tight truncate">
+            Programări
+          </h1>
+          <p className="text-[12px] text-muted-foreground leading-tight truncate mt-0.5 tabular-nums">
+            {countText}
+          </p>
+        </div>
+
+        <Button
+          variant="ghost"
+          aria-label="Programare nouă"
+          onClick={() => setWizardOpen(true)}
+          className="w-11 h-11 p-0 border border-border rounded-lg flex items-center justify-center hover:bg-muted shrink-0 text-foreground"
+        >
+          <Plus className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* Segmented Control Tabs */}
+      <div className="grid grid-cols-2 p-1 bg-muted/60 border border-border rounded-lg">
         <button
+          type="button"
           onClick={() => changeTab("upcoming")}
-          className={
-            "flex-1 py-2.5 rounded-lg text-[14px] font-medium transition-colors " +
-            (tab === "upcoming" ? "bg-card text-foreground border border-border" : "text-muted-foreground")
-          }
+          className={cn(
+            "min-h-[44px] lg:min-h-[36px] flex items-center justify-center gap-2 rounded-md text-[13px] font-medium transition-all cursor-pointer select-none",
+            tab === "upcoming"
+              ? "bg-card text-foreground shadow-sm font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          Următoarele ({upcoming.length})
+          <span>Următoarele</span>
+          <span
+            className={cn(
+              "text-[11px] px-1.5 py-0.5 rounded-full font-medium tabular-nums",
+              tab === "upcoming"
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {upcoming.length}
+          </span>
         </button>
+
         <button
+          type="button"
           onClick={() => changeTab("past")}
-          className={
-            "flex-1 py-2.5 rounded-lg text-[14px] font-medium transition-colors " +
-            (tab === "past" ? "bg-card text-foreground border border-border" : "text-muted-foreground")
-          }
+          className={cn(
+            "min-h-[44px] lg:min-h-[36px] flex items-center justify-center gap-2 rounded-md text-[13px] font-medium transition-all cursor-pointer select-none",
+            tab === "past"
+              ? "bg-card text-foreground shadow-sm font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          Trecute ({past.length})
+          <span>Trecute</span>
+          <span
+            className={cn(
+              "text-[11px] px-1.5 py-0.5 rounded-full font-medium tabular-nums",
+              tab === "past"
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {past.length}
+          </span>
         </button>
       </div>
 
+      {/* Main Content Area */}
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -175,14 +260,12 @@ const SchedulePage = () => {
         <div className="space-y-5">
           {visibleGroups.map((g, gi) => (
             <div key={gi} className="space-y-2.5">
-              <div className="flex items-center gap-2 px-0.5">
-                <span className="text-[14px] font-medium text-foreground capitalize">{dayLabel(g.date)}</span>
-                {!isSameDay(g.date, startToday) && (
-                  <span className="text-[13px] text-muted-foreground capitalize">
-                    · {format(g.date, "d MMM", { locale: ro })}
-                  </span>
-                )}
-                <span className="ml-auto text-[12px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  {dayLabel(g.date)}
+                  {!isSameDay(g.date, startToday) && ` · ${format(g.date, "d MMMM", { locale: ro })}`}
+                </span>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
                   {g.items.length}
                 </span>
               </div>
@@ -193,42 +276,46 @@ const SchedulePage = () => {
                   <div
                     key={a.id}
                     onClick={() => openEdit(a)}
-                    className={
-                      "bg-card border border-border rounded-xl p-3.5 flex gap-3 cursor-pointer hover:bg-accent/40 transition-colors " +
-                      (cancelled ? "opacity-60" : "")
-                    }
+                    className={cn(
+                      "bg-card border border-border rounded-xl p-3.5 flex gap-3 cursor-pointer hover:bg-accent/40 transition-colors min-h-[48px]",
+                      cancelled && "opacity-60"
+                    )}
                   >
-                    <div className="text-center min-w-[48px]">
+                    <div className="text-center min-w-[48px] shrink-0">
                       <p className="text-[17px] font-semibold text-foreground leading-tight">{hhmm(a.startAt)}</p>
                       <p className="text-[12px] text-muted-foreground">{hhmm(a.endAt)}</p>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={"text-[11px] font-medium px-2 py-0.5 rounded-full " + TYPE_BADGE[a.type]}>
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full", TYPE_BADGE[a.type])}>
                           {TYPE_LABELS[a.type]}
                         </span>
                         {a.status !== "SCHEDULED" && (
                           <span
-                            className={
-                              "text-[11px] font-medium px-2 py-0.5 rounded-full " +
-                              (a.status === "CANCELLED"
+                            className={cn(
+                              "text-[11px] font-medium px-2 py-0.5 rounded-full",
+                              a.status === "CANCELLED"
                                 ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                : "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300")
-                            }
+                                : "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                            )}
                           >
                             {STATUS_LABELS[a.status]}
                           </span>
                         )}
                       </div>
-                      <p className={"text-[15px] font-medium text-foreground truncate " + (cancelled ? "line-through" : "")}>
+                      <p className={cn("text-[15px] font-medium text-foreground truncate", cancelled && "line-through")}>
                         {a.title}
                       </p>
                       {(a.clientName || a.clientPhone) && (
                         <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground mt-1">
                           {a.clientName && <span className="truncate">{a.clientName}</span>}
                           {a.clientPhone && (
-                            <a href={"tel:" + a.clientPhone} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-primary shrink-0">
+                            <a
+                              href={"tel:" + a.clientPhone}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 text-primary shrink-0 hover:underline min-h-[24px]"
+                            >
                               <Phone className="w-3.5 h-3.5" /> {a.clientPhone}
                             </a>
                           )}
@@ -248,16 +335,18 @@ const SchedulePage = () => {
 
           {!expanded && hiddenGroupCount > 0 && (
             <button
+              type="button"
               onClick={() => setExpanded(true)}
-              className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               Arată mai multe ({hiddenApptCount}) <ChevronDown className="w-4 h-4" />
             </button>
           )}
           {expanded && groups.length > VISIBLE_DAYS && (
             <button
+              type="button"
               onClick={() => setExpanded(false)}
-              className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-muted-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-muted-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               Arată mai puțin <ChevronUp className="w-4 h-4" />
             </button>
@@ -266,9 +355,15 @@ const SchedulePage = () => {
       )}
 
       <AppointmentEditSheet
-        isOpen={modalOpen}
-        initial={modalInitial}
-        onClose={() => setModalOpen(false)}
+        isOpen={editOpen}
+        initial={editInitial}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
+      />
+
+      <AppointmentWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
       />
     </div>

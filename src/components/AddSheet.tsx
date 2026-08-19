@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Car, UserPlus, Calendar } from "lucide-react";
 import AddLeadModal from "./modals/AddLeadModal";
+import AppointmentWizard from "./modals/AppointmentWizard";
 
 interface AddSheetProps {
   open: boolean;
@@ -11,7 +13,9 @@ interface AddSheetProps {
 
 export default function AddSheet({ open, onOpenChange }: AddSheetProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [appointmentWizardOpen, setAppointmentWizardOpen] = useState(false);
 
   const handleSelect = (path: string) => {
     onOpenChange(false);
@@ -59,7 +63,10 @@ export default function AddSheet({ open, onOpenChange }: AddSheetProps) {
 
             {/* Row 3: Programare */}
             <button
-              onClick={() => handleSelect("/calendar")}
+              onClick={() => {
+                onOpenChange(false);
+                setAppointmentWizardOpen(true);
+              }}
               className="flex items-center gap-4 p-4 min-h-[64px] rounded-xl border border-border bg-card hover:bg-accent text-left transition-colors w-full focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-muted-foreground shrink-0">
@@ -74,6 +81,11 @@ export default function AddSheet({ open, onOpenChange }: AddSheetProps) {
         </DrawerContent>
       </Drawer>
       <AddLeadModal isOpen={leadModalOpen} onClose={() => setLeadModalOpen(false)} />
+      <AppointmentWizard
+        isOpen={appointmentWizardOpen}
+        onClose={() => setAppointmentWizardOpen(false)}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
+      />
     </>
   );
 }
