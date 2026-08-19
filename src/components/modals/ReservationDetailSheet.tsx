@@ -13,11 +13,7 @@ import api, { ReservationItem } from "@/services/api";
 import { formatEur } from "@/lib/format";
 import { formatRoPhone, telLink, hasUsablePhone } from "@/utils/phone";
 import { roCount } from "@/lib/plural";
-
-function daysLeft(expiresAt: string): number {
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
+import { daysLeft } from "@/lib/date";
 
 function statusLabel(s: string) {
   if (s === "COMPLETED") return "Finalizată";

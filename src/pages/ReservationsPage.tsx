@@ -27,11 +27,7 @@ import MarkAsSoldModal from "@/components/modals/MarkAsSoldModal";
 import PickCarSheet from "@/components/modals/PickCarSheet";
 import ExtendReservationSheet from "@/components/modals/ExtendReservationSheet";
 import ReservationDetailSheet from "@/components/modals/ReservationDetailSheet";
-
-function daysLeft(expiresAt: string): number {
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
+import { daysLeft } from "@/lib/date";
 
 function getBadgeProps(dl: number) {
   if (dl <= 0) {

@@ -17,6 +17,7 @@ import { isToday, isTomorrow, differenceInCalendarDays, format, formatDistanceTo
 import { ro } from "date-fns/locale";
 import { CustomerListItem } from "@/services/api";
 import { formatEur } from "@/lib/format";
+import { getLeadAgeBand } from "@/lib/date";
 import { TYPE_LABELS, TYPE_COLORS } from "@/components/leads/LeadDetailPanel";
 import { telLink, formatRoPhone, hasUsablePhone, normalizeRoPhone } from "@/utils/phone";
 
@@ -56,9 +57,9 @@ const DOT_COLORS: Record<string, string> = {
 const ageLabel = (status: string, createdAt: string): string => {
   const label = STATUS_LABELS[status] || status;
   if (status !== "NEW") return label;
-  const days = differenceInCalendarDays(new Date(), new Date(createdAt));
-  if (days <= 2) return "Nou";
-  if (days <= 14) return "Neatins";
+  const band = getLeadAgeBand(createdAt);
+  if (band === "noi") return "Nou";
+  if (band === "neatinse") return "Neatins";
   return "Vechi";
 };
 

@@ -1,14 +1,19 @@
 import { useState, useMemo } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Plus } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getCustomers, CustomerListItem } from "@/services/api";
-import CustomerRow, { getDeadline, getBucket, CUSTOMER_COLS } from "@/components/customers/CustomerRow";
+import CustomerRow, { getDeadline, CUSTOMER_COLS } from "@/components/customers/CustomerRow";
 import CustomersMenu from "@/components/customers/CustomersMenu";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { getLeadAgeBand } from "@/lib/date";
+import CustomersHeader, {
+  CustomersSortOption,
+  LeadTypeFilter,
+  DeadlineFilter,
+  matchesLeadTypes,
+  matchesDeadline,
+} from "@/components/customers/CustomersHeader";
 import { NewLeadDialog } from "@/components/leads/NewLeadDialog";
-import { formatEur } from "@/lib/format";
 import { roCount } from "@/lib/plural";
 import { isInLucru } from "@/hooks/useInLucruCount";
 
@@ -17,7 +22,11 @@ const CustomersPage = () => {
   const [searchParams] = useSearchParams();
   const filter = searchParams.get("filter");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<CustomersSortOption>("recent");
+  const [selectedTypes, setSelectedTypes] = useState<LeadTypeFilter[]>([]);
+  const [selectedDeadline, setSelectedDeadline] = useState<DeadlineFilter | null>(null);
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
+  const [showOldActiveLeads, setShowOldActiveLeads] = useState(false);
 
   const { data: customers = [], isLoading } = useQuery<CustomerListItem[]>({
     queryKey: ['customers'],
@@ -29,54 +38,52 @@ const CustomersPage = () => {
     return customers.filter(isInLucru);
   }, [customers]);
 
-  const inLucruCount = inLucruCustomers.length;
+  const baseCustomers = useMemo(() => {
+    let list: CustomerListItem[] = [];
+    if (filter === "inlucru") {
+      list = inLucruCustomers;
+    } else if (filter === "active") {
+      list = customers.filter((c) => Boolean(c.openLead));
+    } else if (filter === "noi") {
+      list = customers.filter((c) => c.hasUnreadLead === true || (c.openLead && !c.openLead.isRead));
+    } else if (filter === "contact") {
+      list = customers.filter((c) => c.leadTypes?.includes("GENERAL"));
+    } else if (filter === "stock") {
+      list = customers.filter((c) => c.leadTypes?.includes("STOCK"));
+    } else if (filter === "order") {
+      list = customers.filter((c) => c.leadTypes?.includes("ORDER"));
+    } else if (filter === "buyback") {
+      list = customers.filter((c) => c.leadTypes?.includes("BUYBACK"));
+    } else if (filter === "financing") {
+      list = customers.filter((c) => c.leadTypes?.includes("FINANCING"));
+    } else if (filter === "appointments") {
+      list = customers.filter((c) => c.nextAppointment != null);
+    } else if (filter === "offers") {
+      list = customers.filter((c) => c.pendingOffer != null);
+    } else if (filter === "reservations") {
+      list = customers.filter((c) => c.activeReservation != null);
+    } else {
+      list = customers;
+    }
 
-  const { urgente, avans } = useMemo(() => {
-    let countUrgente = 0;
-    let sumAvans = 0;
-    for (const c of customers) {
-      const deadline = getDeadline(c);
-      if (deadline) {
-        const bucket = getBucket(deadline);
-        if (bucket === "expirat" || bucket === "azi" || bucket === "maine") {
-          countUrgente++;
-        }
-      }
-      if (c.activeReservation && c.activeReservation.depositAmount != null) {
-        sumAvans += c.activeReservation.depositAmount;
-      }
-    }
-    return { urgente: countUrgente, avans: sumAvans };
-  }, [customers]);
+    const term = search.toLowerCase().trim();
+    if (!term) return list;
 
-  const subtitle = useMemo(() => {
-    const parts: string[] = [];
-    if (urgente > 0) {
-      parts.push(`${urgente} ${urgente === 1 ? "termen" : "termene"} până mâine`);
-    }
-    if (avans > 0) {
-      parts.push(`${formatEur(avans)} avans în casă`);
-    }
-    if (parts.length === 0) {
-      parts.push(`${inLucruCount} în lucru`);
-    }
-    return parts.join(" · ");
-  }, [urgente, avans, inLucruCount]);
+    const cleanSearch = term.replace(/\D/g, "");
+    return list.filter((c) => {
+      const cleanPhone = c.phone.replace(/\D/g, "");
+      const nameMatch = c.name.toLowerCase().includes(term);
+      const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
+      return nameMatch || phoneMatch;
+    });
+  }, [customers, inLucruCustomers, search, filter]);
 
   const inLucruGrouped = useMemo(() => {
     if (filter !== "inlucru") return [];
 
-    const term = search.toLowerCase().trim();
-    let list = inLucruCustomers;
-    if (term) {
-      const cleanSearch = term.replace(/\D/g, "");
-      list = list.filter((c) => {
-        const cleanPhone = c.phone.replace(/\D/g, "");
-        const nameMatch = c.name.toLowerCase().includes(term);
-        const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
-        return nameMatch || phoneMatch;
-      });
-    }
+    const list = baseCustomers.filter(
+      (c) => matchesLeadTypes(c, selectedTypes) && matchesDeadline(c, selectedDeadline)
+    );
 
     const needsAttentionList: CustomerListItem[] = [];
     const restList: CustomerListItem[] = [];
@@ -84,8 +91,8 @@ const CustomersPage = () => {
     for (const c of list) {
       const isUnread = !!(c.openLead && !c.openLead.isRead);
       const deadline = getDeadline(c);
-      const bucket = getBucket(deadline);
-      const isUrgent = bucket === "expirat" || bucket === "azi" || bucket === "maine";
+      const isUrgent =
+        matchesDeadline(c, "expirat") || matchesDeadline(c, "azi_maine");
 
       if (isUnread || isUrgent) {
         needsAttentionList.push(c);
@@ -138,49 +145,142 @@ const CustomersPage = () => {
     }
 
     return groups;
-  }, [inLucruCustomers, search, filter]);
+  }, [baseCustomers, filter, selectedTypes, selectedDeadline]);
 
-  const totiFiltered = useMemo(() => {
-    if (!filter || filter === "inlucru") return [];
+  const inLucruFilteredCount = useMemo(() => {
+    return inLucruGrouped.reduce((acc, g) => acc + g.customers.length, 0);
+  }, [inLucruGrouped]);
 
-    let list = customers;
-    if (filter === "noi") {
-      list = customers.filter((c) => c.hasUnreadLead === true || (c.openLead && !c.openLead.isRead));
-    } else if (filter === "financing") {
-      list = customers.filter((c) => c.leadTypes?.includes("FINANCING"));
-    } else if (filter === "order") {
-      list = customers.filter((c) => c.leadTypes?.includes("ORDER"));
-    } else if (filter === "appointments") {
-      list = customers.filter((c) => c.nextAppointment != null);
-    } else if (filter === "offers") {
-      list = customers.filter((c) => c.pendingOffer != null);
-    } else if (filter === "reservations") {
-      list = customers.filter((c) => c.activeReservation != null);
+  const activeGrouped = useMemo(() => {
+    if (filter !== "active") return [];
+
+    const list = baseCustomers.filter(
+      (c) => matchesLeadTypes(c, selectedTypes) && matchesDeadline(c, selectedDeadline)
+    );
+
+    const noiList: CustomerListItem[] = [];
+    const neatinseList: CustomerListItem[] = [];
+    const vechiList: CustomerListItem[] = [];
+
+    for (const c of list) {
+      if (!c.openLead) continue;
+      const band = getLeadAgeBand(c.openLead.createdAt);
+      if (band === "noi") {
+        noiList.push(c);
+      } else if (band === "neatinse") {
+        neatinseList.push(c);
+      } else {
+        vechiList.push(c);
+      }
     }
 
-    const term = search.toLowerCase().trim();
-    if (!term) return list;
+    // Sort within each group: oldest lead first (ascending createdAt)
+    const sortByOldest = (a: CustomerListItem, b: CustomerListItem) => {
+      const tA = a.openLead ? new Date(a.openLead.createdAt).getTime() : 0;
+      const tB = b.openLead ? new Date(b.openLead.createdAt).getTime() : 0;
+      return tA - tB;
+    };
 
-    const cleanSearch = term.replace(/\D/g, "");
-    return list.filter((c) => {
-      const cleanPhone = c.phone.replace(/\D/g, "");
-      const nameMatch = c.name.toLowerCase().includes(term);
-      const phoneMatch = (cleanSearch ? cleanPhone.includes(cleanSearch) : false) || c.phone.includes(term);
-      return nameMatch || phoneMatch;
-    });
-  }, [customers, search, filter]);
+    noiList.sort(sortByOldest);
+    neatinseList.sort(sortByOldest);
+    vechiList.sort(sortByOldest);
+
+    const groups: { id: "noi" | "neatinse" | "vechi"; label: string; customers: CustomerListItem[] }[] = [];
+
+    if (noiList.length > 0) {
+      groups.push({
+        id: "noi",
+        label: "Noi",
+        customers: noiList,
+      });
+    }
+
+    if (neatinseList.length > 0) {
+      groups.push({
+        id: "neatinse",
+        label: "Neatinse",
+        customers: neatinseList,
+      });
+    }
+
+    if (vechiList.length > 0) {
+      groups.push({
+        id: "vechi",
+        label: "Vechi",
+        customers: vechiList,
+      });
+    }
+
+    return groups;
+  }, [baseCustomers, filter, selectedTypes, selectedDeadline]);
+
+  const activeVisibleGroups = useMemo(() => {
+    if (filter !== "active") return [];
+    return showOldActiveLeads
+      ? activeGrouped
+      : activeGrouped.filter((g) => g.id !== "vechi");
+  }, [activeGrouped, showOldActiveLeads, filter]);
+
+  const vechiGroup = useMemo(() => {
+    return activeGrouped.find((g) => g.id === "vechi");
+  }, [activeGrouped]);
+
+  const activeVisibleCount = useMemo(() => {
+    return activeVisibleGroups.reduce((acc, g) => acc + g.customers.length, 0);
+  }, [activeVisibleGroups]);
+
+  const totiFiltered = useMemo(() => {
+    if (!filter || filter === "inlucru" || filter === "active") return [];
+
+    let list = baseCustomers.filter(
+      (c) => matchesLeadTypes(c, selectedTypes) && matchesDeadline(c, selectedDeadline)
+    );
+
+    if (sortBy === "deadline_asc") {
+      return [...list].sort((a, b) => {
+        const dA = getDeadline(a);
+        const dB = getDeadline(b);
+        const tA = dA ? dA.getTime() : Infinity;
+        const tB = dB ? dB.getTime() : Infinity;
+        if (tA !== tB) return tA - tB;
+        return 0;
+      });
+    }
+
+    if (sortBy === "name_asc") {
+      return [...list].sort((a, b) => a.name.localeCompare(b.name, "ro", { sensitivity: "base" }));
+    }
+
+    return list;
+  }, [baseCustomers, selectedTypes, selectedDeadline, sortBy, filter]);
 
   const getPageTitle = () => {
     if (filter === "inlucru") return "În lucru";
+    if (filter === "active") return "Cereri active";
     if (filter === "noi") return "Cereri noi";
-    if (filter === "financing") return "Finanțare";
+    if (filter === "contact") return "Contact";
+    if (filter === "stock") return "Interesat mașină";
     if (filter === "order") return "Mașini la comandă";
+    if (filter === "buyback") return "Buy-back";
+    if (filter === "financing") return "Finanțare";
     if (filter === "appointments") return "Programări";
     if (filter === "offers") return "Oferte trimise";
     if (filter === "reservations") return "Rezervări active";
     if (filter === "all") return "Toți clienții";
     return "Clienți";
   };
+
+  const countText = useMemo(() => {
+    if (filter === "inlucru") return roCount(inLucruFilteredCount, "client", "clienți");
+    if (filter === "active") return roCount(activeVisibleCount, "client", "clienți");
+    return roCount(totiFiltered.length, "client", "clienți");
+  }, [filter, inLucruFilteredCount, activeVisibleCount, totiFiltered.length]);
+
+  const searchPlaceholder = useMemo(() => {
+    if (filter === "inlucru") return "Caută în clienții în lucru...";
+    if (filter === "active") return "Caută în cereri active...";
+    return "Caută după nume sau telefon...";
+  }, [filter]);
 
   if (isLoading) {
     return (
@@ -205,48 +305,22 @@ const CustomersPage = () => {
         <CustomersMenu customers={customers} />
       ) : (
         <>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Link
-                to="/customers"
-                className="inline-flex items-center text-[13px] text-primary hover:underline mb-1 lg:hidden"
-              >
-                ← Înapoi la categorii
-              </Link>
-              <h1 className="text-[20px] font-semibold text-foreground leading-tight">
-                {getPageTitle()}
-              </h1>
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                {filter === "inlucru" ? subtitle : roCount(totiFiltered.length, "client", "clienți")}
-              </p>
-            </div>
-            <Button
-              onClick={() => setIsNewLeadOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[13px] h-9 px-3 rounded-lg flex items-center gap-1.5 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Lead nou</span>
-            </Button>
-          </div>
-
-          {/* Search Input */}
-          <div className="sticky top-16 z-20 bg-admin-bg -mx-4 px-4 py-2 lg:mx-0 lg:px-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="customer-search"
-                name="customer-search"
-                placeholder={
-                  filter === "inlucru"
-                    ? "Caută în clienții în lucru..."
-                    : "Caută după nume sau telefon..."
-                }
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background border-input text-foreground h-11 text-[15px]"
-              />
-            </div>
-          </div>
+          <CustomersHeader
+            title={getPageTitle()}
+            countText={countText}
+            searchQuery={search}
+            onSearchQueryChange={setSearch}
+            searchPlaceholder={searchPlaceholder}
+            showSort={filter !== "inlucru" && filter !== "active"}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            selectedTypes={selectedTypes}
+            onSelectedTypesChange={setSelectedTypes}
+            selectedDeadline={selectedDeadline}
+            onSelectedDeadlineChange={setSelectedDeadline}
+            baseCustomers={baseCustomers}
+            onNewLead={() => setIsNewLeadOpen(true)}
+          />
 
           {/* Desktop Column Header */}
           <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 border border-transparent text-[11px] tracking-wide font-medium uppercase text-muted-foreground select-none">
@@ -296,8 +370,64 @@ const CustomersPage = () => {
             </>
           )}
 
-          {/* View 2: Category filter */}
-          {filter !== "inlucru" && (
+          {/* View 2: Active leads grouped */}
+          {filter === "active" && (
+            <>
+              {activeGrouped.length === 0 ? (
+                <div className="text-[15px] text-muted-foreground text-center py-8">
+                  {search.trim()
+                    ? `Niciun client găsit pentru „${search}” în cereri active.`
+                    : "Niciun client cu cereri active."}
+                </div>
+              ) : (
+                <div className="space-y-4 lg:space-y-3">
+                  {activeVisibleGroups.map((group) => (
+                    <div key={group.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between px-3 py-1 text-[11px] uppercase tracking-wide font-medium select-none">
+                        <span className="text-muted-foreground">
+                          {group.label}
+                        </span>
+                        <span className="text-[13px] text-muted-foreground tabular-nums font-normal">
+                          {group.customers.length}
+                        </span>
+                      </div>
+
+                      <div className="bg-card border border-border rounded-xl overflow-hidden lg:bg-transparent lg:border-0 lg:rounded-none lg:overflow-visible lg:space-y-1">
+                        {group.customers.map((customer, index) => (
+                          <div key={customer.phone} className={index > 0 ? "border-t border-border lg:border-t-0" : ""}>
+                            <CustomerRow customer={customer} variant="plain" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {vechiGroup && !showOldActiveLeads && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOldActiveLeads(true)}
+                      className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Arată cereri vechi ({vechiGroup.customers.length}) <ChevronDown className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {vechiGroup && showOldActiveLeads && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOldActiveLeads(false)}
+                      className="w-full min-h-[48px] rounded-xl border border-border bg-card text-[14px] font-medium text-muted-foreground hover:bg-accent/40 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Ascunde cereri vechi <ChevronUp className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* View 3: Category filter */}
+          {filter !== "inlucru" && filter !== "active" && (
             <>
               {totiFiltered.length === 0 ? (
                 <div className="text-[15px] text-muted-foreground text-center py-8">
@@ -321,7 +451,6 @@ const CustomersPage = () => {
         onOpenChange={setIsNewLeadOpen}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["customers"] });
-          queryClient.invalidateQueries({ queryKey: ["message-counts"] });
         }}
       />
     </div>

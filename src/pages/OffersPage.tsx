@@ -20,10 +20,7 @@ import PickCarSheet from "@/components/modals/PickCarSheet";
 import GenerateOfferModal from "@/components/modals/GenerateOfferModal";
 import ShareOfferSheet from "@/components/modals/ShareOfferSheet";
 import OfferDetailSheet from "@/components/modals/OfferDetailSheet";
-
-function daysLeft(expiresAt: string): number {
-  return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
+import { daysLeft } from "@/lib/date";
 
 interface ShareData {
   publicUrl: string | null;
