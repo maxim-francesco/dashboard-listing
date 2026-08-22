@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ import AutovitPublishPanel from "@/components/listings/AutovitPublishPanel";
 import MarketingModal from "@/components/modals/MarketingModal";
 import { downloadImagesAsZip } from '@/utils/downloadImagesAsZip';
 import { cn } from "@/lib/utils";
+import { parseVideoSource } from "@/lib/video";
 import {
   FUEL_TYPES,
   FUEL_TYPE_LABELS,
@@ -102,6 +103,11 @@ interface FullListingData {
     attributeValues: AttributeValueFromServer[];
     youtubeVideoId?: string | null;
 }
+
+const ALLOWED_VIDEO_UPLOAD_BUSINESS_IDS = Object.freeze([
+  'cmlct9h4l0579rb294uz93xmv',
+  'cmlhxd6wr08e9rb29wadrogmm',
+]);
 
 const AddEditListing = () => {
   const { listingId } = useParams();
@@ -239,13 +245,24 @@ const AddEditListing = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [initialYouTubeVideoId, setInitialYouTubeVideoId] = useState<string | null>(null);
+  const [isYouTubeInputTouched, setIsYouTubeInputTouched] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isDeletingVideo, setIsDeletingVideo] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   
-  const hasVideoFeature = localStorage.getItem('userEmail') === 'contact@vlc.ro' || localStorage.getItem('userEmail') === 'contact@nitu.ro';
+  const { data: businessMe, isLoading: isLoadingBusinessMe } = useQuery({
+    queryKey: ['businessMe'],
+    queryFn: async () => {
+      const { data } = await api.get('/business/me');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const canUploadVideoFile = !!businessMe?.id && ALLOWED_VIDEO_UPLOAD_BUSINESS_IDS.includes(businessMe.id);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -303,7 +320,9 @@ const AddEditListing = () => {
         // 2. If editing, fetch listing and map legacy attributes to fixed schema
         if (isEditing && listingId) {
           const fetched = (await api.get<FullListingData>(`/listings/${listingId}`)).data;
-          setYoutubeVideoId(fetched.youtubeVideoId || null);
+          const fetchedYt = fetched.youtubeVideoId || null;
+          setYoutubeVideoId(fetchedYt);
+          setInitialYouTubeVideoId(fetchedYt);
           const sortedImages = (fetched.images || []).sort((a, b) => a.order - b.order);
           setExistingImages(sortedImages.map(img => ({ ...img, rotation: 0 })));
 
@@ -527,7 +546,7 @@ const AddEditListing = () => {
             sellingPrice: parseNum(fields.sellingPrice),
             otherCosts: parseNum(fields.otherCosts),
             status: fields.status || "AVAILABLE",
-            youtubeVideoId: youtubeVideoId || null,
+            youtubeVideoId: youtubeVideoId?.trim() || null,
             featureIds: selectedFeatures,
             extraSpecs: {}
         };
@@ -1681,78 +1700,171 @@ const AddEditListing = () => {
         )}
 
         {/* VIDEO CARD */}
-        {step === 7 && hasVideoFeature && (
-            <Card className="border-card-border bg-card mb-6">
-                <CardHeader>
-                    <CardTitle className="text-foreground">Prezentare Video</CardTitle>
-                    <CardDescription>Încarcă un fișier video pentru anunț.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {!isEditing ? (
-                    <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
-                        Salvează anunțul pentru a putea adăuga un video.
-                    </div>
-                    ) : youtubeVideoId ? (
-                    <div>
-                        {youtubeVideoId.includes('cloudinary') ? (
-                            <video src={youtubeVideoId} controls className="w-full rounded-lg" />
-                        ) : (
-                            <div className="aspect-video rounded-lg overflow-hidden border bg-black">
-                                <iframe
-                                    width="100%"
-                                    height="100%"
-                                    src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                                    title="YouTube video player"
-                                    frameBorder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen>
-                                </iframe>
-                            </div>
-                        )}
-                        <Button variant="outline" onClick={handleRemoveVideo} className="mt-4 border-destructive text-destructive hover:bg-destructive-light" disabled={isDeletingVideo}>
-                        {isDeletingVideo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                        {isDeletingVideo ? 'Se șterge...' : 'Șterge Video'}
-                        </Button>
-                    </div>
-                    ) : (
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="video-upload">Fișier Video (.mp4, .mov)</Label>
-                        <Input
-                            id="video-upload"
-                            type="file"
-                            accept="video/mp4,video/quicktime"
-                            onChange={handleVideoFileChange}
-                            className="flex-grow file:text-foreground file:font-medium"
-                            disabled={isUploadingVideo}
-                        />
-                        {videoFile && <p className="text-sm text-muted-foreground">Selectat: {videoFile.name}</p>}
-                        </div>
-                        
-                        {isUploadingVideo && uploadProgress !== null && (
-                        <div className="space-y-2">
-                            <Label>Progres încărcare</Label>
-                            <Progress value={uploadProgress} className="w-full" />
-                            <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
-                        </div>
-                        )}
+        {step === 7 && (
+          <Card className="border-border bg-card mb-6">
+            <CardHeader>
+              <CardTitle className="text-foreground">Prezentare Video</CardTitle>
+              <CardDescription>
+                {canUploadVideoFile
+                  ? "Încarcă un fișier video pentru prezentarea anunțului."
+                  : "Adăugați un video YouTube pentru prezentarea anunțului."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const videoSource = parseVideoSource(youtubeVideoId);
 
-                        <Button
+                if (videoSource.kind === 'cloudinary') {
+                  return (
+                    <div>
+                      <video src={videoSource.url} controls className="w-full rounded-lg" />
+                      <Button
                         type="button"
-                        onClick={handleVideoUpload}
-                        disabled={!videoFile || isUploadingVideo}
-                        >
-                        {isUploadingVideo ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        variant="outline"
+                        onClick={handleRemoveVideo}
+                        className="mt-4 min-h-[44px] border-destructive text-destructive hover:bg-destructive/10"
+                        disabled={isDeletingVideo}
+                      >
+                        {isDeletingVideo ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
-                            <UploadCloud className="w-4 h-4 mr-2" />
+                          <Trash2 className="w-4 h-4 mr-2" />
                         )}
-                        {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Video'}
-                        </Button>
+                        {isDeletingVideo ? 'Se șterge...' : 'Șterge fișierul de pe server'}
+                      </Button>
                     </div>
+                  );
+                }
+
+                if (videoSource.kind === 'youtube') {
+                  return (
+                    <div>
+                      <div className="aspect-video rounded-lg overflow-hidden border border-border bg-background">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={videoSource.embedUrl}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setYoutubeVideoId(null)}
+                        className="mt-4 min-h-[44px] border-border text-foreground hover:bg-accent"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Elimină linkul YouTube
+                      </Button>
+                    </div>
+                  );
+                }
+
+                // State B (no video stored yet or unusable string)
+                if (isLoadingBusinessMe) {
+                  return (
+                    <div className="flex items-center justify-center p-6 text-muted-foreground text-sm">
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Se încarcă opțiunile video...
+                    </div>
+                  );
+                }
+
+                if (canUploadVideoFile) {
+                  return (
+                    <div>
+                      {!isEditing ? (
+                        <div className="text-center text-muted-foreground p-4 border border-dashed border-border rounded-lg text-sm">
+                          Salvează anunțul mai întâi pentru a putea încărca un fișier video.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="video-upload" className="text-foreground">
+                              Fișier Video (.mp4, .mov)
+                            </Label>
+                            <Input
+                              id="video-upload"
+                              type="file"
+                              accept="video/mp4,video/quicktime"
+                              onChange={handleVideoFileChange}
+                              className="flex-grow file:text-foreground file:font-medium min-h-[44px]"
+                              disabled={isUploadingVideo}
+                            />
+                            {videoFile && (
+                              <p className="text-sm text-muted-foreground">
+                                Selectat: {videoFile.name}
+                              </p>
+                            )}
+                          </div>
+
+                          {isUploadingVideo && uploadProgress !== null && (
+                            <div className="space-y-2">
+                              <Label className="text-foreground">Progres încărcare</Label>
+                              <Progress value={uploadProgress} className="w-full" />
+                              <p className="text-sm text-muted-foreground text-center">
+                                {Math.round(uploadProgress)}%
+                              </p>
+                            </div>
+                          )}
+
+                          <Button
+                            type="button"
+                            onClick={handleVideoUpload}
+                            disabled={!videoFile || isUploadingVideo}
+                            className="min-h-[44px]"
+                          >
+                            {isUploadingVideo ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-4 h-4 mr-2" />
+                            )}
+                            {isUploadingVideo ? 'Se încarcă...' : 'Încarcă Fișier Video'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const trimmedYouTubeInput = youtubeVideoId?.trim() || '';
+                const isUnmodifiedServerValue =
+                  initialYouTubeVideoId !== null && youtubeVideoId === initialYouTubeVideoId;
+                const hasUnusableInput =
+                  (isYouTubeInputTouched || isUnmodifiedServerValue) &&
+                  trimmedYouTubeInput !== '' &&
+                  parseVideoSource(trimmedYouTubeInput).kind !== 'youtube';
+
+                return (
+                  <div className="space-y-2">
+                    <Label htmlFor="youtube-url-input" className="text-foreground">
+                      Link YouTube
+                    </Label>
+                    <Input
+                      id="youtube-url-input"
+                      type="text"
+                      placeholder="https://www.youtube.com/watch?v=... sau https://youtu.be/..."
+                      value={youtubeVideoId || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setYoutubeVideoId(val === "" ? null : val);
+                      }}
+                      onBlur={() => setIsYouTubeInputTouched(true)}
+                      className="min-h-[44px] text-foreground border-input bg-background"
+                    />
+                    {hasUnusableInput && (
+                      <p className="text-sm text-destructive font-medium">
+                        Link-ul introdus nu este recunoscut ca un link YouTube valid (ex: https://www.youtube.com/watch?v=... sau https://youtu.be/...).
+                      </p>
                     )}
-                </CardContent>
-            </Card>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         )}
 
         {/* WIZARD FOOTER */}
