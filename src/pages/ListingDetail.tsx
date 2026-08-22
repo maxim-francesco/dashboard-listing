@@ -45,6 +45,7 @@ import ListingGalleryDesktop from "@/components/listings/detail/ListingGalleryDe
 import ListingSpecs from "@/components/listings/ListingSpecs";
 import ListingSpecsDesktop from "@/components/listings/detail/ListingSpecsDesktop";
 import ListingDescription from "@/components/listings/detail/ListingDescription";
+import ListingVideoBlock from "@/components/listings/detail/ListingVideoBlock";
 import ListingIdentity from "@/components/listings/detail/ListingIdentity";
 import ListingFigures from "@/components/listings/detail/ListingFigures";
 import ReservationNotice from "@/components/listings/detail/ReservationNotice";
@@ -676,6 +677,9 @@ export default function ListingDetail() {
           {/* (e) DESCRIPTION */}
           <ListingDescription description={listing.description} variant="mobile" />
 
+          {/* VIDEO */}
+          <ListingVideoBlock videoValue={listing.youtubeVideoId} />
+
           {/* (f) SPECS */}
           <ListingSpecs attributeValues={listing.attributeValues} />
         </div>
@@ -698,6 +702,7 @@ export default function ListingDetail() {
             <div data-section="gallery">
               <ListingGalleryDesktop images={listing.images} title={listing.title} />
             </div>
+            <ListingVideoBlock videoValue={listing.youtubeVideoId} />
             <div data-section="specs">
               <ListingSpecsDesktop attributeValues={listing.attributeValues} />
             </div>

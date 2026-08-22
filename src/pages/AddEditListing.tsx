@@ -1707,7 +1707,7 @@ const AddEditListing = () => {
               <CardDescription>
                 {canUploadVideoFile
                   ? "Încarcă un fișier video pentru prezentarea anunțului."
-                  : "Adăugați un video YouTube pentru prezentarea anunțului."}
+                  : "Adăugați un link video (YouTube sau TikTok) pentru prezentarea anunțului."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1757,7 +1757,48 @@ const AddEditListing = () => {
                         className="mt-4 min-h-[44px] border-border text-foreground hover:bg-accent"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Elimină linkul YouTube
+                        Elimină linkul video
+                      </Button>
+                    </div>
+                  );
+                }
+
+                if (videoSource.kind === 'tiktok') {
+                  return (
+                    <div>
+                      {videoSource.embedUrl ? (
+                        <div className="aspect-video rounded-lg overflow-hidden border border-border bg-background">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={videoSource.embedUrl}
+                            title="TikTok video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-lg border border-border bg-background text-sm text-foreground space-y-2">
+                          <p className="font-medium">Link video TikTok (link scurt)</p>
+                          <a
+                            href={videoSource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline break-all block"
+                          >
+                            {videoSource.url}
+                          </a>
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setYoutubeVideoId(null)}
+                        className="mt-4 min-h-[44px] border-border text-foreground hover:bg-accent"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Elimină linkul video
                       </Button>
                     </div>
                   );
@@ -1830,23 +1871,25 @@ const AddEditListing = () => {
                   );
                 }
 
-                const trimmedYouTubeInput = youtubeVideoId?.trim() || '';
+                const trimmedVideoInput = youtubeVideoId?.trim() || '';
                 const isUnmodifiedServerValue =
                   initialYouTubeVideoId !== null && youtubeVideoId === initialYouTubeVideoId;
+                const parsedInputKind = parseVideoSource(trimmedVideoInput).kind;
+                const isValidVideoLink = parsedInputKind === 'youtube' || parsedInputKind === 'tiktok';
                 const hasUnusableInput =
                   (isYouTubeInputTouched || isUnmodifiedServerValue) &&
-                  trimmedYouTubeInput !== '' &&
-                  parseVideoSource(trimmedYouTubeInput).kind !== 'youtube';
+                  trimmedVideoInput !== '' &&
+                  !isValidVideoLink;
 
                 return (
                   <div className="space-y-2">
                     <Label htmlFor="youtube-url-input" className="text-foreground">
-                      Link YouTube
+                      Link video (YouTube / TikTok)
                     </Label>
                     <Input
                       id="youtube-url-input"
                       type="text"
-                      placeholder="https://www.youtube.com/watch?v=... sau https://youtu.be/..."
+                      placeholder="https://www.youtube.com/watch?v=... sau https://www.tiktok.com/@..."
                       value={youtubeVideoId || ""}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1857,7 +1900,7 @@ const AddEditListing = () => {
                     />
                     {hasUnusableInput && (
                       <p className="text-sm text-destructive font-medium">
-                        Link-ul introdus nu este recunoscut ca un link YouTube valid (ex: https://www.youtube.com/watch?v=... sau https://youtu.be/...).
+                        Link-ul introdus nu este recunoscut ca un link video valid (YouTube sau TikTok).
                       </p>
                     )}
                   </div>

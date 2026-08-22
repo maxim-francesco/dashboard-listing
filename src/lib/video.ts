@@ -1,13 +1,15 @@
 /**
- * Video utility module for classifying stored video values and extracting YouTube IDs/embed URLs.
+ * Video utility module for classifying stored video values and extracting YouTube/TikTok IDs/embed URLs.
  * Pure module: no React, no app imports, no network, no side effects.
  */
 
-export type VideoSourceKind = 'cloudinary' | 'youtube' | 'unusable';
+export type VideoSourceKind = 'cloudinary' | 'youtube' | 'tiktok' | 'unusable';
 
 export type VideoSource =
   | { kind: 'cloudinary'; url: string }
   | { kind: 'youtube'; videoId: string; embedUrl: string }
+  | { kind: 'tiktok'; url: string; videoId: string; embedUrl: string }
+  | { kind: 'tiktok'; url: string; videoId: null; embedUrl: null }
   | { kind: 'unusable' };
 
 const YOUTUBE_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
@@ -94,7 +96,106 @@ export function extractYouTubeId(input: string | null | undefined): string | nul
 }
 
 /**
- * Classifies a raw stored video value into 'cloudinary', 'youtube', or 'unusable'.
+ * Extracts a TikTok video ID (numeric digits) from a URL or raw ID.
+ * Returns null if the input is a short link or not a valid full TikTok video URL.
+ */
+export function extractTikTokId(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Raw numeric video ID (15-22 digits)
+  if (/^\d{15,22}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  let url: URL;
+  try {
+    if (/^(https?:)?\/\//i.test(trimmed)) {
+      url = new URL(trimmed.startsWith('//') ? `https:${trimmed}` : trimmed);
+    } else if (/^(www\.|m\.|vm\.|vt\.)?tiktok\.com/i.test(trimmed)) {
+      url = new URL(`https://${trimmed}`);
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  if (hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')) {
+    const match = url.pathname.match(/\/video\/(\d+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns TikTok official embed URL if video ID can be extracted, otherwise null.
+ */
+export function getTikTokEmbedUrl(inputOrId: string | null | undefined): string | null {
+  const id = extractTikTokId(inputOrId);
+  if (!id) return null;
+  return `https://www.tiktok.com/embed/v2/${id}`;
+}
+
+function parseTikTokSource(trimmed: string): { url: string; videoId: string | null; embedUrl: string | null } | null {
+  let url: URL;
+  try {
+    if (/^(https?:)?\/\//i.test(trimmed)) {
+      url = new URL(trimmed.startsWith('//') ? `https:${trimmed}` : trimmed);
+    } else if (/^(www\.|m\.|vm\.|vt\.)?tiktok\.com/i.test(trimmed)) {
+      url = new URL(`https://${trimmed}`);
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  if (hostname !== 'tiktok.com' && !hostname.endsWith('.tiktok.com')) {
+    return null;
+  }
+
+  // 1. Check for full video URL with /video/12345...
+  const videoMatch = url.pathname.match(/\/video\/(\d+)/);
+  if (videoMatch && videoMatch[1]) {
+    const videoId = videoMatch[1];
+    return {
+      url: trimmed,
+      videoId,
+      embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
+    };
+  }
+
+  // 2. Check for shortened link (e.g. vm.tiktok.com/ZNRHFFUBd/, vt.tiktok.com/..., tiktok.com/t/...)
+  const isShortHost =
+    hostname === 'vm.tiktok.com' ||
+    hostname.endsWith('.vm.tiktok.com') ||
+    hostname === 'vt.tiktok.com' ||
+    hostname.endsWith('.vt.tiktok.com') ||
+    (hostname === 'tiktok.com' && url.pathname.startsWith('/t/'));
+
+  if (isShortHost) {
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length > 0) {
+      return {
+        url: trimmed,
+        videoId: null,
+        embedUrl: null,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Classifies a raw stored video value into 'cloudinary', 'youtube', 'tiktok', or 'unusable'.
  */
 export function classifyVideoSource(input: string | null | undefined): VideoSourceKind {
   if (!input) return 'unusable';
@@ -107,6 +208,10 @@ export function classifyVideoSource(input: string | null | undefined): VideoSour
 
   if (extractYouTubeId(trimmed) !== null) {
     return 'youtube';
+  }
+
+  if (parseTikTokSource(trimmed) !== null) {
+    return 'tiktok';
   }
 
   return 'unusable';
@@ -141,6 +246,25 @@ export function parseVideoSource(input: string | null | undefined): VideoSource 
       videoId,
       embedUrl: `https://www.youtube.com/embed/${videoId}`,
     };
+  }
+
+  const tikTokSource = parseTikTokSource(trimmed);
+  if (tikTokSource) {
+    if (tikTokSource.videoId !== null && tikTokSource.embedUrl !== null) {
+      return {
+        kind: 'tiktok',
+        url: tikTokSource.url,
+        videoId: tikTokSource.videoId,
+        embedUrl: tikTokSource.embedUrl,
+      };
+    } else {
+      return {
+        kind: 'tiktok',
+        url: tikTokSource.url,
+        videoId: null,
+        embedUrl: null,
+      };
+    }
   }
 
   return { kind: 'unusable' };
