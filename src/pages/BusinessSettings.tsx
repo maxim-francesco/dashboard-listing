@@ -20,9 +20,14 @@ import {
   QrCode,
   ChevronDown,
   ChevronUp,
+  Moon,
+  Sun,
+  Palette,
 } from "lucide-react";
 import api, { deleteBanner } from "@/services/api";
 import { toast } from "react-hot-toast";
+import { CARD } from "@/components/today/cardRecipe";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface Business {
   id: string;
@@ -39,6 +44,7 @@ interface Business {
 
 const BusinessSettings = () => {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -212,6 +218,51 @@ const BusinessSettings = () => {
           <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">
             Datele și aspectul firmei tale
           </p>
+        </div>
+      </div>
+
+      {/* SECTION: ASPECT INTERFAȚĂ */}
+      <div className={`${CARD} p-4 space-y-3`}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <Palette className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-[14px] font-medium text-foreground leading-tight">
+              Aspect interfață
+            </h2>
+            <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">
+              Alege tema vizuală a panoului
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setTheme("dark")}
+            className={`min-h-[44px] px-4 rounded-lg font-medium text-[14px] flex items-center justify-center gap-2 border transition-colors ${
+              theme === "dark"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Moon className="w-4 h-4" />
+            <span>Închis</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTheme("light")}
+            className={`min-h-[44px] px-4 rounded-lg font-medium text-[14px] flex items-center justify-center gap-2 border transition-colors ${
+              theme === "light"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Sun className="w-4 h-4" />
+            <span>Deschis</span>
+          </button>
         </div>
       </div>
 
